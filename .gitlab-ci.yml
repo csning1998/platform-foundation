@@ -34,6 +34,11 @@ include:
       # currently, layers reference modules by relative path.
       # - local: ".gitlab/ci/modules-terraform.yml"
 
+# Ansible ignores an ansible.cfg in the world-writable checkout of the runner, unless ANSIBLE_CONFIG names the file.
+lint:ansible:
+  variables:
+    ANSIBLE_CONFIG: "${CI_PROJECT_DIR}/ansible/ansible.cfg"
+
 # internal/libvirtops uses cgo bindings against libvirt.org/go/libvirt. The lang-go component's
 # golang:*-alpine image ships CGO_ENABLED=0 and no libvirt headers by default; these overrides
 # are local to platform-foundation until ported into gitlab-ci-with-code-reviewer's lang-go.yml.
