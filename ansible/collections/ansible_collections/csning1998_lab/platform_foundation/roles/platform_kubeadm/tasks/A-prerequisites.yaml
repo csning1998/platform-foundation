@@ -3,7 +3,7 @@
   block:
     - name: "A1a. Identify Host-only interface from facts"
       ansible.builtin.set_fact:
-        kubeadm_ha_interface: "{{ item }}"
+        platform_kubeadm_ha_interface: "{{ item }}"
       loop: "{{ ansible_facts.interfaces }}"
       when:
         - item != 'lo'
@@ -13,15 +13,15 @@
         - not (ansible_facts[item]['ipv4']['address'].startswith(kubeadm_nat_subnet_prefix | default('10.0.2')))
       no_log: true
 
-    - name: "A1b. Set kubeadm_advertise_ip fact"
+    - name: "A1b. Set platform_kubeadm_advertise_ip fact"
       ansible.builtin.set_fact:
-        kubeadm_advertise_ip: "{{ ansible_facts[kubeadm_ha_interface]['ipv4']['address'] }}"
-      when: kubeadm_ha_interface is defined
+        platform_kubeadm_advertise_ip: "{{ ansible_facts[platform_kubeadm_ha_interface]['ipv4']['address'] }}"
+      when: platform_kubeadm_ha_interface is defined
 
     - name: "A1c. Fail if advertisement IP could not be determined"
       ansible.builtin.fail:
         msg: "Could not dynamically determine the advertisement IP using prefix exclusion."
-      when: kubeadm_advertise_ip is not defined
+      when: platform_kubeadm_advertise_ip is not defined
 
   rescue:
     - name: "Block A1: Dynamically discover the Host-only network interface for Kubeadm failed"
@@ -61,7 +61,8 @@
   block:
     - name: "A3a. Pre-calculate Registry Configurations"
       ansible.builtin.set_fact:
-        _containerd_registry_configs: "{{ lookup('template', 'containerd_registry_configs.j2') | from_yaml }}"
+        _platform_kubeadm_containerd_registry_configs: >-
+          {{ lookup('template', 'containerd_registry_configs.j2') | from_yaml }}
 
     - name: "A3c. Ensure Mirror Directories Exist"
       ansible.builtin.file:
@@ -70,7 +71,7 @@
         owner: root
         group: root
         mode: "0755"
-      loop: "{{ _containerd_registry_configs }}"
+      loop: "{{ _platform_kubeadm_containerd_registry_configs }}"
 
     - name: "A3d. Deploy hosts.toml for Harbor Registry"
       ansible.builtin.template:
@@ -80,7 +81,7 @@
         group: root
         mode: "0644"
       notify: Restart containerd service
-      loop: "{{ _containerd_registry_configs }}"
+      loop: "{{ _platform_kubeadm_containerd_registry_configs }}"
 
   rescue:
     - name: "Block A3: Configure Containerd Registry endpoint failed"

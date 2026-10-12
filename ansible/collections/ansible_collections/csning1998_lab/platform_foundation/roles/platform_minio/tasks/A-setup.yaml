@@ -9,16 +9,16 @@
   community.general.filesystem:
     fstype: xfs
     dev: "{{ item.device }}"
-  loop: "{{ minio_data_drives }}"
+  loop: "{{ platform_minio_data_drives }}"
 
 - name: "A3. Create mount points"
   ansible.builtin.file:
     path: "{{ item.mount_point }}"
     state: directory
-    owner: "{{ minio_user }}"
-    group: "{{ minio_group }}"
+    owner: "{{ platform_minio_user }}"
+    group: "{{ platform_minio_group }}"
     mode: "0750"
-  loop: "{{ minio_data_drives }}"
+  loop: "{{ platform_minio_data_drives }}"
 
 - name: "A4. Mount drives and persist in fstab"
   ansible.posix.mount:
@@ -27,13 +27,13 @@
     fstype: xfs
     opts: noatime
     state: mounted
-  loop: "{{ minio_data_drives }}"
+  loop: "{{ platform_minio_data_drives }}"
 
 - name: "A5. Ensure ownership of mount points (Recursive)"
   ansible.builtin.file:
     path: "{{ item.mount_point }}"
     state: directory
-    owner: "{{ minio_user }}"
-    group: "{{ minio_group }}"
+    owner: "{{ platform_minio_user }}"
+    group: "{{ platform_minio_group }}"
     recurse: true
-  loop: "{{ minio_data_drives }}"
+  loop: "{{ platform_minio_data_drives }}"

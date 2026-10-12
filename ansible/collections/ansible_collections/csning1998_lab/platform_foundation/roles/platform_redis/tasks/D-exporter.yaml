@@ -7,7 +7,7 @@
     owner: root
     group: root
     mode: "0600"
-  register: _redis_exporter_vault_hcl
+  register: _platform_redis_exporter_vault_hcl
 
 - name: "Step 2. Deploy vault-agent-kv service for redis-exporter"
   become: true
@@ -17,7 +17,7 @@
     owner: root
     group: root
     mode: "0644"
-  register: _redis_exporter_vault_svc
+  register: _platform_redis_exporter_vault_svc
 
 - name: "Step 3. Enable and start vault-agent-redis-exporter"
   become: true
@@ -25,14 +25,14 @@
     name: vault-agent-redis-exporter
     state: started
     enabled: true
-    daemon_reload: "{{ _redis_exporter_vault_svc.changed }}"
+    daemon_reload: "{{ _platform_redis_exporter_vault_svc.changed }}"
 
 - name: "Step 4. Restart vault-agent-redis-exporter if config changed"
   become: true
   ansible.builtin.systemd:
     name: vault-agent-redis-exporter
     state: restarted
-  when: _redis_exporter_vault_hcl.changed or _redis_exporter_vault_svc.changed
+  when: _platform_redis_exporter_vault_hcl.changed or _platform_redis_exporter_vault_svc.changed
 
 - name: "Step 5. Wait for env file to be rendered"
   become: true

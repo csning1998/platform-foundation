@@ -5,17 +5,17 @@ nodeRegistration:
   name: "{{ inventory_hostname }}"
   kubeletExtraArgs:
     - name: "cgroup-driver"
-      value: "{{ k8s_cgroup_driver }}"
+      value: "{{ platform_kubeadm_k8s_cgroup_driver }}"
     - name: "node-ip"
-      value: "{{ kubeadm_advertise_ip }}"
+      value: "{{ platform_kubeadm_advertise_ip }}"
 discovery:
   bootstrapToken:
 {% if (groups['master'] | length) > 1 %}
-    apiServerEndpoint: "{{ kubeadm_ha_vip }}:6443"
+    apiServerEndpoint: "{{ platform_kubeadm_ha_vip }}:6443"
 {% else %}
-    apiServerEndpoint: "{{ hostvars[groups['master'][0]]['kubeadm_advertise_ip'] }}:6443"
+    apiServerEndpoint: "{{ hostvars[groups['master'][0]]['platform_kubeadm_advertise_ip'] }}:6443"
 {% endif %}
-    token: "{{ hostvars[groups['master'][0]]['kubeadm_token'] }}"
+    token: "{{ hostvars[groups['master'][0]]['platform_kubeadm_token'] }}"
     caCertHashes:
-      - "sha256:{{ hostvars[groups['master'][0]]['kubeadm_ca_hash'] }}"
-    unsafeSkipCAVerification: {{ k8s_join_skip_ca_verification | lower }}
+      - "sha256:{{ hostvars[groups['master'][0]]['platform_kubeadm_ca_hash'] }}"
+    unsafeSkipCAVerification: {{ platform_kubeadm_k8s_join_skip_ca_verification | lower }}

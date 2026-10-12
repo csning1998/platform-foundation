@@ -2,10 +2,10 @@
 - name: "F1. Check if node is already joined"
   ansible.builtin.stat:
     path: "/etc/kubernetes/kubelet.conf"
-  register: kubelet_conf_stat
+  register: platform_kubeadm_kubelet_conf_stat
 
 - name: "F2. Prepare worker node for joining"
-  when: not kubelet_conf_stat.stat.exists
+  when: not platform_kubeadm_kubelet_conf_stat.stat.exists
   block:
     - name: "F2a. Reset any previous kubeadm configuration"
       ansible.builtin.command:
@@ -24,7 +24,7 @@
         msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
 
 - name: "F3. Join this worker node to the cluster"
-  when: not kubelet_conf_stat.stat.exists
+  when: not platform_kubeadm_kubelet_conf_stat.stat.exists
   block:
     - name: "F3a. Create kubeadm join config file from template"
       ansible.builtin.template:
@@ -37,15 +37,15 @@
         kubeadm join --config=/tmp/kubeadm-join-config.yaml
       args:
         creates: "/etc/kubernetes/kubelet.conf"
-      register: kubeadm_join_result
+      register: platform_kubeadm_join_result
 
     - name: "F3c. Fail if kubeadm join command failed"
       ansible.builtin.fail:
         msg: |
           kubeadm join failed on {{ inventory_hostname }}.
-          STDOUT: {{ kubeadm_join_result.stdout | default('N/A') }}
-          STDERR: {{ kubeadm_join_result.stderr | default('N/A') }}
-      when: kubeadm_join_result.rc is defined and kubeadm_join_result.rc != 0
+          STDOUT: {{ platform_kubeadm_join_result.stdout | default('N/A') }}
+          STDERR: {{ platform_kubeadm_join_result.stderr | default('N/A') }}
+      when: platform_kubeadm_join_result.rc is defined and platform_kubeadm_join_result.rc != 0
 
   rescue:
     - name: "F3. Join this worker node to the cluster failed"
@@ -57,4 +57,6 @@
     kubeadm upgrade node phase kubelet-config
   changed_when: true
   notify: "Restart kubelet"
-  when: kubelet_conf_stat.stat.exists and hostvars[groups['master'][0]]['kubeadm_config_result'].changed | default(false)
+  when:
+    - platform_kubeadm_kubelet_conf_stat.stat.exists
+    - hostvars[groups['master'][0]]['platform_kubeadm_config_result'].changed | default(false)

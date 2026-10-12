@@ -9,11 +9,11 @@
       loop:
         - keepalived
         - haproxy
-      register: _purge_services
+      register: _platform_kubeadm_purge_services
       failed_when:
-        - _purge_services.failed
-        - "'Could not find the requested service' not in _purge_services.msg"
-        - "'not found' not in _purge_services.msg"
+        - _platform_kubeadm_purge_services.failed
+        - "'Could not find the requested service' not in _platform_kubeadm_purge_services.msg"
+        - "'not found' not in _platform_kubeadm_purge_services.msg"
 
     - name: "B1b. Remove HAProxy and Keepalived packages"
       ansible.builtin.apt:
@@ -25,7 +25,7 @@
 
     - name: "B1c. Clean up stale VIP configurations"
       ansible.builtin.shell: |
-        ip addr del {{ kubeadm_ha_vip }}/32 dev enp0s4 || true
+        ip addr del {{ platform_kubeadm_ha_vip }}/32 dev enp0s4 || true
       changed_when: false
 
   rescue:

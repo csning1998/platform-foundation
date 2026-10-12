@@ -1,7 +1,7 @@
 global
     log /dev/log local0
     log /dev/log local1 notice
-    maxconn {{ haproxy_maxconn }}
+    maxconn {{ platform_kubeadm_haproxy_maxconn }}
     user haproxy
     group haproxy
     daemon
@@ -10,13 +10,13 @@ defaults
     log global
     mode tcp
     option tcplog
-    timeout connect {{ haproxy_timeout_connect }}
-    timeout client {{ haproxy_timeout_client }}
-    timeout server {{ haproxy_timeout_server }}
+    timeout connect {{ platform_kubeadm_haproxy_timeout_connect }}
+    timeout client {{ platform_kubeadm_haproxy_timeout_client }}
+    timeout server {{ platform_kubeadm_haproxy_timeout_server }}
 
 # GitLab HTTP Ingress routing port 80 traffic to NodePort 30080.
 frontend gitlab_http
-    bind {{ kubeadm_ha_vip }}:80
+    bind {{ platform_kubeadm_ha_vip }}:80
     mode tcp
     default_backend gitlab_http_backend
 
@@ -30,7 +30,7 @@ backend gitlab_http_backend
 
 # GitLab HTTPS Ingress routing port 443 traffic to NodePort 30443.
 frontend gitlab_https
-    bind {{ kubeadm_ha_vip }}:443
+    bind {{ platform_kubeadm_ha_vip }}:443
     mode tcp
     default_backend gitlab_https_backend
 

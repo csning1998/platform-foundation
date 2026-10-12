@@ -19,8 +19,8 @@
   ansible.builtin.include_role:
     name: csning1998_lab.platform_foundation.utils_vault_agent
   vars:
-    vault_agent_owner: "{{ minio_user }}"
-    vault_agent_group: "{{ minio_group }}"
+    vault_agent_owner: "{{ platform_minio_user }}"
+    vault_agent_group: "{{ platform_minio_group }}"
     vault_agent_cert_base_dir: "/etc/minio/certs"
     vault_agent_cert_dirs:
       - "/etc/minio/certs"

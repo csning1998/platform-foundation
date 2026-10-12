@@ -60,16 +60,16 @@
     - name: "Step B3. Check if UFW is installed"
       ansible.builtin.stat:
         path: /usr/sbin/ufw
-      register: ufw_stat
+      register: platform_etcd_ufw_stat
 
     - name: "Step B4. Allow Etcd Client port from Postgres subnet"
       community.general.ufw:
         rule: allow
-        port: "{{ etcd_client_port }}"
+        port: "{{ platform_etcd_client_port }}"
         proto: tcp
         src: "{{ item }}"
       loop: "{{ postgres_mtls_node_subnet.split(' ') }}"
-      when: ufw_stat.stat.exists
+      when: platform_etcd_ufw_stat.stat.exists
 
   rescue:
     - name: "Section B: Configure etcd Service failed"

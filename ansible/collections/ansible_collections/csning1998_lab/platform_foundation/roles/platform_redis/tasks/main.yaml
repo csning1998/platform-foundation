@@ -19,8 +19,8 @@
   ansible.builtin.include_role:
     name: csning1998_lab.platform_foundation.utils_vault_agent
   vars:
-    vault_agent_owner: "{{ redis_user }}"
-    vault_agent_group: "{{ redis_group }}"
+    vault_agent_owner: "{{ platform_redis_user }}"
+    vault_agent_group: "{{ platform_redis_group }}"
     vault_agent_cert_base_dir: "/etc/redis/certs"
     vault_agent_post_command: "systemctl restart redis-server redis-sentinel"
     vault_agent_ip_sans: "{{ advertise_ip }},{{ redis_vip }}"

@@ -1,11 +1,11 @@
 ---
 # Redis Service Configuration
-redis_user: "redis"
-redis_group: "redis"
+platform_redis_user: "redis"
+platform_redis_group: "redis"
 
 # Sentinel Configuration
-sentinel_master_name: "{{ service_identifier }}-sentinel_master"
+platform_redis_sentinel_master_name: "{{ service_identifier }}-sentinel_master"
 
 # Sentinel Tuning
-sentinel_down_after_milliseconds: 5000
-sentinel_failover_timeout: 180000
+platform_redis_sentinel_down_after_milliseconds: 5000
+platform_redis_sentinel_failover_timeout: 180000

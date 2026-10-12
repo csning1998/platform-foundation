@@ -2,7 +2,7 @@
 # Define Server Pool / data storage (distributed nodes and disks) location
 MINIO_VOLUMES="
 {%- for ip in minio_cluster_ips -%}
-https://{{ ip }}:9000/data{1...{{ minio_data_drives | length }}}{{ " " }}
+https://{{ ip }}:9000/data{1...{{ platform_minio_data_drives | length }}}{{ " " }}
 {%- endfor -%}
 "
 

@@ -1,13 +1,13 @@
 ---
-postgres_user: "postgres"
-postgres_group: "postgres"
-postgres_version: 18
-postgres_mtls_pod_subnet: "10.1.0.0/16"
-password_encryption: "scram-sha-256"
-postgres_port: 5432
-patroni_restapi_port: 8008
+platform_postgres_user: "postgres"
+platform_postgres_group: "postgres"
+platform_postgres_version: 18
+platform_postgres_mtls_pod_subnet: "10.1.0.0/16"
+platform_postgres_password_encryption: "scram-sha-256"
+platform_postgres_port: 5432
+platform_postgres_patroni_restapi_port: 8008
 
-# When set, vault identity is sourced from vault_agent_identities_json[postgres_vault_role_key]
+# When set, vault identity is sourced from vault_agent_identities_json[platform_postgres_vault_role_key]
 # instead of the flat vars injected by the middleware (used in multi-component layers).
 # Leave null for standalone postgres layers.
-postgres_vault_role_key: null
+platform_postgres_vault_role_key: null

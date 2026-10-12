@@ -19,8 +19,8 @@
 
     - name: "B1e. Force update CA certificates to validate Vault API"
       ansible.builtin.command: update-ca-certificates
-      register: ca_update_result
-      changed_when: "'0 added, 0 removed' not in ca_update_result.stdout"
+      register: platform_microk8s_ca_update_result
+      changed_when: "'0 added, 0 removed' not in platform_microk8s_ca_update_result.stdout"
 
     - name: "B1f. Download Vault PKI Issuing CA directly from Vault API"
       ansible.builtin.get_url:
@@ -47,7 +47,8 @@
   block:
     - name: "B2a. Pre-calculate Registry Configurations"
       ansible.builtin.set_fact:
-        _containerd_registry_configs: "{{ lookup('template', 'containerd_registry_configs.j2') | from_yaml }}"
+        _platform_microk8s_containerd_registry_configs: >-
+          {{ lookup('template', 'containerd_registry_configs.j2') | from_yaml }}
 
     - name: "B2c. Ensure Mirror Directories Exist"
       ansible.builtin.file:
@@ -56,7 +57,7 @@
         owner: root
         group: root
         mode: "0755"
-      loop: "{{ _containerd_registry_configs }}"
+      loop: "{{ _platform_microk8s_containerd_registry_configs }}"
 
     - name: "B2d. Deploy hosts.toml (Standard Registry & Inception redirection)"
       ansible.builtin.template:
@@ -66,7 +67,7 @@
         group: root
         mode: "0644"
       notify: Restart MicroK8s Containerd
-      loop: "{{ _containerd_registry_configs }}"
+      loop: "{{ _platform_microk8s_containerd_registry_configs }}"
 
   rescue:
     - name: "Block B2: Configure Containerd Registry endpoint (MicroK8s Snap) failed"

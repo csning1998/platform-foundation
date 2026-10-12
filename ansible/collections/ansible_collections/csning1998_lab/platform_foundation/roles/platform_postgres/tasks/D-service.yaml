@@ -4,7 +4,7 @@
     - name: "C1a. Check if UFW is installed"
       ansible.builtin.stat:
         path: /usr/sbin/ufw
-      register: patroni_ufw_stat
+      register: platform_postgres_patroni_ufw_stat
 
     - name: "C1b. Allow Postgres and Patroni ports"
       community.general.ufw:
@@ -13,9 +13,9 @@
         proto: tcp
         src: "{{ item.1 }}"
       with_nested:
-        - ["{{ postgres_port }}", "{{ patroni_restapi_port }}"]
+        - ["{{ platform_postgres_port }}", "{{ platform_postgres_patroni_restapi_port }}"]
         - "{{ postgres_mtls_node_subnet.split(' ') }}"
-      when: patroni_ufw_stat.stat.exists
+      when: platform_postgres_patroni_ufw_stat.stat.exists
 
     - name: "C1c. Reload systemd and start Patroni"
       ansible.builtin.systemd:
@@ -35,7 +35,7 @@
     - name: "C1d. Wait for Postgres to accept connections"
       ansible.builtin.wait_for:
         host: "{{ advertise_ip }}"
-        port: "{{ postgres_port }}"
+        port: "{{ platform_postgres_port }}"
         timeout: 60
       when:
         - praefect_db_password is defined
@@ -47,10 +47,10 @@
     # They connect via the local node's advertise_ip to bypass the HAProxy VIP mTLS requirement.
     - name: "C1d2. Detect Patroni leader via REST API"
       ansible.builtin.uri:
-        url: "http://{{ advertise_ip }}:{{ patroni_restapi_port }}/leader"
+        url: "http://{{ advertise_ip }}:{{ platform_postgres_patroni_restapi_port }}/leader"
         status_code: [200, 503]
         return_content: false
-      register: patroni_leader_status
+      register: platform_postgres_patroni_leader_status
       changed_when: false
       when:
         - praefect_db_password is defined
@@ -67,43 +67,43 @@
         cmd: >-
           psql
           -h {{ advertise_ip }}
-          -p {{ postgres_port }}
+          -p {{ platform_postgres_port }}
           -U postgres
           -c "CREATE ROLE praefect WITH LOGIN ENCRYPTED PASSWORD '{{ praefect_db_password }}';"
       environment:
         PGPASSWORD: "{{ pg_superuser_password }}"
-      register: praefect_pg_user
+      register: platform_postgres_praefect_pg_user
       failed_when:
-        - praefect_pg_user.rc != 0
-        - "'already exists' not in praefect_pg_user.stderr"
-      changed_when: "'CREATE ROLE' in praefect_pg_user.stdout"
+        - platform_postgres_praefect_pg_user.rc != 0
+        - "'already exists' not in platform_postgres_praefect_pg_user.stderr"
+      changed_when: "'CREATE ROLE' in platform_postgres_praefect_pg_user.stdout"
       no_log: true
       when:
         - praefect_db_password is defined
         - praefect_db_password | length > 0
-        - patroni_leader_status is defined
-        - patroni_leader_status.status == 200
+        - platform_postgres_patroni_leader_status is defined
+        - platform_postgres_patroni_leader_status.status == 200
 
     - name: "C1f. Create praefect_production database"
       ansible.builtin.command:
         cmd: >-
           psql
           -h {{ advertise_ip }}
-          -p {{ postgres_port }}
+          -p {{ platform_postgres_port }}
           -U postgres
           -c "CREATE DATABASE praefect_production WITH OWNER praefect ENCODING 'UTF8';"
       environment:
         PGPASSWORD: "{{ pg_superuser_password }}"
-      register: praefect_pg_db
+      register: platform_postgres_praefect_pg_db
       failed_when:
-        - praefect_pg_db.rc != 0
-        - "'already exists' not in praefect_pg_db.stderr"
-      changed_when: "'CREATE DATABASE' in praefect_pg_db.stdout"
+        - platform_postgres_praefect_pg_db.rc != 0
+        - "'already exists' not in platform_postgres_praefect_pg_db.stderr"
+      changed_when: "'CREATE DATABASE' in platform_postgres_praefect_pg_db.stdout"
       when:
         - praefect_db_password is defined
         - praefect_db_password | length > 0
-        - patroni_leader_status is defined
-        - patroni_leader_status.status == 200
+        - platform_postgres_patroni_leader_status is defined
+        - platform_postgres_patroni_leader_status.status == 200
 
   rescue:
     - name: "Block C1: Start and Enable Patroni Service failed"
