@@ -74,7 +74,7 @@
   hosts: "base-baremetal-haproxy"
   become: true
   roles:
-    - base_baremetal_haproxy
+    - csning1998_lab.platform_foundation.base_baremetal_haproxy
 
 - name: "Play: Provision Etcd (Base) Image"
   hosts: "base-baremetal-etcd"

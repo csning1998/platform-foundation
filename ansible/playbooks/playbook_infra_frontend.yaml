@@ -24,7 +24,7 @@
   hosts: "{{ 'haproxy' if 'haproxy' in groups else [] }}"
   become: true
   roles:
-    - platform_haproxy
+    - csning1998_lab.platform_foundation.platform_haproxy
 #
 # Generic MicroK8s Cluster
 # Commented out: infra_microk8s role is not committed yet.

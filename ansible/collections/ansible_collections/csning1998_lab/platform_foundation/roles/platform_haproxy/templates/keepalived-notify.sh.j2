@@ -8,7 +8,7 @@ set -euo pipefail
 # preventing all state series from defaulting to 0.
 STATE="${3:-UNKNOWN}"
 
-OUTPUT_DIR="{{ node_exporter_textfile_directory }}"
+OUTPUT_DIR="{{ utils_common_defaults_node_exporter_textfile_directory }}"
 TARGET_FILE="${OUTPUT_DIR}/keepalived_vrrp_state.prom"
 mkdir -p "${OUTPUT_DIR}"
 TMP_FILE=$(mktemp "${OUTPUT_DIR}/.keepalived_vrrp_state.XXXXXX")
