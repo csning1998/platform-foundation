@@ -34,3 +34,10 @@
   become: true
   roles:
     - csning1998_lab.platform_foundation.platform_redis
+
+# MinIO Distributed
+- name: "Play [MinIO]: Configure MinIO High Availability Cluster"
+  hosts: "{{ 'minio' if 'minio' in groups else [] }}"
+  become: true
+  roles:
+    - csning1998_lab.platform_foundation.platform_minio

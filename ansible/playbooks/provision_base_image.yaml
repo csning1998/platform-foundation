@@ -55,7 +55,7 @@
   hosts: "base-baremetal-minio"
   become: true
   roles:
-    - base_baremetal_minio
+    - csning1998_lab.platform_foundation.base_baremetal_minio
     - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision Vault (Singular) Base Image"
