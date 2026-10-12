@@ -3,14 +3,14 @@
   hosts: "all"
   become: true
   roles:
-    - foundation_common
+    - csning1998_lab.platform_foundation.foundation_common
 
 - name: "Play: Provision Docker Base Image for Keycloak for OIDC"
   hosts: "base-docker-keycloak"
   become: true
   roles:
-    - base_docker
-    - base_docker_spiffe_helper
+    - csning1998_lab.platform_foundation.base_docker
+    - csning1998_lab.platform_foundation.base_docker_spiffe_helper
     - base_baremetal_vault
     - base_docker_keycloak
 
@@ -18,8 +18,8 @@
   hosts: "base-docker-harbor"
   become: true
   roles:
-    - base_docker
-    - base_docker_spiffe_helper
+    - csning1998_lab.platform_foundation.base_docker
+    - csning1998_lab.platform_foundation.base_docker_spiffe_helper
     - base_baremetal_vault
     - base_docker_harbor
 
@@ -86,4 +86,4 @@
   hosts: "all"
   become: true
   roles:
-    - foundation_image_finalization
+    - csning1998_lab.platform_foundation.foundation_image_finalization

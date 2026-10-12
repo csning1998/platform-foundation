@@ -13,7 +13,7 @@
         update_cache: true
 
     - name: "Step 2. Check installed Alloy version"
-      ansible.builtin.command: "{{ alloy_agent_bin }} --version"
+      ansible.builtin.command: "{{ foundation_common_alloy_agent_bin }} --version"
       register: foundation_common_alloy_installed_version
       changed_when: false
       failed_when: false
@@ -22,31 +22,31 @@
       ansible.builtin.set_fact:
         foundation_common_alloy_needs_install: >-
           {{ foundation_common_alloy_installed_version.rc != 0
-              or alloy_agent_version != (foundation_common_alloy_installed_version.stdout | default('')
+              or foundation_common_alloy_agent_version != (foundation_common_alloy_installed_version.stdout | default('')
               | regex_search('[0-9]+\.[0-9]+\.[0-9]+') | default(''))
           }}
 
     - name: "Step 3. Download Alloy archive with checksum verification"
       ansible.builtin.get_url:
         url:
-          "https://github.com/grafana/alloy/releases/download/v{{ alloy_agent_version }}/\
-          alloy-{{ alloy_agent_os }}-{{ alloy_agent_arch }}.zip"
-        dest: "/tmp/alloy-{{ alloy_agent_os }}-{{ alloy_agent_arch }}.zip"
-        checksum: "sha256:{{ alloy_agent_sha256 }}"
+          "https://github.com/grafana/alloy/releases/download/v{{ foundation_common_alloy_agent_version }}/\
+          alloy-{{ foundation_common_alloy_agent_os }}-{{ foundation_common_alloy_agent_arch }}.zip"
+        dest: "/tmp/alloy-{{ foundation_common_alloy_agent_os }}-{{ foundation_common_alloy_agent_arch }}.zip"
+        checksum: "sha256:{{ foundation_common_alloy_agent_sha256 }}"
         mode: "0644"
       when: foundation_common_alloy_needs_install
 
     - name: "Step 4. Extract Alloy archive to staging directory"
       ansible.builtin.unarchive:
-        src: "/tmp/alloy-{{ alloy_agent_os }}-{{ alloy_agent_arch }}.zip"
+        src: "/tmp/alloy-{{ foundation_common_alloy_agent_os }}-{{ foundation_common_alloy_agent_arch }}.zip"
         dest: /tmp
         remote_src: true
       when: foundation_common_alloy_needs_install
 
     - name: "Step 5. Install Alloy binary"
       ansible.builtin.copy:
-        src: "/tmp/alloy-{{ alloy_agent_os }}-{{ alloy_agent_arch }}"
-        dest: "{{ alloy_agent_bin }}"
+        src: "/tmp/alloy-{{ foundation_common_alloy_agent_os }}-{{ foundation_common_alloy_agent_arch }}"
+        dest: "{{ foundation_common_alloy_agent_bin }}"
         remote_src: true
         owner: root
         group: root
@@ -58,43 +58,43 @@
         path: "{{ item }}"
         state: absent
       loop:
-        - "/tmp/alloy-{{ alloy_agent_os }}-{{ alloy_agent_arch }}.zip"
-        - "/tmp/alloy-{{ alloy_agent_os }}-{{ alloy_agent_arch }}"
+        - "/tmp/alloy-{{ foundation_common_alloy_agent_os }}-{{ foundation_common_alloy_agent_arch }}.zip"
+        - "/tmp/alloy-{{ foundation_common_alloy_agent_os }}-{{ foundation_common_alloy_agent_arch }}"
       when: foundation_common_alloy_needs_install
 
     - name: "Step 7. Create Alloy system group"
       ansible.builtin.group:
-        name: "{{ alloy_agent_group }}"
+        name: "{{ foundation_common_alloy_agent_group }}"
         system: true
         state: present
 
     - name: "Step 8. Create Alloy system user with journal read access"
       ansible.builtin.user:
-        name: "{{ alloy_agent_user }}"
-        group: "{{ alloy_agent_group }}"
+        name: "{{ foundation_common_alloy_agent_user }}"
+        group: "{{ foundation_common_alloy_agent_group }}"
         groups: systemd-journal
         append: true
         system: true
         shell: /usr/sbin/nologin
         create_home: false
-        home: "{{ alloy_agent_config_dir }}"
+        home: "{{ foundation_common_alloy_agent_config_dir }}"
 
     - name: "Step 9. Create Alloy config and data directories"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
-        owner: "{{ alloy_agent_user }}"
-        group: "{{ alloy_agent_group }}"
+        owner: "{{ foundation_common_alloy_agent_user }}"
+        group: "{{ foundation_common_alloy_agent_group }}"
         mode: "0750"
       loop:
-        - "{{ alloy_agent_config_dir }}"
-        - "{{ alloy_agent_data_dir }}"
+        - "{{ foundation_common_alloy_agent_config_dir }}"
+        - "{{ foundation_common_alloy_agent_data_dir }}"
 
     - name: "Step 10. Deploy Alloy default arguments"
       ansible.builtin.copy:
         content: |
-          CONFIG_FILE="{{ alloy_agent_config_dir }}/config.alloy"
-          CUSTOM_ARGS="--storage.path={{ alloy_agent_data_dir }}"
+          CONFIG_FILE="{{ foundation_common_alloy_agent_config_dir }}/config.alloy"
+          CUSTOM_ARGS="--storage.path={{ foundation_common_alloy_agent_data_dir }}"
         dest: /etc/default/alloy
         owner: root
         group: root

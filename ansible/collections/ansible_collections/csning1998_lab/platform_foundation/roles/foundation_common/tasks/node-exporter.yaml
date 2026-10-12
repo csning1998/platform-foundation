@@ -10,7 +10,7 @@
 
     - name: "Step 2. Ensure textfile collector directory exists"
       ansible.builtin.file:
-        path: "{{ node_exporter_textfile_directory }}"
+        path: "{{ utils_common_defaults_node_exporter_textfile_directory }}"
         state: directory
         owner: root
         group: root
@@ -19,7 +19,7 @@
     - name: "Step 3. Configure textfile collector flag"
       ansible.builtin.copy:
         content: |
-          ARGS="--collector.textfile.directory={{ node_exporter_textfile_directory }}"
+          ARGS="--collector.textfile.directory={{ utils_common_defaults_node_exporter_textfile_directory }}"
         dest: /etc/default/prometheus-node-exporter
         owner: root
         group: root

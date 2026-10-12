@@ -1,4 +1,0 @@
----
-foundation_common_node_exporter_base:
-  package: prometheus-node-exporter
-  service: prometheus-node-exporter
