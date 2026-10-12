@@ -12,7 +12,7 @@
   hosts: "{{ 'harbor_origin' if 'harbor_origin' in groups else [] }}"
   become: true
   roles:
-    - platform_harbor_origin
+    - csning1998_lab.platform_foundation.platform_harbor_origin
 
 - name: "Play [Keycloak]: Configure Keycloak Container"
   hosts: "{{ 'keycloak' if 'keycloak' in groups else [] }}"

@@ -4,7 +4,7 @@
   gather_facts: false
   become: true
   roles:
-    - role: provision_harbor_origin
+    - role: csning1998_lab.platform_foundation.provision_harbor_origin
 
 - name: SPIRE Child Registration on the SPIRE Parent
   hosts: "{{ 'spire_child_registration' if 'spire_child_registration' in groups else [] }}"

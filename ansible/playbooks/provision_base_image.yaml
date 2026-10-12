@@ -21,7 +21,7 @@
     - csning1998_lab.platform_foundation.base_docker
     - csning1998_lab.platform_foundation.base_docker_spiffe_helper
     - csning1998_lab.platform_foundation.base_baremetal_vault
-    - base_docker_harbor
+    - csning1998_lab.platform_foundation.base_docker_harbor
 
 - name: "Play: Provision Kubernetes (Kubeadm) Base Image"
   hosts: "base-kubernetes-kubeadm"

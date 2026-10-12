@@ -1,7 +1,7 @@
 ---
 - name: "Step 0. Read the Harbor Robot credentials from the Downstream Vault"
   ansible.builtin.include_role:
-    name: utils_vault_kv2_read
+    name: csning1998_lab.platform_foundation.utils_vault_kv2_read
   vars:
     utils_vault_kv2_read_access:
       endpoint: "{{ vault_endpoint }}"
