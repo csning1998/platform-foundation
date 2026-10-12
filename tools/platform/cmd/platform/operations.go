@@ -54,9 +54,8 @@ func (a *app) reportVaultStatus(ctx context.Context) error {
 	return nil
 }
 
-func (a *app) unsealProdVault(ctx context.Context) error {
-	inv := a.env.Get(config.KeyProdVaultInventoryFile)
-	return vaultops.UnsealProduction(ctx, a.newVaultPaths(), inv, a.out)
+func (a *app) unsealDownstreamVault(ctx context.Context) error {
+	return vaultops.UnsealDownstream(ctx, a.newVaultPaths(), os.Getenv, a.out)
 }
 
 func (a *app) generateSSHKey(keyName string, overwrite bool) error {

@@ -115,7 +115,7 @@ func execute() int {
 				// runMenu bootstraps itself after printing the title banner.
 				return nil
 			}
-			env, err := config.BootstrapEnv(a.root, a.packerDir, a.terraform, a.ansibleDir, resolveBootstrapPrinter(cmd, a.out))
+			env, err := config.BootstrapEnv(a.root, a.packerDir, a.terraform, resolveBootstrapPrinter(cmd, a.out))
 			if err != nil {
 				return err
 			}

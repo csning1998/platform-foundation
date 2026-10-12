@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"io"
 	"math/big"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 
 	"platform/internal/config"
 	"platform/internal/ui"
+	"platform/internal/vaultops"
 )
 
 func generateTestCACert(t *testing.T, targetPath string) {
@@ -115,11 +117,12 @@ func TestReportVaultStatus_SucceedsWhenReachable(t *testing.T) {
 	}
 }
 
-func TestUnsealProdVault_FailsWhenInventoryMissing(t *testing.T) {
+func TestUnsealDownstreamVault_RequiresTheProxyEnvironment(t *testing.T) {
 	a, _ := newOperationsApp(t, "")
-	err := a.unsealProdVault(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "no Production Vault inventory") {
-		t.Fatalf("unsealProdVault = %v, want no Production Vault inventory", err)
+	t.Setenv("VAULT_ADDR", "")
+	err := a.unsealDownstreamVault(context.Background())
+	if !errors.Is(err, vaultops.ErrProxyEnvironmentMissing) {
+		t.Fatalf("unsealDownstreamVault = %v, want ErrProxyEnvironmentMissing", err)
 	}
 }
 
@@ -254,15 +257,18 @@ func TestVaultStatusCommand_ExecutesReportVaultStatus(t *testing.T) {
 	}
 }
 
-func TestVaultUnsealProdCommand_FailsWhenInventoryMissing(t *testing.T) {
+func TestVaultUnsealDownstreamCommand_RequiresTheLayerInventory(t *testing.T) {
 	a, _ := newOperationsApp(t, "")
+	for _, key := range []string{"VAULT_ADDR", "VAULT_CACERT", "VAULT_TOKEN", "VAULT_CLIENT_CERT", "VAULT_CLIENT_KEY"} {
+		t.Setenv(key, "example")
+	}
 	cmd := a.vaultCmd()
-	cmd.SetArgs([]string{"unseal-prod"})
+	cmd.SetArgs([]string{"unseal-downstream"})
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
 	err := cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "no Production Vault inventory") {
-		t.Fatalf("vault unseal-prod = %v, want no Production Vault inventory", err)
+	if !errors.Is(err, vaultops.ErrDownstreamInventoryMissing) {
+		t.Fatalf("vault unseal-downstream = %v, want ErrDownstreamInventoryMissing", err)
 	}
 }
 

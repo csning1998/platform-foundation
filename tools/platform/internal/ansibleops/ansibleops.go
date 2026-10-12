@@ -12,17 +12,26 @@ import (
 // RunPlaybook executes playbookFile using opts while injecting ANSIBLE_CONFIG derived from ansibleDir.
 // If runDir is non-empty, sets the command execution directory to runDir to resolve relative playbook paths.
 func RunPlaybook(ctx context.Context, ansibleDir, runDir, playbookFile string, opts *playbook.AnsiblePlaybookOptions) error {
+	return RunPlaybookWithConfig(ctx, filepath.Join(ansibleDir, "ansible.cfg"), runDir, playbookFile, opts, nil)
+}
+
+// RunPlaybookWithConfig executes playbookFile under the configuration file configFile and the additional variables env.
+func RunPlaybookWithConfig(ctx context.Context, configFile, runDir, playbookFile string, opts *playbook.AnsiblePlaybookOptions, env map[string]string) error {
 	cmd := playbook.NewAnsiblePlaybookCmd(
 		playbook.WithPlaybooks(playbookFile),
 		playbook.WithPlaybookOptions(opts),
 	)
 
+	vars := map[string]string{
+		"ANSIBLE_CONFIG":      configFile,
+		"ANSIBLE_FORCE_COLOR": "1",
+	}
+	for k, v := range env {
+		vars[k] = v
+	}
 	execOpts := []execute.ExecuteOptions{
 		execute.WithCmd(cmd),
-		execute.WithEnvVars(map[string]string{
-			"ANSIBLE_CONFIG":      filepath.Join(ansibleDir, "ansible.cfg"),
-			"ANSIBLE_FORCE_COLOR": "1",
-		}),
+		execute.WithEnvVars(vars),
 	}
 	if runDir != "" {
 		execOpts = append(execOpts, execute.WithCmdRunDir(runDir))

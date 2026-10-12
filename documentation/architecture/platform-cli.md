@@ -24,14 +24,12 @@
 
 ### Item A. Vault Operations (`vault`)
 
-1. `platform vault tls-generate` MUST regenerate the Bastion Vault Certificate Authority and server certificates under `vault/tls/`.
-2. `platform vault tls-generate` MUST require explicit confirmation by typing `yes` before overwriting existing cryptographic assets.
-3. `platform vault init` MUST initialize the local Bastion Vault using 5 Shamir shares and a 3-share reconstruction threshold.
-4. `platform vault init` MUST persist unseal keys to `vault/keys/unseal.key`, persist the root token to `$HOME/.vault-token`, and execute auto-unseal.
-5. `platform vault init` MUST refuse execution if `vault/keys/init-output.json` already exists.
-6. `platform vault unseal` MUST read unseal keys from `vault/keys/unseal.key` and apply them to the Bastion Vault instance until the sealed status clears.
-7. `platform vault enable-kv` MUST mount the `kv-v2` secrets engine at path `secret/` if the mount is not present.
-8. `platform vault prod-unseal` MUST execute the `shared-vault-frontend` Ansible playbook with tag `vault-unseal` against the discovered Production Vault inventory.
+1. The lifecycle of the Bastion Vault, which covers TLS generation, initialization, unseal, and the root token, belongs to `./governance` of `parent-group-governance`.
+2. `platform vault status` MUST report the seal state of the Bastion Vault and of the Downstream Vault. The Downstream address and CA come from the outputs of `security-vault-downstream-tenants`.
+3. `platform vault unseal-downstream` MUST run `ansible/playbooks/playbook_platform.yaml` with tag `vault-unseal` under the `ansible.cfg` which `ansible-runner` rendered into `platform-vault-downstream-frontend`.
+4. `platform vault unseal-downstream` MUST read the inventory from that `ansible.cfg`, and MUST pass the sibling file `inventory-<cluster>-unseal-vars.json` as extra variables.
+5. `platform vault unseal-downstream` MUST refuse to run without `VAULT_ADDR`, `VAULT_CACERT`, `VAULT_TOKEN`, `VAULT_CLIENT_CERT`, and `VAULT_CLIENT_KEY` of the `platform-foundation` Vault Proxy, since the play reads the unseal keys from the Bastion Vault through that Proxy.
+6. The Talos runtime of the Downstream Vault unseals through transit, hence `platform vault unseal-downstream` serves the VM runtime alone.
 
 ### Item B. SSH Operations (`ssh`)
 
@@ -106,7 +104,7 @@ The interactive menu MUST present options in the following sequence:
 
 | Number | Menu Option Label                                          | Target Command                                                  |
 | ------ | ---------------------------------------------------------- | --------------------------------------------------------------- |
-| 1      | `[PROD] Unseal Production Vault via Ansible`               | `platform vault unseal-prod`                                    |
+| 1      | `[Downstream] Unseal Downstream Vault via Ansible`         | `platform vault unseal-downstream`                              |
 | 2      | `Generate SSH Key`                                         | Interactive prompt for key name, then `platform ssh keygen`     |
 | 3      | `Verify IaC Environment`                                   | `platform env verify`                                           |
 | 4      | `Execute Hypervisor Configuration via Ansible`             | `playbook_hypervisor.yaml` against a temporary local inventory  |
@@ -171,7 +169,7 @@ The interactive menu MUST present options in the following sequence:
 ## Section 6. Build Prerequisites and Compilation Constraints
 
 1. Compiling `internal/libvirtops` REQUIRES the `libvirt-devel` package on Fedora/RHEL systems or `libvirt-dev` on Debian/Ubuntu systems.
-2. System dependency installation is automated by Ansible role `ansible/roles/hypervisor_baseline/tasks/libvirt-dev-headers.yaml`.
+2. System dependency installation is automated by Ansible role `ansible/collections/ansible_collections/csning1998_lab/platform_foundation/roles/hypervisor_baseline/tasks/libvirt-dev-headers.yaml`.
 3. The build environment MUST support CGO compilation (`CGO_ENABLED=1`).
 
 ## Section 7. Quality Assurance and Testing Standards

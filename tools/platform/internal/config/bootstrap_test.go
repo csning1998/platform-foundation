@@ -41,10 +41,9 @@ func TestBootstrapEnv_FirstRunInitializesDefaults(t *testing.T) {
 	root := t.TempDir()
 	packerDir := filepath.Join(root, "packer")
 	terraformDir := filepath.Join(root, "terraform")
-	ansibleDir := filepath.Join(root, "ansible")
 	out := ui.New(io.Discard, io.Discard)
 
-	e, err := BootstrapEnv(root, packerDir, terraformDir, ansibleDir, out)
+	e, err := BootstrapEnv(root, packerDir, terraformDir, out)
 	if err != nil {
 		t.Fatalf("BootstrapEnv: %v", err)
 	}
@@ -56,7 +55,6 @@ func TestBootstrapEnv_FirstRunInitializesDefaults(t *testing.T) {
 		KeyAllTerraformLayers:  "",
 		KeyBastionVaultAddr:    DefaultBastionVaultAddr,
 		KeyBastionVaultCACert:  DefaultBastionVaultCACert,
-		KeyVaultToken:          "",
 		KeyUhome:               "${HOME}",
 		KeyPKRVarNetDevice:     "virtio-net",
 	}
@@ -88,13 +86,12 @@ func TestBootstrapEnv_SecondRunPreservesCustomStrategyAndKeys(t *testing.T) {
 	root := t.TempDir()
 	packerDir := filepath.Join(root, "packer")
 	terraformDir := filepath.Join(root, "terraform")
-	ansibleDir := filepath.Join(root, "ansible")
 	envPath := filepath.Join(root, ".env")
 
 	mustWriteFile(t, envPath, "ENVIRONMENT_STRATEGY=\"container\"\nCUSTOM_KEY=\"custom-value\"\n")
 
 	out := ui.New(io.Discard, io.Discard)
-	e, err := BootstrapEnv(root, packerDir, terraformDir, ansibleDir, out)
+	e, err := BootstrapEnv(root, packerDir, terraformDir, out)
 	if err != nil {
 		t.Fatalf("BootstrapEnv: %v", err)
 	}
@@ -134,7 +131,6 @@ func TestBootstrapEnv_BackfillsMissingStrategyOnExistingFile(t *testing.T) {
 	root := t.TempDir()
 	packerDir := filepath.Join(root, "packer")
 	terraformDir := filepath.Join(root, "terraform")
-	ansibleDir := filepath.Join(root, "ansible")
 	envPath := filepath.Join(root, ".env")
 
 	// An existing file with ENVIRONMENT_STRATEGY absent entirely still takes the
@@ -142,7 +138,7 @@ func TestBootstrapEnv_BackfillsMissingStrategyOnExistingFile(t *testing.T) {
 	mustWriteFile(t, envPath, "SOME_OTHER_KEY=\"value\"\n")
 
 	out := ui.New(io.Discard, io.Discard)
-	e, err := BootstrapEnv(root, packerDir, terraformDir, ansibleDir, out)
+	e, err := BootstrapEnv(root, packerDir, terraformDir, out)
 	if err != nil {
 		t.Fatalf("BootstrapEnv: %v", err)
 	}
@@ -157,7 +153,7 @@ func TestBootstrapEnv_BackfillsMissingStrategyOnExistingFile(t *testing.T) {
 func TestBootstrapEnv_CACertIsRelocatable(t *testing.T) {
 	root := t.TempDir()
 	out := ui.New(io.Discard, io.Discard)
-	e, err := BootstrapEnv(root, filepath.Join(root, "packer"), filepath.Join(root, "terraform"), filepath.Join(root, "ansible"), out)
+	e, err := BootstrapEnv(root, filepath.Join(root, "packer"), filepath.Join(root, "terraform"), out)
 	if err != nil {
 		t.Fatalf("BootstrapEnv: %v", err)
 	}
