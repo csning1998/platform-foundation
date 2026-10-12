@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -46,15 +44,4 @@ func newTestVaultClient(t *testing.T, addr string) *vaultapi.Client {
 		t.Fatalf("NewClient: %v", err)
 	}
 	return client
-}
-
-func writePlaybook(t *testing.T, p Paths) {
-	t.Helper()
-	dir := filepath.Join(p.AnsibleDir, "playbooks")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "operation_playbook.yaml"), []byte("dummy: true\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 }

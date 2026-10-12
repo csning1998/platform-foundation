@@ -31,7 +31,10 @@
 5. `platform vault init` MUST refuse execution if `vault/keys/init-output.json` already exists.
 6. `platform vault unseal` MUST read unseal keys from `vault/keys/unseal.key` and apply them to the Bastion Vault instance until the sealed status clears.
 7. `platform vault enable-kv` MUST mount the `kv-v2` secrets engine at path `secret/` if the mount is not present.
-8. `platform vault prod-unseal` MUST execute the `shared-vault-frontend` Ansible playbook with tag `vault-unseal` against the discovered Production Vault inventory.
+8. `platform vault unseal-downstream` MUST run `ansible/playbooks/playbook_platform.yaml` with tag `vault-unseal` under the `ansible.cfg` which `ansible-runner` rendered into `platform-vault-downstream-frontend`.
+9. `platform vault unseal-downstream` MUST read the inventory from that `ansible.cfg`, and MUST pass the sibling file `inventory-<cluster>-unseal-vars.json` as extra variables.
+10. `platform vault unseal-downstream` MUST refuse to run without `VAULT_ADDR`, `VAULT_CACERT`, `VAULT_TOKEN`, `VAULT_CLIENT_CERT`, and `VAULT_CLIENT_KEY` of the `platform-foundation` Vault Proxy, since the play reads the unseal keys from the Bastion Vault through that Proxy.
+11. The Talos runtime of the Downstream Vault unseals through transit, hence `platform vault unseal-downstream` serves the VM runtime alone.
 
 ### Item B. SSH Operations (`ssh`)
 
@@ -106,7 +109,7 @@ The interactive menu MUST present options in the following sequence:
 
 | Number | Menu Option Label                                          | Target Command                                                  |
 | ------ | ---------------------------------------------------------- | --------------------------------------------------------------- |
-| 1      | `[PROD] Unseal Production Vault via Ansible`               | `platform vault unseal-prod`                                    |
+| 1      | `[Downstream] Unseal Downstream Vault via Ansible`         | `platform vault unseal-downstream`                              |
 | 2      | `Generate SSH Key`                                         | Interactive prompt for key name, then `platform ssh keygen`     |
 | 3      | `Verify IaC Environment`                                   | `platform env verify`                                           |
 | 4      | `Execute Hypervisor Configuration via Ansible`             | `playbook_hypervisor.yaml` against a temporary local inventory  |

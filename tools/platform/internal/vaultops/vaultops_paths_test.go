@@ -39,6 +39,7 @@ func TestPaths_ResolvesHelperPaths(t *testing.T) {
 		{"resolveRootTokenFile", p.resolveRootTokenFile(), "/home/u/.vault-token"},
 		{"resolveCACertFile", p.resolveCACertFile(), "/custom/ca.pem"},
 		{"prodCACert", p.resolveProdCACertFile(), "/tf/layers/shared-vault-frontend/tls/bootstrap-ca.crt"},
+		{"resolveDownstreamLayerDir", p.resolveDownstreamLayerDir(), "/tf/layers/" + DownstreamLayer},
 	}
 	for _, c := range cases {
 		want := filepath.FromSlash(c.want)

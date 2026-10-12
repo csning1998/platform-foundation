@@ -18,10 +18,9 @@ func (a *app) vaultCmd() *cobra.Command {
 		RunE:  func(cmd *cobra.Command, args []string) error { return a.reportVaultStatus(cmd.Context()) },
 	})
 	cmd.AddCommand(&cobra.Command{
-		Use:     "unseal-prod",
-		Aliases: []string{"prod-unseal"},
-		Short:   "[PROD] Unseal Production Vault via Ansible",
-		RunE:    func(cmd *cobra.Command, args []string) error { return a.unsealProdVault(cmd.Context()) },
+		Use:   "unseal-downstream",
+		Short: "[Downstream] Unseal the Downstream Vault of the VM runtime via Ansible",
+		RunE:  func(cmd *cobra.Command, args []string) error { return a.unsealDownstreamVault(cmd.Context()) },
 	})
 
 	return cmd

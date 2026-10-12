@@ -20,7 +20,7 @@ type menuOption struct {
 // runMenu returns after dispatching the first valid selection; an invalid selection re-prompts instead of exiting.
 func (a *app) runMenu(ctx context.Context) error {
 	options := []menuOption{
-		{"[PROD] Unseal Production Vault via Ansible", func(ctx context.Context) error { return a.unsealProdVault(ctx) }},
+		{"[Downstream] Unseal Downstream Vault via Ansible", func(ctx context.Context) error { return a.unsealDownstreamVault(ctx) }},
 		{"Generate SSH Key", func(ctx context.Context) error { return a.sshKeygenMenu() }},
 		{"Verify IaC Environment", func(ctx context.Context) error { return a.verifyEnvironment() }},
 		{"Execute Hypervisor Configuration via Ansible", func(ctx context.Context) error { return a.runHypervisorPlaybook(ctx) }},
