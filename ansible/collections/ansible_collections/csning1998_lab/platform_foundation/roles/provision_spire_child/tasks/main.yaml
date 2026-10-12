@@ -25,7 +25,7 @@
   block:
     - name: "Read kubeconfig of Child cluster from the Downstream Vault"
       ansible.builtin.include_role:
-        name: utils_vault_kv2_read
+        name: csning1998_lab.platform_foundation.utils_vault_kv2_read
       vars:
         utils_vault_kv2_read_access:
           endpoint: "{{ operator_vault_url }}"
@@ -48,8 +48,8 @@
       ansible.builtin.copy:
         content: "{{ _provision_spire_child_kubeconfig_b64 | b64decode }}"
         dest: "{{ provision_spire_child_k8s_psat_dir }}/{{ provision_spire_child_cluster_name }}.kubeconfig"
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0600"
       become: true
       no_log: true

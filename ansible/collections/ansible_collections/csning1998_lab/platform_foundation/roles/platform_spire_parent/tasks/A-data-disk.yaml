@@ -1,7 +1,7 @@
 ---
 - name: "A1. Check current mount state"
   ansible.builtin.command:
-    cmd: findmnt --source /dev/vdb --mountpoint {{ spire_dir_data }}
+    cmd: findmnt --source /dev/vdb --mountpoint {{ utils_common_defaults_spire_dir_data }}
   register: _platform_spire_parent_disk_already_mounted
   changed_when: false
   failed_when: false
@@ -30,15 +30,15 @@
 
     - name: "A2d. Ensure SPIRE data base directory exists"
       ansible.builtin.file:
-        path: "{{ spire_dir_data }}"
+        path: "{{ utils_common_defaults_spire_dir_data }}"
         state: directory
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0700"
 
     - name: "A2e. Mount vdb at SPIRE data path and persist in fstab"
       ansible.posix.mount:
-        path: "{{ spire_dir_data }}"
+        path: "{{ utils_common_defaults_spire_dir_data }}"
         src: "UUID={{ _platform_spire_parent_disk_uuid.stdout }}"
         fstype: xfs
         opts: defaults
@@ -51,9 +51,9 @@
 
 - name: "A3. Enforce ownership on vdb mount root"
   ansible.builtin.file:
-    path: "{{ spire_dir_data }}"
-    owner: "{{ spire_owner }}"
-    group: "{{ spire_group }}"
+    path: "{{ utils_common_defaults_spire_dir_data }}"
+    owner: "{{ utils_common_defaults_spire_owner }}"
+    group: "{{ utils_common_defaults_spire_group }}"
     mode: "0700"
 
 # A routine OS disk rebuild MUST preserve persistent SPIRE CA keys on the persistent data volume
@@ -74,7 +74,7 @@
 
     - name: "A4c. Remove datastore and CA key material"
       ansible.builtin.file:
-        path: "{{ spire_dir_data }}/{{ item }}"
+        path: "{{ utils_common_defaults_spire_dir_data }}/{{ item }}"
         state: absent
       loop:
         - datastore.sqlite3

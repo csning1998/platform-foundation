@@ -414,14 +414,14 @@ Location: `terraform/layers/platform-spire-parent`.
 ### Item C. `platform_spire_parent` Role Execution
 
 1. The `tasks/main.yaml` file MUST sequence `A-data-disk.yaml`, `B-configure.yaml`, and `C-validate.yaml` inside `block`/`rescue` constructs.
-2. The `A-data-disk.yaml` file MUST check mount state via `findmnt`, verify filesystem presence via `blkid`, format missing filesystems with `mkfs.xfs`, and mount `/dev/vdb` to `spire_dir_data` by filesystem UUID.
+2. The `A-data-disk.yaml` file MUST check mount state via `findmnt`, verify filesystem presence via `blkid`, format missing filesystems with `mkfs.xfs`, and mount `/dev/vdb` to `utils_common_defaults_spire_dir_data` by filesystem UUID.
 3. The `B-configure.yaml` file MUST deploy the Bastion Vault listener CA certificate, render `server.conf.j2`, configure the systemd unit `spire-server.service`, and start the service.
 4. The `server.conf.j2` template MUST bind `bind_address` to `spire_parent_node_ip`. The template SHALL configure `DataStore "sql"` with `sqlite3`, `NodeAttestor "join_token"`, `KeyManager "disk"`, and `UpstreamAuthority "vault"` using AppRole authentication against Bastion Vault.
 5. The `C-validate.yaml` file MUST execute `spire-server healthcheck`, verify certificate presence via `spire-server bundle show`, and assert active authority signing via `spire-server localauthority x509 show`.
 
 ### Item D. Systemd Service Hardening
 
-1. The `spire-server.service.j2` template MUST run the service under system user `spire` and group `spire`. The unit SHALL configure `ProtectSystem=full`, `ProtectHome=read-only`, `ProtectClock=yes`, and restrict `ReadWritePaths` to `spire_dir_data`.
+1. The `spire-server.service.j2` template MUST run the service under system user `spire` and group `spire`. The unit SHALL configure `ProtectSystem=full`, `ProtectHome=read-only`, `ProtectClock=yes`, and restrict `ReadWritePaths` to `utils_common_defaults_spire_dir_data`.
 2. The unit MUST configure `KillSignal=SIGINT` to ensure graceful process termination.
 
 ## Section 9. SPIRE Agent Consumption Contract

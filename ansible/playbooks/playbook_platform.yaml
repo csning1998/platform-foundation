@@ -19,4 +19,4 @@
   hosts: "{{ 'spire_parent' if 'spire_parent' in groups else [] }}"
   become: true
   roles:
-    - platform_spire_parent
+    - csning1998_lab.platform_foundation.platform_spire_parent

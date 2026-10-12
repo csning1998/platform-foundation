@@ -6,16 +6,16 @@
       ansible.builtin.file:
         path: "{{ platform_spire_parent_oidc_dir_config }}"
         state: directory
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0750"
 
     - name: "D1b. Write the CA chain of the listener, the Bastion root and the pki-platform intermediate"
       ansible.builtin.copy:
         content: "{{ spire_oidc_ca_chain_b64 | b64decode }}"
         dest: "{{ platform_spire_parent_oidc_ca_path }}"
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0644"
 
     # A certificate from a rebuilt pki-platform fails the chain check.
@@ -52,7 +52,7 @@
       block:
         - name: "D1e-i. Take the Vault Proxy route of identity {{ project_code }}"
           ansible.builtin.include_role:
-            name: utils_vault_operator_login
+            name: csning1998_lab.platform_foundation.utils_vault_operator_login
           vars:
             utils_vault_operator_login_use_ambient: true
 
@@ -84,8 +84,8 @@
             content: "{{ _platform_spire_parent_oidc_issue.json.data.certificate ~ '\n'
               ~ _platform_spire_parent_oidc_issue.json.data.issuing_ca ~ '\n' }}"
             dest: "{{ platform_spire_parent_oidc_cert_path }}"
-            owner: "{{ spire_owner }}"
-            group: "{{ spire_group }}"
+            owner: "{{ utils_common_defaults_spire_owner }}"
+            group: "{{ utils_common_defaults_spire_group }}"
             mode: "0644"
           notify: Restart SPIRE OIDC Discovery Provider Service
 
@@ -93,8 +93,8 @@
           ansible.builtin.copy:
             content: "{{ _platform_spire_parent_oidc_issue.json.data.private_key ~ '\n' }}"
             dest: "{{ platform_spire_parent_oidc_key_path }}"
-            owner: "{{ spire_owner }}"
-            group: "{{ spire_group }}"
+            owner: "{{ utils_common_defaults_spire_owner }}"
+            group: "{{ utils_common_defaults_spire_group }}"
             mode: "0640"
           notify: Restart SPIRE OIDC Discovery Provider Service
           no_log: true
@@ -103,8 +103,8 @@
       ansible.builtin.template:
         src: oidc-discovery-provider.conf.j2
         dest: "{{ platform_spire_parent_oidc_dir_config }}/oidc-discovery-provider.conf"
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0640"
       notify: Restart SPIRE OIDC Discovery Provider Service
 

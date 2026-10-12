@@ -86,18 +86,18 @@
 
     - name: "Step A6. Create SPIRE system group"
       ansible.builtin.group:
-        name: "{{ spire_group }}"
+        name: "{{ utils_common_defaults_spire_group }}"
         system: true
         state: present
 
     - name: "Step A7. Create SPIRE system user"
       ansible.builtin.user:
-        name: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        name: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         system: true
         shell: /usr/sbin/nologin
         create_home: false
-        home: "{{ spire_dir_config }}"
+        home: "{{ utils_common_defaults_spire_dir_config }}"
 
   rescue:
     - name: "Block A: Install SPIRE Server Binary failed"

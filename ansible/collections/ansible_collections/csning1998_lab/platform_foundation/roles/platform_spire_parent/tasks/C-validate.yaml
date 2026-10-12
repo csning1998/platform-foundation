@@ -2,7 +2,7 @@
 - name: "Block C: Validate SPIRE Server Instance"
   become: true
   vars:
-    platform_spire_parent_socket_path: "{{ spire_dir_data }}/private/api.sock"
+    platform_spire_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
   block:
     - name: "C1. Check SPIRE Server health"
       ansible.builtin.command:

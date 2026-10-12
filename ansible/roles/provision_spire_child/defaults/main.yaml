@@ -1,3 +1,0 @@
----
-provision_spire_child_socket_path: "{{ spire_dir_data }}/private/api.sock"
-provision_spire_child_k8s_psat_dir: "{{ spire_dir_config }}/k8s-psat"

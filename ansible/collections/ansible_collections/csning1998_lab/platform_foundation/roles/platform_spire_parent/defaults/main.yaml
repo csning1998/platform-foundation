@@ -3,16 +3,16 @@ platform_spire_parent_log_level: "INFO"
 platform_spire_parent_ca_ttl: "8760h" # 1 year, within the lifetime of the pki-spire intermediate
 platform_spire_parent_default_svid_ttl: "1h"
 
-platform_spire_parent_upstream_ca_cert_path: "{{ spire_dir_config }}/upstream-ca.pem"
+platform_spire_parent_upstream_ca_cert_path: "{{ utils_common_defaults_spire_dir_config }}/upstream-ca.pem"
 platform_spire_parent_upstream_approle_auth_mount_point: "{{ spire_vault_upstream_approle_mount_path }}"
 
 # systemd reads the file as root before the unit drops to the spire user, hence only root reads the secret ID.
-platform_spire_parent_upstream_env_path: "{{ spire_dir_config }}/upstream-authority.env"
+platform_spire_parent_upstream_env_path: "{{ utils_common_defaults_spire_dir_config }}/upstream-authority.env"
 
 # Cluster registration parameters for k8s_psat node attestation.
 # The caller supplies spire_k8s_psat_clusters as a JSON string or a native list of {name, service_account_allow_list}.
 platform_spire_parent_k8s_psat_clusters: "{{ spire_k8s_psat_clusters | default([]) }}"
-platform_spire_parent_k8s_psat_dir: "{{ spire_dir_config }}/k8s-psat"
+platform_spire_parent_k8s_psat_dir: "{{ utils_common_defaults_spire_dir_config }}/k8s-psat"
 
 platform_spire_parent_oidc_dir_config: "/etc/spire/oidc-discovery-provider"
 platform_spire_parent_oidc_cert_path: "{{ platform_spire_parent_oidc_dir_config }}/server.crt"

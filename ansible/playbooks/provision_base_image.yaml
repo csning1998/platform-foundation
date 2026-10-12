@@ -68,7 +68,7 @@
   hosts: "base-baremetal-spire-parent"
   become: true
   roles:
-    - base_baremetal_spire
+    - csning1998_lab.platform_foundation.base_baremetal_spire
 
 - name: "Play: Provision HAProxy + Keepalived (Baremetal) Base Image"
   hosts: "base-baremetal-haproxy"

@@ -4,18 +4,18 @@
   block:
     - name: "B1a. Create SPIRE Config Directory"
       ansible.builtin.file:
-        path: "{{ spire_dir_config }}"
+        path: "{{ utils_common_defaults_spire_dir_config }}"
         state: directory
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0750"
 
     - name: "B1a2. Deploy Bastion Vault Listener CA Certificate"
       ansible.builtin.copy:
         content: "{{ spire_vault_upstream_ca_cert_b64 | b64decode }}"
         dest: "{{ platform_spire_parent_upstream_ca_cert_path }}"
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0640"
       notify: Restart SPIRE Server Service
 
@@ -24,16 +24,16 @@
       ansible.builtin.file:
         path: "{{ platform_spire_parent_k8s_psat_dir }}"
         state: directory
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0750"
 
     - name: "B1b. Deploy SPIRE Server Config"
       ansible.builtin.template:
         src: server.conf.j2
-        dest: "{{ spire_dir_config }}/server.conf"
-        owner: "{{ spire_owner }}"
-        group: "{{ spire_group }}"
+        dest: "{{ utils_common_defaults_spire_dir_config }}/server.conf"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
         mode: "0640"
       notify: Restart SPIRE Server Service
 
@@ -58,7 +58,7 @@
   block:
     - name: "B2a. Take the Vault Proxy route of identity {{ project_code }}"
       ansible.builtin.include_role:
-        name: utils_vault_operator_login
+        name: csning1998_lab.platform_foundation.utils_vault_operator_login
       vars:
         utils_vault_operator_login_use_ambient: true
 

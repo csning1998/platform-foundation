@@ -4,20 +4,20 @@ server {
   trust_domain = "{{ spire_trust_domain }}"
   # The issuer equals the discovery URL, which the JWT backend of the Downstream Vault binds as bound_issuer.
   jwt_issuer   = "https://{{ spire_parent_node_ip }}:{{ spire_oidc_discovery_port }}"
-  data_dir     = "{{ spire_dir_data }}"
+  data_dir     = "{{ utils_common_defaults_spire_dir_data }}"
   log_level    = "{{ platform_spire_parent_log_level }}"
 
   ca_ttl                 = "{{ platform_spire_parent_ca_ttl }}"
   default_x509_svid_ttl  = "{{ platform_spire_parent_default_svid_ttl }}"
 
-  socket_path = "{{ spire_dir_data }}/private/api.sock"
+  socket_path = "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
 }
 
 plugins {
   DataStore "sql" {
     plugin_data {
       database_type     = "sqlite3"
-      connection_string = "{{ spire_dir_data }}/datastore.sqlite3"
+      connection_string = "{{ utils_common_defaults_spire_dir_data }}/datastore.sqlite3"
     }
   }
 
@@ -46,7 +46,7 @@ plugins {
 
   KeyManager "disk" {
     plugin_data {
-      keys_path = "{{ spire_dir_data }}/keys.json"
+      keys_path = "{{ utils_common_defaults_spire_dir_data }}/keys.json"
     }
   }
 

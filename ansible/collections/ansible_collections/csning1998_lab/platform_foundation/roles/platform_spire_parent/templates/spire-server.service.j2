@@ -3,21 +3,21 @@ Description="SPIRE Server - SPIFFE Runtime Environment"
 Documentation=https://spiffe.io/docs/latest/spire-about/spire-concepts/
 Requires=network-online.target
 After=network-online.target
-ConditionFileNotEmpty={{ spire_dir_config }}/server.conf
+ConditionFileNotEmpty={{ utils_common_defaults_spire_dir_config }}/server.conf
 StartLimitIntervalSec=60
 StartLimitBurst=3
 
 [Service]
-User={{ spire_owner }}
-Group={{ spire_group }}
+User={{ utils_common_defaults_spire_owner }}
+Group={{ utils_common_defaults_spire_group }}
 ProtectSystem=full
 ProtectHome=read-only
 ProtectClock=yes
-ReadWritePaths={{ spire_dir_data }}
+ReadWritePaths={{ utils_common_defaults_spire_dir_data }}
 PrivateTmp=yes
 NoNewPrivileges=yes
 EnvironmentFile={{ platform_spire_parent_upstream_env_path }}
-ExecStart=/usr/local/bin/spire-server run -config {{ spire_dir_config }}/server.conf
+ExecStart=/usr/local/bin/spire-server run -config {{ utils_common_defaults_spire_dir_config }}/server.conf
 KillMode=process
 KillSignal=SIGINT
 Restart=on-failure

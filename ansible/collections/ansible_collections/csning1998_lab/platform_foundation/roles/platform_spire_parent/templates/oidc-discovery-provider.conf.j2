@@ -2,7 +2,7 @@ log_level = "{{ platform_spire_parent_oidc_log_level }}"
 domains   = ["{{ spire_oidc_domain }}"]
 
 server_api {
-  address = "unix://{{ spire_dir_data }}/private/api.sock"
+  address = "unix://{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
 }
 
 serving_cert_file {
