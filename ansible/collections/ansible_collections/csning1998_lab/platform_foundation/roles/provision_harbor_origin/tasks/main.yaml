@@ -1,0 +1,50 @@
+---
+- name: "Step 0. Read the Harbor Robot credentials from the Downstream Vault"
+  ansible.builtin.include_role:
+    name: csning1998_lab.platform_foundation.utils_vault_kv2_read
+  vars:
+    utils_vault_kv2_read_access:
+      endpoint: "{{ vault_endpoint }}"
+      ca_cert_path: "{{ vault_ca_cert_path }}"
+      auth_mount: "{{ vault_operator_mount }}"
+      role: "{{ vault_operator_role }}"
+      wrapper: "{{ vault_operator_wrapper }}"
+    utils_vault_kv2_read_secrets:
+      - path: "{{ harbor_robot_kv_path }}"
+        as: harbor_robot
+        fields: [password_pusher]
+
+- name: Step 1. Keep the Harbor Robot password
+  ansible.builtin.set_fact:
+    provision_harbor_origin_robot_password: "{{ utils_vault_kv2_read_result.harbor_robot.password_pusher }}"
+  no_log: true
+
+- name: Step 2. Verify Harbor OCI Login
+  kubernetes.core.helm_registry_auth:
+    host: "{{ harbor_registry }}"
+    username: "{{ harbor_robot_user }}"
+    password: "{{ provision_harbor_origin_robot_password }}"
+  register: provision_harbor_origin_harbor_login
+  no_log: true
+
+- name: Step 3. Synchronize Helm Charts (Pull and Push)
+  ansible.builtin.shell: |
+    set -eo pipefail
+    WORK_DIR=$(mktemp -d)
+    trap 'rm -rf "$WORK_DIR"' EXIT
+    cd "$WORK_DIR"
+
+    {% set is_oci = item.is_oci | default(false) | bool %}
+
+    {% if is_oci %}
+    helm pull "{{ item.repo }}/{{ item.name }}" --version "{{ item.version }}"
+    {% else %}
+    helm pull "{{ item.name }}" --version "{{ item.version }}" --repo "{{ item.repo }}"
+    {% endif %}
+
+    helm push ./*.tgz "oci://{{ harbor_registry }}/{{ harbor_project }}"
+  args:
+    executable: /bin/bash
+  loop: "{{ provision_harbor_origin_helm_charts_to_sync }}"
+  register: provision_harbor_origin_sync_results
+  changed_when: "'Pushed' in (provision_harbor_origin_sync_results.stderr | default(''))"

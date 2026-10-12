@@ -1,0 +1,54 @@
+---
+# The agent counts as attested only when the server lists the agent behind the recorded join token.
+# A missing record is an expected state, and Step D2d-4 clears the stale attestation when the record is absent.
+# Privilege comes from Block D in main.yaml which includes this file.
+- name: "Step D2d-1. Read the recorded join_token of this host"
+  block:
+    - name: "Step D2d-1a. Read the record from the operator Vault"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_vault_kv2_read
+      vars:
+        utils_vault_kv2_read_access:
+          endpoint: "{{ operator_vault_url }}"
+          ca_cert_path: "{{ operator_vault_ca_cert_path }}"
+          auth_mount: "{{ operator_vault_auth_mount | default('') }}"
+          role: "{{ operator_vault_role | default('') }}"
+          wrapper: "{{ operator_vault_wrapper | default('') }}"
+        utils_vault_kv2_read_use_ambient: "{{ operator_vault_use_ambient_token | default(false) | bool }}"
+        utils_vault_kv2_read_secrets:
+          - path: "{{ utils_spire_agent_join_token_vault_path }}"
+            as: recorded
+            fields: [join_token]
+
+    - name: "Step D2d-1b. Keep the recorded join_token"
+      ansible.builtin.set_fact:
+        _utils_spire_agent_recorded_join_token: "{{ utils_vault_kv2_read_result.recorded.join_token }}"
+      no_log: true
+  rescue:
+    - name: "Step D2d-1c. Treat the missing record as an empty token"
+      ansible.builtin.set_fact:
+        _utils_spire_agent_recorded_join_token: ""
+
+- name: "Step D2d-3. List the agents which the SPIRE server knows"
+  ansible.builtin.include_role:
+    name: csning1998_lab.platform_foundation.utils_spire_server_command
+  vars:
+    utils_spire_server_command_arguments: "agent list -output json"
+    utils_spire_server_command_tolerate_failure: true
+
+- name: "Step D2d-4. Clear stale attestation when the record or the agent is missing"
+  when: >-
+    (_utils_spire_agent_recorded_join_token | length == 0) or
+    utils_spire_server_command_result.unreachable | default(false) | bool or
+    utils_spire_server_command_result.rc | int != 0 or
+    ('/spire/agent/join_token/' ~ _utils_spire_agent_recorded_join_token) not in
+    (utils_spire_server_command_result.stdout | default(''))
+  block:
+    - name: "Step D2d-4a. Remove stale agent identity data"
+      ansible.builtin.file:
+        path: "{{ utils_spire_agent_dir_data }}/agent-data.json"
+        state: absent
+
+    - name: "Step D2d-4b. Set attestation state to unattested"
+      ansible.builtin.set_fact:
+        utils_spire_agent_already_attested: false

@@ -19,7 +19,7 @@
   tags:
     - spire_agent
   roles:
-    - utils_spire_agent
+    - csning1998_lab.platform_foundation.utils_spire_agent
 
 # Registers per-component Terraform operator workload identities consumed by downstream external data sources.
 - name: "Play [Terraform Operator Identity]: Register JWT-SVID fetch wrapper"
@@ -52,7 +52,7 @@
   tasks:
     - name: "Register workload identity"
       ansible.builtin.include_role:
-        name: utils_terraform_operator_identity
+        name: csning1998_lab.platform_foundation.utils_terraform_operator_identity
       vars:
         utils_terraform_operator_identity_name: "{{ item }}"
         utils_terraform_operator_identity_spiffe_path: "{{ _utils_terraform_operator_identity_spiffe_paths[item] }}"

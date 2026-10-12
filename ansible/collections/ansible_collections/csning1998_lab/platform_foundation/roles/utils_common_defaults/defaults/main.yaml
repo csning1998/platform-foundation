@@ -1,0 +1,10 @@
+---
+# Constants which several roles of the collection share. A dependent role declares this role in meta/main.yaml.
+utils_common_defaults_vault_owner: vault
+utils_common_defaults_vault_group: vault
+utils_common_defaults_spire_owner: spire
+utils_common_defaults_spire_group: spire
+utils_common_defaults_spire_dir_config: "/etc/spire/server"
+utils_common_defaults_spire_dir_data: "/opt/spire/server/data"
+utils_common_defaults_spiffe_helper_version: "0.11.0"
+utils_common_defaults_node_exporter_textfile_directory: "/var/lib/prometheus/node-exporter"

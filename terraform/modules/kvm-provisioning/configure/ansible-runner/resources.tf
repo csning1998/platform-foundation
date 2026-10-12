@@ -43,13 +43,18 @@ resource "local_file" "inventory" {
   }
 }
 
+# Roles of the caller resolve from roles_path, and the platform collection resolves from collections_path.
 resource "local_file" "ansible_cfg" {
   content = replace(
     replace(
       replace(
-        data.local_file.base_ansible_cfg.content,
-        "roles_path = ansible/roles",
-        "roles_path = ${var.ansible_config.root_path}/roles"
+        replace(
+          data.local_file.base_ansible_cfg.content,
+          "roles_path = ansible/roles",
+          "roles_path = ${var.ansible_config.root_path}/roles"
+        ),
+        "collections_path = ansible/collections",
+        "collections_path = ${var.ansible_config.root_path}/collections"
       ),
       "inventory = ansible/inventory.yaml",
       "inventory = ${local.inventory_path}"

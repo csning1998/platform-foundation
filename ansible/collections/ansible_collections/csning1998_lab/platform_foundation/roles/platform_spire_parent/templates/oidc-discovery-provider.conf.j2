@@ -1,0 +1,16 @@
+log_level = "{{ platform_spire_parent_oidc_log_level }}"
+domains   = ["{{ spire_oidc_domain }}"]
+
+server_api {
+  address = "unix://{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
+}
+
+serving_cert_file {
+  cert_file_path = "{{ platform_spire_parent_oidc_cert_path }}"
+  key_file_path  = "{{ platform_spire_parent_oidc_key_path }}"
+  addr           = "{{ spire_parent_node_ip }}:{{ platform_spire_parent_oidc_bind_port }}"
+}
+
+health_checks {
+  bind_port = "{{ platform_spire_parent_oidc_health_port }}"
+}

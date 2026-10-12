@@ -1,0 +1,3 @@
+---
+dependencies:
+  - role: csning1998_lab.platform_foundation.utils_common_defaults

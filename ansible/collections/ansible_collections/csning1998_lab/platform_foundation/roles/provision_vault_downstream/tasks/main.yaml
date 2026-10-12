@@ -1,0 +1,220 @@
+---
+# Initializes Downstream Vault on Kubernetes through the API server, with the Bastion Vault reached through the Vault Proxy.
+# Stores root token and recovery/unseal keys in the Bastion Vault init leaf; transit seal manages automatic unseal.
+
+- name: "Section 0. Assert the caller supplied the coordinates"
+  ansible.builtin.assert:
+    that:
+      - operator_vault_url | default('') | length > 0
+      - operator_vault_ca_cert_path | default('') | length > 0
+      - provision_vault_downstream_kubeconfig_kv_path | default('') | length > 0
+      - provision_vault_downstream_init_kv_path | default('') | length > 0
+      - provision_vault_downstream_namespace | default('') | length > 0
+      - provision_vault_downstream_pods | default('') | length > 0
+      - provision_vault_downstream_container | default('') | length > 0
+      - provision_vault_downstream_health_url | default('') | length > 0
+      - provision_vault_downstream_ca_cert_path | default('') | length > 0
+      - provision_vault_downstream_seal in ['transit', 'shamir']
+    fail_msg: >-
+      provision-vault-downstream-frontend MUST run in the {{ project_code }} Vault Proxy environment,
+      which supplies the Bastion Vault coordinates, and MUST supply the KV paths, the server coordinates,
+      and the health check endpoint.
+
+- name: "Section 0. Decode the server list"
+  ansible.builtin.set_fact:
+    _provision_vault_downstream_pods: >-
+      {{
+        (provision_vault_downstream_pods | from_json)
+        if provision_vault_downstream_pods is string else provision_vault_downstream_pods
+      }}
+
+- name: "Block A: Initialize and unseal through the API server"
+  block:
+    - name: "A1. Read the kubeconfig of the cluster from the Bastion KV"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_vault_kv2_read
+      vars:
+        utils_vault_kv2_read_access:
+          endpoint: "{{ operator_vault_url }}"
+          ca_cert_path: "{{ operator_vault_ca_cert_path }}"
+        utils_vault_kv2_read_use_ambient: true
+        utils_vault_kv2_read_secrets:
+          - path: "{{ provision_vault_downstream_kubeconfig_kv_path }}"
+            as: vault_cluster
+            fields: [content_b64]
+
+    - name: "A2. Write the kubeconfig to a private temporary file"
+      ansible.builtin.tempfile:
+        state: file
+        prefix: vault-downstream-kubeconfig.
+      register: _provision_vault_downstream_kubeconfig_file
+
+    - name: "A3. Restrict and fill the temporary kubeconfig"
+      ansible.builtin.copy:
+        content: "{{ utils_vault_kv2_read_result.vault_cluster.content_b64 | b64decode }}"
+        dest: "{{ _provision_vault_downstream_kubeconfig_file.path }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "A4. Keep the kubectl prefix of every exec"
+      ansible.builtin.set_fact:
+        _provision_vault_downstream_kubectl: >-
+          {{
+            [
+              'kubectl', '--kubeconfig', _provision_vault_downstream_kubeconfig_file.path, '--request-timeout=60s',
+              '-n', provision_vault_downstream_namespace
+            ]
+          }}
+
+    - name: "A5. Wait until every server container runs"
+      ansible.builtin.command:
+        argv: "{{ _provision_vault_downstream_kubectl + ['get', 'pod', item, '-o', 'jsonpath={.status.phase}'] }}"
+      loop: "{{ _provision_vault_downstream_pods }}"
+      register: _provision_vault_downstream_phase
+      until: _provision_vault_downstream_phase.stdout == 'Running'
+      retries: "{{ provision_vault_downstream_pod_wait_retries }}"
+      delay: "{{ provision_vault_downstream_pod_wait_delay_seconds }}"
+      changed_when: false
+
+    # vault status exits 0 when unsealed, 2 when sealed, and 1 on an error.
+    - name: "A6. Read the status of the first server"
+      ansible.builtin.command:
+        argv: >-
+          {{
+            _provision_vault_downstream_kubectl +
+            [
+              'exec', _provision_vault_downstream_pods[0], '-c', provision_vault_downstream_container, '--',
+              'vault', 'status', '-format=json'
+            ]
+          }}
+      register: _provision_vault_downstream_first_status
+      changed_when: false
+      failed_when: _provision_vault_downstream_first_status.rc not in [0, 2]
+
+    - name: "A7. Initialize the first server"
+      when: not (_provision_vault_downstream_first_status.stdout | from_json).initialized
+      vars:
+        _share_flag: >-
+          {{ '-recovery-shares=' if provision_vault_downstream_seal == 'transit' else '-key-shares=' }}
+        _threshold_flag: >-
+          {{ '-recovery-threshold=' if provision_vault_downstream_seal == 'transit' else '-key-threshold=' }}
+      ansible.builtin.command:
+        argv: >-
+          {{
+            _provision_vault_downstream_kubectl +
+            [
+              'exec', _provision_vault_downstream_pods[0], '-c', provision_vault_downstream_container, '--',
+              'vault', 'operator', 'init',
+              _share_flag ~ provision_vault_downstream_init_key_shares,
+              _threshold_flag ~ provision_vault_downstream_init_key_threshold,
+              '-format=json'
+            ]
+          }}
+      register: _provision_vault_downstream_init
+      changed_when: true
+      no_log: true
+
+    - name: "A8. Persist the root token and the unseal keys"
+      when: _provision_vault_downstream_init is not skipped
+      block:
+        - name: "A8a. Take the Vault Proxy route of identity {{ project_code }}"
+          ansible.builtin.include_role:
+            name: csning1998_lab.platform_foundation.utils_vault_operator_login
+          vars:
+            utils_vault_operator_login_use_ambient: true
+
+        # Encodes unseal keys as JSON string to satisfy provider schema constraints requiring scalar string values.
+        - name: "A8b. Write the init leaf"
+          vars:
+            _init: "{{ _provision_vault_downstream_init.stdout | from_json }}"
+          ansible.builtin.uri:
+            url: "{{ operator_vault_url }}/v1/secret/data/{{ provision_vault_downstream_init_kv_path }}"
+            method: POST
+            headers:
+              X-Vault-Token: "{{ utils_vault_operator_login_token }}"
+            ca_path: "{{ operator_vault_ca_cert_path }}"
+            client_cert: "{{ operator_vault_client_cert | default(omit, true) }}"
+            client_key: "{{ operator_vault_client_key | default(omit, true) }}"
+            validate_certs: true
+            body_format: json
+            status_code: [200, 204]
+            body:
+              data: >-
+                {{
+                  {
+                    'prod_vault_root_token': _init.root_token,
+                    'prod_vault_recovery_keys': _init.recovery_keys_b64 | to_json
+                  }
+                  if provision_vault_downstream_seal == 'transit' else
+                  {
+                    'prod_vault_root_token': _init.root_token,
+                    'prod_vault_unseal_keys': _init.unseal_keys_b64 | to_json
+                  }
+                }}
+          no_log: true
+
+      rescue:
+        # Writes ephemeral init credentials to disk on persistence failure to prevent permanent data loss.
+        - name: "A8-rescue1. Preserve the init secrets on the control machine"
+          ansible.builtin.copy:
+            content: "{{ _provision_vault_downstream_init.stdout }}"
+            dest: "{{ provision_vault_downstream_emergency_init_path }}"
+            mode: "0600"
+          no_log: true
+
+        - name: "A8-rescue2. Fail after the preservation"
+          ansible.builtin.fail:
+            msg: >-
+              The Downstream Vault was initialized, but the root token and the unseal keys could not reach the
+              Bastion Vault. They are in {{ provision_vault_downstream_emergency_init_path }} (mode 0600). Write them to
+              the init leaf by hand, then delete that file.
+
+    - name: "A9. Read the unseal keys from the Bastion Vault"
+      when: provision_vault_downstream_seal == 'shamir'
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_vault_kv2_read
+      vars:
+        utils_vault_kv2_read_access:
+          endpoint: "{{ operator_vault_url }}"
+          ca_cert_path: "{{ operator_vault_ca_cert_path }}"
+        utils_vault_kv2_read_use_ambient: true
+        utils_vault_kv2_read_secrets:
+          - path: "{{ provision_vault_downstream_init_kv_path }}"
+            as: vault_init
+            fields: [prod_vault_unseal_keys]
+
+    - name: "A10. Keep the unseal keys up to the threshold"
+      when: provision_vault_downstream_seal == 'shamir'
+      ansible.builtin.set_fact:
+        _provision_vault_downstream_unseal_keys: >-
+          {{
+            (utils_vault_kv2_read_result.vault_init.prod_vault_unseal_keys | from_json)
+            [: provision_vault_downstream_init_key_threshold | int]
+          }}
+      no_log: true
+
+    # The first server unseals before the replicas, since a replica joins the raft cluster of an unsealed leader.
+    - name: "A11. Unseal every sealed server in ordinal order"
+      when: provision_vault_downstream_seal == 'shamir'
+      ansible.builtin.include_tasks: unseal.yaml
+      loop: "{{ _provision_vault_downstream_pods }}"
+      loop_control:
+        loop_var: _provision_vault_downstream_pod
+
+  always:
+    - name: "A12. Remove the temporary kubeconfig"
+      when: _provision_vault_downstream_kubeconfig_file.path is defined
+      ansible.builtin.file:
+        path: "{{ _provision_vault_downstream_kubeconfig_file.path }}"
+        state: absent
+
+- name: "Section B. Wait until the VIP serves the active server"
+  ansible.builtin.uri:
+    url: "{{ provision_vault_downstream_health_url }}"
+    ca_path: "{{ provision_vault_downstream_ca_cert_path }}"
+    validate_certs: true
+    status_code: 200
+  register: _provision_vault_downstream_health
+  until: _provision_vault_downstream_health.status == 200
+  retries: "{{ provision_vault_downstream_unseal_retries }}"
+  delay: "{{ provision_vault_downstream_unseal_delay_seconds }}"

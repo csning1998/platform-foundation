@@ -1,0 +1,32 @@
+---
+- name: "Block C: Validate SPIRE Server Instance"
+  become: true
+  vars:
+    platform_spire_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
+  block:
+    - name: "C1. Check SPIRE Server health"
+      ansible.builtin.command:
+        cmd: "spire-server healthcheck -socketPath {{ platform_spire_parent_socket_path }}"
+      changed_when: false
+
+    - name: "C2. Verify Root CA bundle is issued"
+      ansible.builtin.command:
+        cmd: "spire-server bundle show -socketPath {{ platform_spire_parent_socket_path }}"
+      register: platform_spire_parent_bundle
+      changed_when: false
+      failed_when: "'BEGIN CERTIFICATE' not in platform_spire_parent_bundle.stdout"
+
+    - name: "C3. Verify active X.509 authority is signed by the Vault upstream authority"
+      ansible.builtin.command:
+        cmd: "spire-server localauthority x509 show -socketPath {{ platform_spire_parent_socket_path }} -output json"
+      register: platform_spire_parent_local_authority
+      changed_when: false
+      failed_when: >-
+        platform_spire_parent_local_authority.rc != 0 or
+        ((platform_spire_parent_local_authority.stdout | from_json).get('active', {})
+          .get('upstream_authority_subject_key_id', '') | length == 0)
+
+  rescue:
+    - name: "Block C: Validate SPIRE Server Instance failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"

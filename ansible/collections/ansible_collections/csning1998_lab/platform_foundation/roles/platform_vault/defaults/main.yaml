@@ -1,0 +1,40 @@
+---
+# Section A: Listener certificate. The PKI role caps the lifetime at 90 days,
+# and a run within the last 30 days issues a new one.
+platform_vault_listener_cert_ttl: "2160h"
+platform_vault_listener_renew_before_seconds: 2592000
+
+# The first attached volume of the node, which linux-generic-cluster derives from the data_disks of the catalog.
+# An empty value keeps the raft data on the OS disk.
+platform_vault_data_device: "{{ (attached_volumes | default([]) | first | default({})).device_name | default('') }}"
+
+# Section B: Configuration
+platform_vault_vault_ui_enabled: true
+platform_vault_vault_disable_mlock: true # Set to true to avoid memory locking issues
+
+# Section C: Initialization
+platform_vault_vault_init_key_shares: 1
+platform_vault_vault_init_key_threshold: 1
+platform_vault_vault_wait_delay_seconds: 10
+
+# Section D: Unseal
+platform_vault_vault_unseal_retries: 24
+platform_vault_vault_unseal_delay_seconds: 5
+
+# The CLI on a node reaches the listener at 127.0.0.1 and verifies the certificate against the common name of the service.
+platform_vault_local_cli_environment:
+  VAULT_ADDR: "https://127.0.0.1:{{ platform_vault_port_api }}"
+  VAULT_CACERT: "{{ platform_vault_dir_tls }}/vault-ca.crt"
+  VAULT_TLS_SERVER_NAME: "{{ platform_vault_tls_server_name }}"
+
+# Directory structure, listener ports, and raft cluster name of the Vault service.
+platform_vault_dir_config: "/etc/vault.d"
+platform_vault_dir_tls: "/etc/vault.d/tls"
+platform_vault_dir_data: "/opt/vault/data"
+platform_vault_port_api: 8200
+platform_vault_port_cluster: 8201
+platform_vault_cluster_name: "vault-ha-cluster"
+
+# The control machine path which receives the init secrets when the write to the Bastion Vault fails.
+# The ansible-runner module writes the inventory at the Ansible root, hence the default is the repository root.
+platform_vault_emergency_init_path: "{{ inventory_dir }}/../vault-init-emergency.json"

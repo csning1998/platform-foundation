@@ -1,0 +1,43 @@
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    maxconn {{ platform_kubeadm_haproxy_maxconn }}
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log global
+    mode tcp
+    option tcplog
+    timeout connect {{ platform_kubeadm_haproxy_timeout_connect }}
+    timeout client {{ platform_kubeadm_haproxy_timeout_client }}
+    timeout server {{ platform_kubeadm_haproxy_timeout_server }}
+
+# GitLab HTTP Ingress routing port 80 traffic to NodePort 30080.
+frontend gitlab_http
+    bind {{ platform_kubeadm_ha_vip }}:80
+    mode tcp
+    default_backend gitlab_http_backend
+
+backend gitlab_http_backend
+    mode tcp
+    balance roundrobin
+    option tcp-check
+{% for host in groups['worker'] | default([]) %}
+    server {{ host }} {{ hostvars[host]['advertise_ip'] }}:{{ kubeadm_http_nodeport }} check
+{% endfor %}
+
+# GitLab HTTPS Ingress routing port 443 traffic to NodePort 30443.
+frontend gitlab_https
+    bind {{ platform_kubeadm_ha_vip }}:443
+    mode tcp
+    default_backend gitlab_https_backend
+
+backend gitlab_https_backend
+    mode tcp
+    balance roundrobin
+    option tcp-check
+{% for host in groups['worker'] | default([]) %}
+    server {{ host }} {{ hostvars[host]['advertise_ip'] }}:{{ kubeadm_https_nodeport }} check
+{% endfor %}

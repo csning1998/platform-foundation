@@ -1,0 +1,94 @@
+---
+# Retrieves KV v2 secrets dynamically using the operator identity to avoid persisting secret values in Terraform state.
+- name: "Section 0. Assert the caller supplied the Vault coordinates and the secret list"
+  ansible.builtin.assert:
+    that:
+      - utils_vault_kv2_read_secrets | length > 0
+      - utils_vault_kv2_read_secrets | map(attribute='path') | length == utils_vault_kv2_read_secrets | length
+      - utils_vault_kv2_read_secrets | map(attribute='as') | unique | length == utils_vault_kv2_read_secrets | length
+      - utils_vault_kv2_read_access.endpoint | default('') | length > 0
+      - utils_vault_kv2_read_access.ca_cert_path | default('') | length > 0
+      - >-
+        utils_vault_kv2_read_use_ambient | bool
+        or (utils_vault_kv2_read_access.wrapper | default('') | length > 0
+            and utils_vault_kv2_read_access.role | default('') | length > 0
+            and utils_vault_kv2_read_access.auth_mount | default('') | length > 0)
+    fail_msg: >-
+      utils_vault_kv2_read MUST receive a non-empty secrets list with unique aliases and the target coordinates
+      endpoint, ca_cert_path, auth_mount, role, and wrapper. Target: {{ utils_vault_kv2_read_target }}.
+
+- name: "Section A. Log in to the Vault as the operator"
+  ansible.builtin.include_role:
+    name: csning1998_lab.platform_foundation.utils_vault_operator_login
+  vars:
+    utils_vault_operator_login_wrapper: "{{ utils_vault_kv2_read_access.wrapper | default('') }}"
+    utils_vault_operator_login_role: "{{ utils_vault_kv2_read_access.role | default('') }}"
+    utils_vault_operator_login_auth_mount: "{{ utils_vault_kv2_read_access.auth_mount | default('') }}"
+    utils_vault_operator_login_endpoint: "{{ utils_vault_kv2_read_access.endpoint }}"
+    utils_vault_operator_login_ca_cert_path: "{{ utils_vault_kv2_read_access.ca_cert_path }}"
+    utils_vault_operator_login_use_ambient: "{{ utils_vault_kv2_read_use_ambient }}"
+
+- name: "Section B. Read each secret"
+  ansible.builtin.uri:
+    url: >-
+      {{
+        utils_vault_kv2_read_access.endpoint ~ '/v1/'
+        ~ (item.mount | default(utils_vault_kv2_read_engine_mount))
+        ~ '/data/' ~ item.path
+      }}
+    method: GET
+    headers:
+      X-Vault-Token: "{{ utils_vault_operator_login_token }}"
+    ca_path: "{{ utils_vault_kv2_read_access.ca_cert_path }}"
+    client_cert: >-
+      {{
+        (utils_vault_kv2_read_use_ambient | bool)
+        | ternary(operator_vault_client_cert, '') | default(omit, true)
+      }}
+    client_key: >-
+      {{
+        (utils_vault_kv2_read_use_ambient | bool)
+        | ternary(operator_vault_client_key, '') | default(omit, true)
+      }}
+    validate_certs: true
+    return_content: true
+  loop: "{{ utils_vault_kv2_read_secrets }}"
+  loop_control:
+    label: "{{ item.as }}"
+  register: _utils_vault_kv2_read_responses
+  delegate_to: localhost
+  become: false
+  no_log: true
+
+# Records missing field paths for error reporting without exposing sensitive secret values.
+- name: "Section C. Collect the requested fields which the secrets lack"
+  ansible.builtin.set_fact:
+    _utils_vault_kv2_read_missing: >-
+      {% set ns = namespace(missing=[]) %}
+      {% for response in _utils_vault_kv2_read_responses.results %}
+      {% for field in response.item.fields | default([]) if field not in response.json.data.data %}
+      {% set ns.missing = ns.missing + [response.item.path ~ '#' ~ field] %}
+      {% endfor %}
+      {% endfor %}
+      {{ ns.missing | to_json }}
+  no_log: true
+
+- name: "Section C. Fail when a requested field is missing"
+  ansible.builtin.assert:
+    that:
+      - _utils_vault_kv2_read_missing | from_json | length == 0
+    fail_msg: "The secrets lack these fields: {{ _utils_vault_kv2_read_missing | from_json }}"
+
+- name: "Section D. Expose the secrets by alias"
+  ansible.builtin.set_fact:
+    utils_vault_kv2_read_result: >-
+      {{
+        dict(
+          utils_vault_kv2_read_secrets | map(attribute='as')
+          | zip(
+            _utils_vault_kv2_read_responses.results
+            | map(attribute='json') | map(attribute='data') | map(attribute='data')
+          )
+        )
+      }}
+  no_log: true

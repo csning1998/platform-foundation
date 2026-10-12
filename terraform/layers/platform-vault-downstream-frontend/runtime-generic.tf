@@ -4,9 +4,9 @@
 # Shamir keys of the init leaf. Neither the private key nor the init secrets enter a Terraform state.
 locals {
   vm_ansible_template_config = {
-    global_mss         = module.terraform_layer_context.global_mss
-    vault_vip          = module.terraform_layer_context.primary_network_config.lb_config.vip
-    vault_cluster_name = local.vault_downstream_cluster_name
+    global_mss                  = module.terraform_layer_context.global_mss
+    vault_vip                   = module.terraform_layer_context.primary_network_config.lb_config.vip
+    platform_vault_cluster_name = local.vault_downstream_cluster_name
   }
 
   # Variables which the unseal tasks of platform_vault read, also exported for the post-reboot unseal of the platform CLI.

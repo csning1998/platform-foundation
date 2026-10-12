@@ -1,0 +1,6 @@
+---
+base_docker_spiffe_helper_target_version: "{{ utils_common_defaults_spiffe_helper_version }}"
+base_docker_spiffe_helper_target_arch: "x86_64"
+base_docker_spiffe_helper_target_sha256: "7fba909574320d6a656e2e7d7f0657890fefad08a2abecd86c7bafe62d6d9134"
+
+base_docker_spiffe_helper_image_tag: "spiffe-helper:{{ base_docker_spiffe_helper_target_version }}"

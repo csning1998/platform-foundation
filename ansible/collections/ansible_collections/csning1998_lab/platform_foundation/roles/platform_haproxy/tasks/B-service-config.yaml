@@ -1,0 +1,218 @@
+---
+- name: "Block B1: Deploy SSL Certificates"
+  become: true
+  block:
+    - name: "B1a. Ensure Certificate Directory Exists"
+      ansible.builtin.file:
+        path: /etc/haproxy/certs
+        state: directory
+        owner: haproxy
+        group: haproxy
+        mode: "0700"
+
+    # The backends present certificates of pki-platform or of the Downstream issuer below pki-downstream.
+    - name: "B1b. Deploy the CA bundle for backend verification"
+      ansible.builtin.copy:
+        content: "{{ platform_haproxy_ca_bundle_b64 | b64decode }}"
+        dest: "{{ platform_haproxy_haproxy_ca_path }}"
+        owner: haproxy
+        group: haproxy
+        mode: "0644"
+      notify: Restart HAProxy
+
+    # A certificate from a rebuilt pki-platform fails the chain check,
+    # and a certificate inside the renewal window fails checkend.
+    - name: "B1c. Verify the held stats certificate against the CA bundle"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - verify
+          - -CAfile
+          - "{{ platform_haproxy_haproxy_ca_path }}"
+          - "{{ platform_haproxy_stats_bundle_path }}"
+      register: _platform_haproxy_stats_chain
+      changed_when: false
+      failed_when: false
+
+    - name: "B1d. Check that the held stats certificate outlives the renewal window"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - x509
+          - -checkend
+          - "{{ platform_haproxy_stats_renew_before_seconds }}"
+          - -noout
+          - -in
+          - "{{ platform_haproxy_stats_bundle_path }}"
+      register: _platform_haproxy_stats_expiry
+      changed_when: false
+      failed_when: false
+
+    # The workstation issues the certificate through the Vault Proxy, and the private key never enters a Terraform state.
+    - name: "B1e. Issue the stats certificate from pki-platform"
+      when: _platform_haproxy_stats_chain.rc != 0 or _platform_haproxy_stats_expiry.rc != 0
+      block:
+        - name: "B1e-i. Take the Vault Proxy route of identity {{ project_code }}"
+          ansible.builtin.include_role:
+            name: csning1998_lab.platform_foundation.utils_vault_operator_login
+          vars:
+            utils_vault_operator_login_use_ambient: true
+
+        - name: "B1e-ii. Issue the certificate and the private key"
+          ansible.builtin.uri:
+            url: "{{ operator_vault_url ~ '/v1/' ~ platform_haproxy_pki_mount ~ '/issue/' ~ platform_haproxy_pki_role }}"
+            method: POST
+            headers:
+              X-Vault-Token: "{{ utils_vault_operator_login_token }}"
+            body_format: json
+            body:
+              common_name: "{{ platform_haproxy_common_name }}"
+              alt_names: "{{ platform_haproxy_alt_names }}"
+              ip_sans: "{{ platform_haproxy_ip_sans }}"
+              ttl: "{{ platform_haproxy_stats_cert_ttl }}"
+            ca_path: "{{ operator_vault_ca_cert_path }}"
+            client_cert: "{{ operator_vault_client_cert | default(omit, true) }}"
+            client_key: "{{ operator_vault_client_key | default(omit, true) }}"
+            validate_certs: true
+            status_code: 200
+            return_content: true
+          register: _platform_haproxy_stats_issue
+          delegate_to: localhost
+          become: false
+          no_log: true
+
+        # HAProxy reads the leaf, the issuing intermediate, and the key from one PEM file.
+        - name: "B1e-iii. Write the stats bundle"
+          vars:
+            _issued: "{{ _platform_haproxy_stats_issue.json.data }}"
+          ansible.builtin.copy:
+            # The double-quoted scalar turns each \n into a line break, which a folded scalar would keep as two characters.
+            content: "{{ [_issued.certificate, _issued.issuing_ca, _issued.private_key] | join('\n') ~ '\n' }}"
+            dest: "{{ platform_haproxy_stats_bundle_path }}"
+            owner: haproxy
+            group: haproxy
+            mode: "0600"
+          notify: Restart HAProxy
+          no_log: true
+
+  rescue:
+    - name: "Block B1: Deploy SSL Certificates failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+
+- name: "Task B1. Build platform_haproxy_lb_keepalived_segments filtered to interfaces present in OS"
+  ansible.builtin.set_fact:
+    platform_haproxy_lb_keepalived_segments: >-
+      {{ platform_haproxy_lb_service_segments | selectattr('interface_alias', 'in', ansible_facts['interfaces']) | list }}
+
+- name: "Block B2: Configure Keepalived and HAProxy"
+  block:
+    - name: "B2a. Deploy Keepalived VRRP notify script"
+      ansible.builtin.template:
+        src: keepalived-notify.sh.j2
+        dest: /usr/local/bin/keepalived-notify.sh
+        mode: "0755"
+
+    - name: "B2b. Render Keepalived configuration"
+      ansible.builtin.template:
+        src: keepalived.conf.j2
+        dest: /etc/keepalived/keepalived.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart Keepalived
+
+    - name: "B2c. Assert the stats login inputs"
+      ansible.builtin.assert:
+        that:
+          - platform_haproxy_stats_password is defined
+          - platform_haproxy_stats_password | length >= 16
+          - cluster_name is defined
+        fail_msg: >-
+          platform_haproxy_stats_password MUST come from the Bastion KV with at least 16 characters,
+          and cluster_name MUST be defined.
+      no_log: true
+
+    # The salt derives from the cluster name, which keeps the hash stable across runs and leaks nothing about the password.
+    - name: "B2d. Derive the crypt hash of the stats password"
+      ansible.builtin.command:
+        cmd: "openssl passwd -6 -salt {{ (cluster_name | hash('sha256'))[:16] }} -stdin"
+        stdin: "{{ platform_haproxy_stats_password }}"
+      register: _platform_haproxy_stats_hash
+      changed_when: false
+      no_log: true
+
+    - name: "B2e. Render HAProxy configuration"
+      ansible.builtin.template:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: "0640"
+      notify: Restart HAProxy
+
+    - name: "B2f. Verify HAProxy configuration"
+      ansible.builtin.command:
+        cmd: haproxy -c -f /etc/haproxy/haproxy.cfg
+      changed_when: false
+
+  rescue:
+    - name: "Block B2: Configure Keepalived and HAProxy failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+
+- name: "Block B3: Service Lifecycle"
+  block:
+    - name: "B3a. Enable and start Keepalived"
+      ansible.builtin.systemd:
+        name: keepalived
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: "B3b. Enable and start HAProxy"
+      ansible.builtin.systemd:
+        name: haproxy
+        state: started
+        enabled: true
+        daemon_reload: true
+
+  rescue:
+    - name: "Block B3: Service Lifecycle failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+
+- name: "Block B4: Policy-Based Routing for symmetric VIP return traffic"
+  block:
+    - name: "B4a. Ensure custom routing tables exist"
+      ansible.builtin.lineinfile:
+        path: /etc/iproute2/rt_tables
+        line: "{{ item.vrid }} rt_{{ item.name | replace('-', '_') }}"
+        regexp: "^{{ item.vrid }} "
+      loop: "{{ platform_haproxy_lb_service_segments }}"
+
+    - name: "B4b. Generate PBR bash script"
+      ansible.builtin.template:
+        src: "pbr-rules.sh.j2"
+        dest: "/usr/local/bin/pbr-rules.sh"
+        mode: "0755"
+      notify: Restart PBR
+
+    - name: "B4c. Generate PBR Service"
+      ansible.builtin.template:
+        src: "pbr-rules.service.j2"
+        dest: "/etc/systemd/system/pbr-rules.service"
+        mode: "0644"
+      notify: Restart PBR
+
+    - name: "B4d. Start and enable PBR Service"
+      ansible.builtin.systemd:
+        name: pbr-rules.service
+        state: started
+        enabled: true
+        daemon_reload: true
+
+  rescue:
+    - name: "Block B4: Policy-Based Routing for symmetric VIP return traffic failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"

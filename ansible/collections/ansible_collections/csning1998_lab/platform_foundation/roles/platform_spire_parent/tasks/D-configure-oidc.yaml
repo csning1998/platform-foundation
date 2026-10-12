@@ -1,0 +1,141 @@
+---
+- name: "Block D1: OIDC Discovery Provider Directory, Certificate & Service Configuration"
+  become: true
+  block:
+    - name: "D1a. Create OIDC Discovery Provider Config Directory"
+      ansible.builtin.file:
+        path: "{{ platform_spire_parent_oidc_dir_config }}"
+        state: directory
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
+        mode: "0750"
+
+    - name: "D1b. Write the CA chain of the listener, the Bastion root and the pki-platform intermediate"
+      ansible.builtin.copy:
+        content: "{{ spire_oidc_ca_chain_b64 | b64decode }}"
+        dest: "{{ platform_spire_parent_oidc_ca_path }}"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
+        mode: "0644"
+
+    # A certificate from a rebuilt pki-platform fails the chain check.
+    # A certificate inside the renewal window fails checkend.
+    - name: "D1c. Verify the held listener certificate against the CA chain"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - verify
+          - -CAfile
+          - "{{ platform_spire_parent_oidc_ca_path }}"
+          - "{{ platform_spire_parent_oidc_cert_path }}"
+      register: _platform_spire_parent_oidc_cert_chain
+      changed_when: false
+      failed_when: false
+
+    - name: "D1d. Check that the held listener certificate outlives the renewal window"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - x509
+          - -checkend
+          - "{{ platform_spire_parent_oidc_renew_before_seconds }}"
+          - -noout
+          - -in
+          - "{{ platform_spire_parent_oidc_cert_path }}"
+      register: _platform_spire_parent_oidc_cert_expiry
+      changed_when: false
+      failed_when: false
+
+    # The workstation issues the certificate through the Vault Proxy, and the private key never enters a Terraform state.
+    - name: "D1e. Issue the listener certificate from pki-platform"
+      when: _platform_spire_parent_oidc_cert_chain.rc != 0 or _platform_spire_parent_oidc_cert_expiry.rc != 0
+      block:
+        - name: "D1e-i. Take the Vault Proxy route of identity {{ project_code }}"
+          ansible.builtin.include_role:
+            name: csning1998_lab.platform_foundation.utils_vault_operator_login
+          vars:
+            utils_vault_operator_login_use_ambient: true
+
+        - name: "D1e-ii. Issue the certificate and the private key"
+          ansible.builtin.uri:
+            url: "{{ operator_vault_url ~ '/v1/' ~ spire_oidc_pki_mount_path ~ '/issue/' ~ spire_oidc_pki_role_name }}"
+            method: POST
+            headers:
+              X-Vault-Token: "{{ utils_vault_operator_login_token }}"
+            body_format: json
+            body:
+              common_name: "{{ spire_oidc_common_name }}"
+              alt_names: "{{ spire_oidc_common_name }}"
+              ip_sans: "{{ spire_oidc_ip_sans }}"
+              ttl: "{{ platform_spire_parent_oidc_cert_ttl }}"
+            ca_path: "{{ operator_vault_ca_cert_path }}"
+            client_cert: "{{ operator_vault_client_cert | default(omit, true) }}"
+            client_key: "{{ operator_vault_client_key | default(omit, true) }}"
+            validate_certs: true
+            status_code: 200
+            return_content: true
+          register: _platform_spire_parent_oidc_issue
+          delegate_to: localhost
+          become: false
+          no_log: true
+
+        - name: "D1e-iii. Write the server certificate followed by the issuing intermediate"
+          ansible.builtin.copy:
+            content: "{{ _platform_spire_parent_oidc_issue.json.data.certificate ~ '\n'
+              ~ _platform_spire_parent_oidc_issue.json.data.issuing_ca ~ '\n' }}"
+            dest: "{{ platform_spire_parent_oidc_cert_path }}"
+            owner: "{{ utils_common_defaults_spire_owner }}"
+            group: "{{ utils_common_defaults_spire_group }}"
+            mode: "0644"
+          notify: Restart SPIRE OIDC Discovery Provider Service
+
+        - name: "D1e-iv. Write the server private key"
+          ansible.builtin.copy:
+            content: "{{ _platform_spire_parent_oidc_issue.json.data.private_key ~ '\n' }}"
+            dest: "{{ platform_spire_parent_oidc_key_path }}"
+            owner: "{{ utils_common_defaults_spire_owner }}"
+            group: "{{ utils_common_defaults_spire_group }}"
+            mode: "0640"
+          notify: Restart SPIRE OIDC Discovery Provider Service
+          no_log: true
+
+    - name: "D1f. Deploy OIDC Discovery Provider Config"
+      ansible.builtin.template:
+        src: oidc-discovery-provider.conf.j2
+        dest: "{{ platform_spire_parent_oidc_dir_config }}/oidc-discovery-provider.conf"
+        owner: "{{ utils_common_defaults_spire_owner }}"
+        group: "{{ utils_common_defaults_spire_group }}"
+        mode: "0640"
+      notify: Restart SPIRE OIDC Discovery Provider Service
+
+    - name: "D1g. Create OIDC Discovery Provider Systemd Service"
+      ansible.builtin.template:
+        src: spire-oidc-discovery-provider.service.j2
+        dest: "/etc/systemd/system/spire-oidc-discovery-provider.service"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart SPIRE OIDC Discovery Provider Service
+
+  rescue:
+    - name: "Block D1: OIDC Discovery Provider Directory, Certificate & Service Configuration failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+
+- name: "Block D2: Start OIDC Discovery Provider Service"
+  become: true
+  block:
+    - name: "D2a. Enable and start OIDC Discovery Provider"
+      ansible.builtin.systemd:
+        name: spire-oidc-discovery-provider
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: "D2b. Flush handlers before validation"
+      ansible.builtin.meta: flush_handlers
+
+  rescue:
+    - name: "Block D2: Start OIDC Discovery Provider Service failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"

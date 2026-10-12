@@ -1,0 +1,41 @@
+---
+# System Config
+utils_spire_agent_target_os: "linux"
+utils_spire_agent_target_arch: "amd64"
+utils_spire_agent_target_libc: "musl"
+utils_spire_agent_target_version: "1.15.3"
+utils_spire_agent_target_sha256: "ca1a4d1155317bdd2afc7f36663828a10410c7c840e54725b90b4064b0a301c7"
+
+# One host runs one agent per SPIRE server. The empty instance keeps the paths and the unit of a single agent host.
+utils_spire_agent_instance: ""
+utils_spire_agent_unit_name: >-
+  spire-agent{{ ('-' ~ utils_spire_agent_instance) if utils_spire_agent_instance | length > 0 else '' }}
+
+# The SPIRE server to which the agent attests. Kind parent runs the server commands on the Parent host over SSH.
+# Kind child runs the commands in the pod of the Child server.
+# The kubeconfig of the Child comes from the KV of the operator Vault.
+utils_spire_agent_server_kind: "parent"
+utils_spire_agent_server_address: "{{ spire_parent_node_ip }}"
+utils_spire_agent_server_port: "{{ spire_server_port }}"
+utils_spire_agent_child_kubeconfig_kv_path: ""
+
+# Standard Directory Structure
+utils_spire_agent_dir_config: "/etc/spire/{{ utils_spire_agent_unit_name | regex_replace('^spire-', '') }}"
+utils_spire_agent_dir_data: >-
+  /opt/spire/agent/data{{
+    ('-' ~ utils_spire_agent_instance) if utils_spire_agent_instance | length > 0 else '' }}
+
+# Workload API Socket
+utils_spire_agent_socket_dir: "/run/{{ utils_spire_agent_unit_name }}/public"
+
+# Operator Vault kv2 path which stores the generated join_token of this host, below the SPIRE server which issued the token.
+# Terraform passes the join-token leaf of each server from foundation-libvirt-resources.
+utils_spire_agent_join_token_vault_path: >-
+  {{ spire_child_join_token_kv_path if utils_spire_agent_server_kind == 'child' else spire_parent_join_token_kv_path }}/{{
+    spire_cluster_name }}/{{ inventory_hostname | regex_replace('^' ~ (spire_cluster_name | regex_escape) ~ '-', '') }}
+
+# Log Level
+utils_spire_agent_log_level: "INFO"
+
+# Bootstrap Attestation Timeout (seconds)
+utils_spire_agent_bootstrap_timeout: 60

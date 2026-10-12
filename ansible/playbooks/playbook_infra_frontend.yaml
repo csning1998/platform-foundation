@@ -12,34 +12,31 @@
   hosts: "{{ 'harbor_origin' if 'harbor_origin' in groups else [] }}"
   become: true
   roles:
-    - platform_harbor_origin
+    - csning1998_lab.platform_foundation.platform_harbor_origin
 
 - name: "Play [Keycloak]: Configure Keycloak Container"
   hosts: "{{ 'keycloak' if 'keycloak' in groups else [] }}"
   become: true
   roles:
-    - platform_keycloak
+    - csning1998_lab.platform_foundation.platform_keycloak
 
 - name: "Play [HAProxy]: Configure HAProxy + Keepalived Frontend"
   hosts: "{{ 'haproxy' if 'haproxy' in groups else [] }}"
   become: true
   roles:
-    - platform_haproxy
-#
-# Generic MicroK8s Cluster
-# Commented out: infra_microk8s role is not committed yet.
-# - name: "Play [Kubernetes]: Provision and Configure MicroK8s Cluster"
-#   hosts: "{{ 'microk8s' if 'microk8s' in groups else [] }}"
-#   become: true
-#   gather_facts: true
-#   roles:
-#     - infra_microk8s
+    - csning1998_lab.platform_foundation.platform_haproxy
 
-# Generic Kubeadm Cluster
-# Commented out: infra_kubeadm role is not committed yet.
-# - name: "Play [Kubernetes]: Provision and Configure Kubeadm Cluster"
-#   hosts: "{{ (groups['master'] | default([])) + (groups['worker'] | default([])) }}"
-#   become: true
-#   gather_facts: true
-#   roles:
-#     - infra_kubeadm
+# Generic Kubernetes Cluster
+- name: "Play [Kubernetes]: Provision and Configure MicroK8s Cluster"
+  hosts: "{{ 'microk8s' if 'microk8s' in groups else [] }}"
+  become: true
+  gather_facts: true
+  roles:
+    - csning1998_lab.platform_foundation.platform_microk8s
+
+- name: "Play [Kubernetes]: Provision and Configure Kubeadm Cluster"
+  hosts: "{{ (groups['master'] | default([])) + (groups['worker'] | default([])) }}"
+  become: true
+  gather_facts: true
+  roles:
+    - csning1998_lab.platform_foundation.platform_kubeadm

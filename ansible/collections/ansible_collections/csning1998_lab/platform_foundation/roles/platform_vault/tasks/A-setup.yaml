@@ -1,0 +1,160 @@
+---
+- name: "Block A1: System & Service Configuration"
+  become: true
+  block:
+    - name: "A1a. Create Vault system group"
+      ansible.builtin.group:
+        name: "{{ utils_common_defaults_vault_owner }}"
+        system: true
+        state: present
+
+    - name: "A1b. Ensure Vault system user exists"
+      ansible.builtin.user:
+        name: "{{ utils_common_defaults_vault_owner }}"
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+        home: /etc/vault.d
+
+    - name: "A1c. Create Vault Config & TLS Directories"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ utils_common_defaults_vault_owner }}"
+        group: "{{ utils_common_defaults_vault_group }}"
+        mode: "0750"
+      loop:
+        - "{{ platform_vault_dir_config }}"
+        - "{{ platform_vault_dir_tls }}"
+        - "{{ platform_vault_dir_data }}"
+
+    - name: "A1d. Create Vault Systemd Service"
+      ansible.builtin.template:
+        src: vault.service.j2
+        dest: "/etc/systemd/system/vault.service"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload Systemd
+
+  rescue:
+    - name: "Block A1: System & Service Configuration failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+
+# The workstation issues the certificate through the Vault Proxy, and the private key never enters a Terraform state.
+# A certificate from a rebuilt pki-platform fails the chain check,
+# and a certificate inside the renewal window fails checkend.
+- name: "Block A2: Issue the Listener Certificate from pki-platform"
+  become: true
+  block:
+    - name: "A2a. Write the CA chain of the listener, the Bastion root and the pki-platform intermediate"
+      ansible.builtin.copy:
+        content: "{{ platform_vault_ca_chain_b64 | b64decode }}"
+        dest: "{{ platform_vault_dir_tls }}/vault-ca.crt"
+        owner: "{{ utils_common_defaults_vault_owner }}"
+        group: "{{ utils_common_defaults_vault_group }}"
+        mode: "0644"
+      notify: Restart Vault Service
+
+    - name: "A2b. Verify the held listener certificate against the CA chain"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - verify
+          - -CAfile
+          - "{{ platform_vault_dir_tls }}/vault-ca.crt"
+          - "{{ platform_vault_dir_tls }}/vault.crt"
+      register: _platform_vault_listener_chain
+      changed_when: false
+      failed_when: false
+
+    - name: "A2c. Check that the held listener certificate outlives the renewal window"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - x509
+          - -checkend
+          - "{{ platform_vault_listener_renew_before_seconds }}"
+          - -noout
+          - -in
+          - "{{ platform_vault_dir_tls }}/vault.crt"
+      register: _platform_vault_listener_expiry
+      changed_when: false
+      failed_when: false
+
+    - name: "A2d. Issue the listener certificate of this node"
+      when: _platform_vault_listener_chain.rc != 0 or _platform_vault_listener_expiry.rc != 0
+      block:
+        - name: "A2d-i. Take the Vault Proxy route of identity {{ project_code }}"
+          ansible.builtin.include_role:
+            name: csning1998_lab.platform_foundation.utils_vault_operator_login
+          vars:
+            utils_vault_operator_login_use_ambient: true
+
+        # The raft peers join through the node addresses, hence each node carries its own address and the VIP.
+        - name: "A2d-ii. Issue the certificate and the private key"
+          ansible.builtin.uri:
+            url: >-
+              {{
+                operator_vault_url ~ '/v1/' ~ platform_vault_pki_mount_path
+                ~ '/issue/' ~ platform_vault_pki_role_name
+              }}
+            method: POST
+            headers:
+              X-Vault-Token: "{{ utils_vault_operator_login_token }}"
+            body_format: json
+            body:
+              common_name: "{{ platform_vault_common_name }}"
+              alt_names: "{{ platform_vault_alt_names }}"
+              ip_sans: "{{ advertise_ip ~ ',' ~ vault_vip }}"
+              ttl: "{{ platform_vault_listener_cert_ttl }}"
+            ca_path: "{{ operator_vault_ca_cert_path }}"
+            client_cert: "{{ operator_vault_client_cert | default(omit, true) }}"
+            client_key: "{{ operator_vault_client_key | default(omit, true) }}"
+            validate_certs: true
+            status_code: 200
+            return_content: true
+          register: _platform_vault_listener_issue
+          delegate_to: localhost
+          become: false
+          no_log: true
+
+        - name: "A2d-iii. Write the server certificate followed by the issuing intermediate"
+          ansible.builtin.copy:
+            content: >-
+              {{
+                _platform_vault_listener_issue.json.data.certificate
+                ~ ('%c' | format(10))
+                ~ _platform_vault_listener_issue.json.data.issuing_ca
+                ~ ('%c' | format(10))
+              }}
+            dest: "{{ platform_vault_dir_tls }}/vault.crt"
+            owner: "{{ utils_common_defaults_vault_owner }}"
+            group: "{{ utils_common_defaults_vault_group }}"
+            mode: "0640"
+          notify: Restart Vault Service
+
+        - name: "A2d-iv. Write the server private key"
+          ansible.builtin.copy:
+            content: "{{ _platform_vault_listener_issue.json.data.private_key ~ '\n' }}"
+            dest: "{{ platform_vault_dir_tls }}/vault.key"
+            owner: "{{ utils_common_defaults_vault_owner }}"
+            group: "{{ utils_common_defaults_vault_group }}"
+            mode: "0600"
+          notify: Restart Vault Service
+          no_log: true
+
+    - name: "A2e. Trust the Bastion root and pki-platform on the OS level"
+      ansible.builtin.copy:
+        content: "{{ platform_vault_ca_chain_b64 | b64decode }}"
+        dest: /usr/local/share/ca-certificates/vault-ca.crt
+        mode: "0644"
+        owner: root
+        group: root
+      notify: Update CA Trust
+
+  rescue:
+    - name: "Block A2: Issue the Listener Certificate failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"

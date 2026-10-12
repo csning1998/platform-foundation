@@ -1,0 +1,7 @@
+---
+# The operator Vault defaults to the Vault Proxy which vault-proxy-env selects. A layer which targets another Vault
+# passes the URL and the CA path, and the Proxy client certificate stays empty there.
+operator_vault_url: "{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}"
+operator_vault_ca_cert_path: "{{ lookup('ansible.builtin.env', 'VAULT_CACERT') }}"
+operator_vault_client_cert: "{{ lookup('ansible.builtin.env', 'VAULT_CLIENT_CERT') }}"
+operator_vault_client_key: "{{ lookup('ansible.builtin.env', 'VAULT_CLIENT_KEY') }}"

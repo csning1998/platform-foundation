@@ -1,0 +1,125 @@
+---
+- name: "Block A: Resolve inventory_hostname's Current Agent SPIFFE ID"
+  become: false
+  block:
+    - name: "Step A0. Assert that the caller supplies the operator Vault coordinates"
+      ansible.builtin.assert:
+        that:
+          - operator_vault_url | default('') | length > 0
+          - operator_vault_ca_cert_path | default('') | length > 0
+        fail_msg: >-
+          operator_vault_url and operator_vault_ca_cert_path MUST name the operator Vault and the CA file of its listener.
+          vault-proxy-env exports both values, and a layer which targets another Vault passes both values.
+
+    # Documentation: documentation/architecture/platform-spire-parent-frontend.md Section 8 Item A.
+    - name: "Step A1. Read inventory_hostname's join_token from the operator Vault"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_vault_kv2_read
+      vars:
+        utils_vault_kv2_read_access:
+          endpoint: "{{ operator_vault_url }}"
+          ca_cert_path: "{{ operator_vault_ca_cert_path }}"
+          auth_mount: "{{ operator_vault_auth_mount | default('') }}"
+          role: "{{ operator_vault_role | default('') }}"
+          wrapper: "{{ operator_vault_wrapper | default('') }}"
+        utils_vault_kv2_read_use_ambient: "{{ operator_vault_use_ambient_token | default(false) | bool }}"
+        utils_vault_kv2_read_secrets:
+          - path: "{{ utils_spire_workload_entry_join_token_vault_path }}"
+            as: join_token
+            fields: [join_token]
+
+    - name: "Step A2. Compute inventory_hostname's Agent SPIFFE ID"
+      ansible.builtin.set_fact:
+        _utils_spire_workload_entry_parent_id: >-
+          {{
+            "spiffe://" ~ spire_trust_domain ~ "/spire/agent/join_token/"
+            ~ utils_vault_kv2_read_result.join_token.join_token
+          }}
+      no_log: true
+
+  rescue:
+    - name: "Block A: Resolve inventory_hostname's Current Agent SPIFFE ID failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+
+- name: "Block B: Register Workload Entry"
+  become: false
+  block:
+    - name: "Step B1. Check for an existing registration entry"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_spire_server_command
+      vars:
+        # The anchor holds the coordinates shared by every call, and each call adds its own arguments.
+        <<: &server_command_vars
+          utils_spire_server_command_kind: "{{ utils_spire_workload_entry_server_kind }}"
+          utils_spire_server_command_parent_ssh_host: "{{ spire_parent_ssh_host | default('') }}"
+          utils_spire_server_command_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
+          utils_spire_server_command_child_kubeconfig_kv_path: "{{ utils_spire_workload_entry_child_kubeconfig_kv_path }}"
+          utils_spire_server_command_terraform_operator_jwt_command: "{{ operator_vault_wrapper | default('') }}"
+          utils_spire_server_command_terraform_operator_vault_role: "{{ operator_vault_role | default('') }}"
+          utils_spire_server_command_terraform_operator_vault_auth_mount: "{{ operator_vault_auth_mount | default('') }}"
+          utils_spire_server_command_operator_vault_endpoint: "{{ operator_vault_url | default('') }}"
+          utils_spire_server_command_operator_vault_ca_cert_path: "{{ operator_vault_ca_cert_path | default('') }}"
+        utils_spire_server_command_arguments: >-
+          entry show -spiffeID {{ utils_spire_workload_entry_spiffe_id }} -output json
+
+    - name: "Step B1a. Assert that the server answered with entries"
+      ansible.builtin.assert:
+        that:
+          - (utils_spire_server_command_result.stdout | trim) != ''
+        fail_msg: "The SPIRE server returned no entry list for {{ utils_spire_workload_entry_spiffe_id }}."
+
+    # Preserves identical registrations in-place to eliminate registration blackouts causing workload SVID fetch failures.
+    - name: "Step B2a. Precompute the expected parentID path and selector for comparison"
+      ansible.builtin.set_fact:
+        _utils_spire_workload_entry_expected_parent_path: >-
+          {{ _utils_spire_workload_entry_parent_id | regex_replace('^spiffe://[^/]+', '') }}
+        _utils_spire_workload_entry_expected_selector:
+          type: "{{ utils_spire_workload_entry_selector.split(':')[0] }}"
+          value: "{{ utils_spire_workload_entry_selector.split(':', 1)[1] }}"
+        _utils_spire_workload_entry_all: >-
+          {{ (utils_spire_server_command_result.stdout | from_json).entries | default([]) }}
+
+    - name: "Step B2b. Split existing entries into current and stale"
+      ansible.builtin.set_fact:
+        _utils_spire_workload_entry_current: >-
+          {{
+            _utils_spire_workload_entry_all
+            | selectattr('parent_id.path', 'equalto', _utils_spire_workload_entry_expected_parent_path)
+            | selectattr('selectors', 'equalto', [_utils_spire_workload_entry_expected_selector])
+            | list
+          }}
+        _utils_spire_workload_entry_stale: >-
+          {{
+            _utils_spire_workload_entry_all
+            | rejectattr('parent_id.path', 'equalto', _utils_spire_workload_entry_expected_parent_path)
+            | list
+          }}
+
+    - name: "Step B2c. Delete only stale registration entries for this SPIFFE ID"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_spire_server_command
+      vars:
+        <<: *server_command_vars
+        utils_spire_server_command_arguments: "entry delete -entryID {{ _utils_spire_workload_entry_stale_item.id }}"
+      loop: "{{ _utils_spire_workload_entry_stale }}"
+      loop_control:
+        loop_var: _utils_spire_workload_entry_stale_item
+
+    - name: "Step B3. Create the registration entry"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_spire_server_command
+      vars:
+        <<: *server_command_vars
+        utils_spire_server_command_arguments: >-
+          entry create -parentID {{ _utils_spire_workload_entry_parent_id }}
+          -spiffeID {{ utils_spire_workload_entry_spiffe_id }}
+          -selector {{ utils_spire_workload_entry_selector }}
+          {{ ('-jwtSVIDTTL ' ~ utils_spire_workload_entry_jwt_svid_ttl)
+            if utils_spire_workload_entry_jwt_svid_ttl | length > 0 else '' }}
+      when: _utils_spire_workload_entry_current | length == 0
+
+  rescue:
+    - name: "Block B: Register Workload Entry failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"

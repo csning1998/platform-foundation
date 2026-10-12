@@ -1,0 +1,27 @@
+[Unit]
+Description="SPIRE OIDC Discovery Provider - JWT Signing Key Federation Endpoint"
+Documentation=https://github.com/spiffe/spire/blob/main/support/oidc-discovery-provider/README.md
+Requires=network-online.target spire-server.service
+After=network-online.target spire-server.service
+ConditionFileNotEmpty={{ platform_spire_parent_oidc_dir_config }}/oidc-discovery-provider.conf
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+User={{ utils_common_defaults_spire_owner }}
+Group={{ utils_common_defaults_spire_group }}
+ProtectSystem=full
+ProtectHome=read-only
+ProtectClock=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ExecStart=/usr/local/bin/oidc-discovery-provider -config {{ platform_spire_parent_oidc_dir_config }}/oidc-discovery-provider.conf
+KillMode=process
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

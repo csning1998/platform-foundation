@@ -1,0 +1,11 @@
+---
+# MinIO Service Configuration
+platform_minio_user: "minio-user"
+platform_minio_group: "minio-user"
+
+# Disk Configuration corresponding to Terraform-mounted vdb, vdc
+platform_minio_data_drives:
+  - device: "/dev/vdb"
+    mount_point: "/data1"
+  - device: "/dev/vdc"
+    mount_point: "/data2"

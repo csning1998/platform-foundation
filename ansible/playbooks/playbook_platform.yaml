@@ -13,10 +13,10 @@
   hosts: "{{ 'vault' if 'vault' in groups else [] }}"
   become: true
   roles:
-    - platform_vault
+    - csning1998_lab.platform_foundation.platform_vault
 
 - name: "Play [SPIRE]: Configure SPIRE Parent Server"
   hosts: "{{ 'spire_parent' if 'spire_parent' in groups else [] }}"
   become: true
   roles:
-    - platform_spire_parent
+    - csning1998_lab.platform_foundation.platform_spire_parent

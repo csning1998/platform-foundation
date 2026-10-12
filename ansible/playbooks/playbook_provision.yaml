@@ -4,18 +4,18 @@
   gather_facts: false
   become: true
   roles:
-    - role: provision_harbor_origin
+    - role: csning1998_lab.platform_foundation.provision_harbor_origin
 
 - name: SPIRE Child Registration on the SPIRE Parent
   hosts: "{{ 'spire_child_registration' if 'spire_child_registration' in groups else [] }}"
   gather_facts: false
   become: false
   roles:
-    - role: provision_spire_child
+    - role: csning1998_lab.platform_foundation.provision_spire_child
 
 - name: Downstream Vault Initialization and Unseal on Kubernetes
   hosts: "{{ 'vault_downstream_bootstrap' if 'vault_downstream_bootstrap' in groups else [] }}"
   gather_facts: false
   become: false
   roles:
-    - role: provision_vault_downstream
+    - role: csning1998_lab.platform_foundation.provision_vault_downstream
