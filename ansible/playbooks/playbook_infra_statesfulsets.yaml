@@ -1,5 +1,29 @@
 ---
-- name: "Play [Statefulset]: Placeholder no-op"
-  hosts: localhost
+# 1. Dynamic Grouping: Map node_role to Ansible groups
+- name: "Play [Setup]: Dynamic Grouping based on node_role"
+  hosts: all
   gather_facts: false
-  tasks: []
+  tasks:
+    - name: "Create dynamic groups from node_role variable"
+      ansible.builtin.group_by:
+        key: "{{ node_role | replace('-', '_') }}"
+      changed_when: false
+
+# (HA) ETCD
+- name: "Play [ETCD]: Configure etcd Cluster"
+  hosts: >-
+    {{ (groups['etcd'] | default([]))
+        + (groups['praefect_patroni'] | default([])) }}
+  become: true
+  roles:
+    - csning1998_lab.platform_foundation.base_baremetal_etcd
+    - csning1998_lab.platform_foundation.platform_etcd
+
+# Patroni
+- name: "Play [Postgres]: Configure Patroni and Postgres Cluster"
+  hosts: >-
+    {{ (groups['postgres'] | default([]))
+        + (groups['praefect_patroni'] | default([])) }}
+  become: true
+  roles:
+    - csning1998_lab.platform_foundation.platform_postgres

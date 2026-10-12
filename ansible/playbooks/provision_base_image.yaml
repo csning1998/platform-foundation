@@ -41,7 +41,7 @@
   hosts: "base-baremetal-postgres"
   become: true
   roles:
-    - base_baremetal_postgres
+    - csning1998_lab.platform_foundation.base_baremetal_postgres
     - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision Redis (Singular) Base Image"
@@ -80,7 +80,7 @@
   hosts: "base-baremetal-etcd"
   become: true
   roles:
-    - base_baremetal_etcd
+    - csning1998_lab.platform_foundation.base_baremetal_etcd
 
 - name: "Play: Final Permission Check and Clean up"
   hosts: "all"
