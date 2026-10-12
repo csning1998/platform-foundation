@@ -18,7 +18,7 @@
   hosts: "{{ 'keycloak' if 'keycloak' in groups else [] }}"
   become: true
   roles:
-    - platform_keycloak
+    - csning1998_lab.platform_foundation.platform_keycloak
 
 - name: "Play [HAProxy]: Configure HAProxy + Keepalived Frontend"
   hosts: "{{ 'haproxy' if 'haproxy' in groups else [] }}"

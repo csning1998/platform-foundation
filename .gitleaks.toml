@@ -4,7 +4,7 @@ useDefault = true
 [[allowlists]]
 description = "JDBC connection URLs carry host, port and database name only. Credentials are injected separately through KC_DB_USERNAME and KC_DB_PASSWORD."
 targetRules = ["generic-api-key"]
-paths = ['''ansible/roles/(shared|platform)_keycloak/templates/keycloak\.env\.j2$''']
+paths = ['''ansible/collections/ansible_collections/csning1998_lab/platform_foundation/roles/platform_keycloak/templates/keycloak\.env\.j2$''']
 regexes = ['''jdbc:postgresql://[^\s"']+''']
 
 [[allowlists]]

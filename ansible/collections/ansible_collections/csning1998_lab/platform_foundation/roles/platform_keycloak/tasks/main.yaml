@@ -2,7 +2,7 @@
 # Read Keycloak credentials from Downstream Vault to keep secrets out of Terraform state.
 - name: "Section 0. Read the Keycloak credentials from the Downstream Vault"
   ansible.builtin.include_role:
-    name: utils_vault_kv2_read
+    name: csning1998_lab.platform_foundation.utils_vault_kv2_read
   vars:
     utils_vault_kv2_read_target: downstream
     utils_vault_kv2_read_secrets:
@@ -20,7 +20,7 @@
 
 - name: "Role 81: Configure Network Routing (Asymmetric Fix)"
   ansible.builtin.include_role:
-    name: "utils_asymmetric_routing"
+    name: csning1998_lab.platform_foundation.utils_asymmetric_routing
   vars:
     utils_asymmetric_routing_static_routes: "{{ keycloak_static_routes }}"
   when: keycloak_static_routes is defined
@@ -33,7 +33,7 @@
 
 - name: "Role 83: Provision SPIRE Agent for Workload Identity"
   ansible.builtin.include_role:
-    name: utils_spire_agent
+    name: csning1998_lab.platform_foundation.utils_spire_agent
   vars:
     utils_spire_agent_server_kind: child
     utils_spire_agent_server_address: "{{ spire_child_agent_address }}"
@@ -43,11 +43,11 @@
 # Ensures local availability of the spiffe-helper container image required for workload SVID retrieval.
 - name: "Role 84: Ensure the spiffe-helper Image"
   ansible.builtin.include_role:
-    name: base_docker_spiffe_helper
+    name: csning1998_lab.platform_foundation.base_docker_spiffe_helper
 
 - name: "Role 85: Register SPIRE Workload Entry"
   ansible.builtin.include_role:
-    name: utils_spire_workload_entry
+    name: csning1998_lab.platform_foundation.utils_spire_workload_entry
   vars:
     utils_spire_workload_entry_spiffe_id: "{{ spire_workload_spiffe_id }}"
     utils_spire_workload_entry_selector: "docker:label:spiffe-workload:{{ spire_cluster_name }}"
@@ -56,7 +56,7 @@
 
 - name: "Role 82: Prepare Environment for Vault Agent (OIDC/Certificates)"
   ansible.builtin.include_role:
-    name: "utils_vault_agent"
+    name: csning1998_lab.platform_foundation.utils_vault_agent
   vars:
     utils_vault_agent_ip_sans: "{{ advertise_ip }}"
     utils_vault_agent_owner: "1000"

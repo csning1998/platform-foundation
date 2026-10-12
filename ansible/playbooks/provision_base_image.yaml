@@ -12,7 +12,7 @@
     - csning1998_lab.platform_foundation.base_docker
     - csning1998_lab.platform_foundation.base_docker_spiffe_helper
     - csning1998_lab.platform_foundation.base_baremetal_vault
-    - base_docker_keycloak
+    - csning1998_lab.platform_foundation.base_docker_keycloak
 
 - name: "Play: Provision Docker Base Image for Harbor Origin"
   hosts: "base-docker-harbor"
