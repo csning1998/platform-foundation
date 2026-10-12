@@ -36,7 +36,7 @@ func ComputePackerNetConfig(strategy string, out *ui.Printer) PackerNetConfig {
 
 // BootstrapEnv initializes or updates root/.env with default settings, host facts, and
 // dynamically discovered infrastructure layers.
-func BootstrapEnv(root, packerDir, terraformDir, ansibleDir string, out *ui.Printer) (*Env, error) {
+func BootstrapEnv(root, packerDir, terraformDir string, out *ui.Printer) (*Env, error) {
 	envPath := filepath.Join(root, ".env")
 	facts, err := DetectHostFacts()
 	if err != nil {
@@ -55,11 +55,8 @@ func BootstrapEnv(root, packerDir, terraformDir, ansibleDir string, out *ui.Prin
 			{KeyEnvironmentStrategy, StrategyNative},
 			{KeyAllPackerBases, ""},
 			{KeyAllTerraformLayers, ""},
-			{KeyProdVaultInventoryFile, ""},
-			{KeyProdVaultAddr, ""},
 			{KeyBastionVaultAddr, DefaultBastionVaultAddr},
 			{KeyBastionVaultCACert, DefaultBastionVaultCACert},
-			{KeyVaultToken, ""},
 			{KeyHostUID, strconv.Itoa(facts.CurrentUID)},
 			{KeyHostGID, strconv.Itoa(facts.CurrentGID)},
 			{KeyUname, facts.CurrentUname},
@@ -91,13 +88,6 @@ func BootstrapEnv(root, packerDir, terraformDir, ansibleDir string, out *ui.Prin
 		return nil, err
 	}
 	e.Set(KeyAllTerraformLayers, strings.Join(tfLayers, " "))
-
-	inv, err := DiscoverProdVaultInventory(ansibleDir)
-	if err != nil {
-		return nil, err
-	}
-	e.Set(KeyProdVaultInventoryFile, inv.File)
-	e.Set(KeyProdVaultAddr, inv.Addr)
 
 	strategy := e.Get(KeyEnvironmentStrategy)
 	if strategy == "" {

@@ -10,15 +10,7 @@ func (a *app) newVaultPaths() vaultops.Paths {
 	if a.env != nil {
 		caCert = a.env.GetExpanded(config.KeyBastionVaultCACert)
 	}
-	p := vaultops.NewPaths(a.root, a.ansibleDir, a.terraform, a.home, a.resolveBastionVaultAddr(), caCert)
-	if a.env != nil {
-		p = p.WithProdTokenRef(vaultops.CustomProdTokenRef(
-			a.env.GetExpanded("PROD_VAULT_TOKEN_MOUNT"),
-			a.env.GetExpanded("PROD_VAULT_TOKEN_PATH"),
-			a.env.GetExpanded("PROD_VAULT_TOKEN_FIELD"),
-		))
-	}
-	return p
+	return vaultops.NewPaths(a.root, a.ansibleDir, a.terraform, a.home, a.resolveBastionVaultAddr(), caCert)
 }
 
 // Returns the explicitly injected bastion address or falls back to BASTION_VAULT_ADDR from .env.

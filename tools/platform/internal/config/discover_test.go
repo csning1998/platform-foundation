@@ -33,45 +33,6 @@ func TestDiscoverTerraformLayers_ReturnsNilWhenDirMissing(t *testing.T) {
 	}
 }
 
-func TestDiscoverProdVaultInventory_FindsInventoryFile(t *testing.T) {
-	t.Run("no match", func(t *testing.T) {
-		inv, err := DiscoverProdVaultInventory(t.TempDir())
-		if err != nil {
-			t.Fatalf("DiscoverProdVaultInventory: %v", err)
-		}
-		if inv.File != "" || inv.Addr != "" {
-			t.Errorf("DiscoverProdVaultInventory on empty dir = %+v, want zero value", inv)
-		}
-	})
-
-	t.Run("one match", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "inventory-platform-vault-frontend.yaml")
-		mustWriteFile(t, path, "\"vault_vip\": \"172.16.136.250\"\n")
-
-		inv, err := DiscoverProdVaultInventory(dir)
-		if err != nil {
-			t.Fatalf("DiscoverProdVaultInventory: %v", err)
-		}
-		if inv.File != path {
-			t.Errorf("File = %q, want %q", inv.File, path)
-		}
-		if inv.Addr != "https://172.16.136.250:443" {
-			t.Errorf("Addr = %q, want https://172.16.136.250:443", inv.Addr)
-		}
-	})
-
-	t.Run("multiple matches is an error", func(t *testing.T) {
-		dir := t.TempDir()
-		mustWriteFile(t, filepath.Join(dir, "inventory-a-vault-frontend.yaml"), "")
-		mustWriteFile(t, filepath.Join(dir, "inventory-b-vault-frontend.yaml"), "")
-
-		if _, err := DiscoverProdVaultInventory(dir); err == nil {
-			t.Error("DiscoverProdVaultInventory with two matches = nil error, want error")
-		}
-	})
-}
-
 func TestDiscoverPackerBases_HandlesPartialDirectories(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -177,53 +138,6 @@ func TestDiscoverTerraformLayers_HandlesEmptyAndMixedDirectories(t *testing.T) {
 		}
 		if len(got) != 1 || got[0] != "networking" {
 			t.Errorf("DiscoverTerraformLayers = %v, want [networking]", got)
-		}
-	})
-}
-
-func TestDiscoverProdVaultInventory_HandlesEdgeCases(t *testing.T) {
-	t.Run("vault_vip line absent", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "inventory-platform-vault-frontend.yaml")
-		mustWriteFile(t, path, "some_other_key: value\n")
-
-		inv, err := DiscoverProdVaultInventory(dir)
-		if err != nil {
-			t.Fatalf("DiscoverProdVaultInventory: %v", err)
-		}
-		if inv.File != path {
-			t.Errorf("File = %q, want %q", inv.File, path)
-		}
-		if inv.Addr != "" {
-			t.Errorf("Addr = %q, want empty", inv.Addr)
-		}
-	})
-
-	t.Run("vault_vip present but empty", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "inventory-platform-vault-frontend.yaml")
-		mustWriteFile(t, path, `"vault_vip": ""`+"\n")
-
-		inv, err := DiscoverProdVaultInventory(dir)
-		if err != nil {
-			t.Fatalf("DiscoverProdVaultInventory: %v", err)
-		}
-		if inv.Addr != "" {
-			t.Errorf("Addr = %q, want empty for blank vault_vip", inv.Addr)
-		}
-	})
-
-	t.Run("malformed line does not match regex", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "inventory-platform-vault-frontend.yaml")
-		mustWriteFile(t, path, "vault_vip: 172.16.136.250\n")
-
-		inv, err := DiscoverProdVaultInventory(dir)
-		if err != nil {
-			t.Fatalf("DiscoverProdVaultInventory: %v", err)
-		}
-		if inv.Addr != "" {
-			t.Errorf("Addr = %q, want empty (unquoted key:value form does not match)", inv.Addr)
 		}
 	})
 }

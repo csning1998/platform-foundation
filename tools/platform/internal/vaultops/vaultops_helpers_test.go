@@ -11,14 +11,6 @@ import (
 	"platform/internal/ui"
 )
 
-// fakeEnv is a minimal test-local implementation of the one-method Set(string,string)
-// interface TokenSync accepts. Tests assert on what was recorded.
-type fakeEnv struct{ kv map[string]string }
-
-func newFakeEnv() *fakeEnv { return &fakeEnv{kv: map[string]string{}} }
-
-func (e *fakeEnv) Set(k, v string) { e.kv[k] = v }
-
 func discardOut() *ui.Printer { return ui.New(io.Discard, io.Discard) }
 
 // kvv2Handler serves a fake Vault KV-v2 "read" response for exactly one mount/path pair.

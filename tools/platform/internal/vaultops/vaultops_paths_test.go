@@ -10,9 +10,6 @@ func TestNewPaths_InitializesFieldsAndResolvesPaths(t *testing.T) {
 	if p.ProjectRoot != "/root" || p.AnsibleDir != "/ansible" || p.TerraformDir != "/tf" || p.Home != "/home/u" {
 		t.Errorf("NewPaths fields = %+v", p)
 	}
-	if got := p.ProdCACertPath(); got != filepath.FromSlash("/tf/layers/shared-vault-frontend/tls/bootstrap-ca.crt") {
-		t.Errorf("ProdCACertPath = %q", got)
-	}
 	if got := p.resolveBastionAddr(); got != "https://bastion:8200" {
 		t.Errorf("resolveBastionAddr = %q, want https://bastion:8200", got)
 	}
@@ -36,9 +33,7 @@ func TestPaths_ResolvesHelperPaths(t *testing.T) {
 		want string
 	}{
 		{"resolveTLSDir", p.resolveTLSDir(), "/root/vault/tls"},
-		{"resolveRootTokenFile", p.resolveRootTokenFile(), "/home/u/.vault-token"},
 		{"resolveCACertFile", p.resolveCACertFile(), "/custom/ca.pem"},
-		{"prodCACert", p.resolveProdCACertFile(), "/tf/layers/shared-vault-frontend/tls/bootstrap-ca.crt"},
 		{"resolveDownstreamLayerDir", p.resolveDownstreamLayerDir(), "/tf/layers/" + DownstreamLayer},
 	}
 	for _, c := range cases {

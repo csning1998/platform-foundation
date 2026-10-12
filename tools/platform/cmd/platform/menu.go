@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"strings"
 
+	"platform/internal/clusterops"
 	"platform/internal/config"
 	"platform/internal/packerops"
 	"platform/internal/ui"
@@ -17,7 +17,7 @@ type menuOption struct {
 	run   func(ctx context.Context) error
 }
 
-// runMenu returns after dispatching the first valid selection; an invalid selection re-prompts instead of exiting.
+// runMenu returns after dispatching the first valid selection. An invalid selection re-prompts instead of exiting.
 func (a *app) runMenu(ctx context.Context) error {
 	options := []menuOption{
 		{"[Downstream] Unseal Downstream Vault via Ansible", func(ctx context.Context) error { return a.unsealDownstreamVault(ctx) }},
@@ -36,7 +36,7 @@ func (a *app) runMenu(ctx context.Context) error {
 	a.printEnvironmentBanner()
 	a.out.PrintDivider("")
 
-	env, err := config.BootstrapEnv(a.root, a.packerDir, a.terraform, a.ansibleDir, a.out)
+	env, err := config.BootstrapEnv(a.root, a.packerDir, a.terraform, a.out)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (a *app) printEnvironmentBanner() {
 	}
 }
 
-// printVaultStatusBanner reports the state of Bastion and Production Vault.
+// printVaultStatusBanner reports the state of the Bastion Vault and the Downstream Vault.
 func (a *app) printVaultStatusBanner(ctx context.Context) {
 	a.out.PrintDivider("")
 
@@ -92,32 +92,21 @@ func (a *app) printVaultStatusBanner(ctx context.Context) {
 		a.out.Print(ui.Warn, "Bastion Vault: Running (Sealed)")
 	default:
 		a.out.Print(ui.OK, "Bastion Vault: Running (Unsealed)")
-		if a.env != nil {
-			if _, err := vaultops.SyncVaultToken(a.newVaultPaths(), a.env); err != nil {
-				a.out.Print(ui.Warn, "Vault token sync failed: "+err.Error())
-			} else if err := a.env.Save(); err != nil {
-				a.out.Print(ui.Warn, "Vault token sync failed: "+err.Error())
-			}
-		}
 	}
 
-	prodCACert := a.newVaultPaths().ProdCACertPath()
-	if _, err := os.Stat(prodCACert); err != nil {
-		a.out.Print(ui.Warn, "Production Vault: Unknown (CA Cert missing at "+prodCACert+")")
-		a.out.Print(ui.Info, "Run shared-vault-frontend Terraform to generate the Bootstrap CA file.")
+	tenantsLayerDir := a.newWorkstation().TenantsLayerDir
+	coordinates, err := clusterops.ReadCoordinates(ctx, tenantsLayerDir)
+	if err != nil {
+		a.out.Print(ui.Warn, "Downstream Vault: Unknown (the outputs of "+filepath.Base(tenantsLayerDir)+" are unreadable)")
 	} else {
-		prodAddr := ""
-		if a.env != nil {
-			prodAddr = a.env.Get(config.KeyProdVaultAddr)
-		}
-		prod := vaultops.InspectStatusAt(ctx, prodAddr, prodCACert)
+		downstream := vaultops.InspectStatusAt(ctx, coordinates.Address, coordinates.CACertPath)
 		switch {
-		case !prod.Reachable:
-			a.out.Print(ui.Error, "Production Vault: Stopped or Unreachable")
-		case prod.Sealed:
-			a.out.Print(ui.Warn, "Production Vault: Running (Sealed)")
+		case !downstream.Reachable:
+			a.out.Print(ui.Error, "Downstream Vault: Stopped or Unreachable")
+		case downstream.Sealed:
+			a.out.Print(ui.Warn, "Downstream Vault: Running (Sealed)")
 		default:
-			a.out.Print(ui.OK, "Production Vault: Running (Unsealed)")
+			a.out.Print(ui.OK, "Downstream Vault: Running (Unsealed)")
 		}
 	}
 
@@ -126,7 +115,7 @@ func (a *app) printVaultStatusBanner(ctx context.Context) {
 
 func (a *app) sshKeygenMenu() error {
 	name := a.out.PromptInput(a.in, "Enter the desired key name (default: id_ed25519_"+config.ProjectCode+"): ", "id_ed25519_"+config.ProjectCode)
-	overwrite := true // The legacy bash script's own y/n overwrite prompt already gates entry to this path.
+	overwrite := true // The y/n overwrite prompt of the legacy bash script already gates entry to this path.
 	return a.generateSSHKey(name, overwrite)
 }
 
@@ -168,7 +157,7 @@ func (a *app) packerMenu(ctx context.Context) error {
 	}
 }
 
-// packerCategoryMenu reports done=true once a build ran or navigation exited since the caller's loop stops on that signal.
+// packerCategoryMenu reports done=true once a build ran or navigation exited since the loop of the caller stops on that signal.
 func (a *app) packerCategoryMenu(ctx context.Context, subDir, title string) (done bool, err error) {
 	var bases []string
 	if subDir == "distro" {

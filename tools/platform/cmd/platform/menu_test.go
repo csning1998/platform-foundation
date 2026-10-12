@@ -66,18 +66,11 @@ func TestPrintEnvironmentBanner_PrintsPodmanEngineForContainerStrategy(t *testin
 	}
 }
 
-// Validates printVaultStatusBanner execution when a Production Vault CA certificate exists and a.env is uninitialized (nil).
+// Validates printVaultStatusBanner execution when the tenants layer has no outputs and a.env is uninitialized (nil).
 // Execution MUST NOT panic or block when evaluating Vault configuration status.
-func TestPrintVaultStatusBanner_ToleratesNilEnvWithCACert(t *testing.T) {
+func TestPrintVaultStatusBanner_ToleratesNilEnvWithoutTenantOutputs(t *testing.T) {
 	dir := t.TempDir()
 	terraform := filepath.Join(dir, "terraform")
-	caCertPath := filepath.Join(terraform, "layers", "shared-vault-frontend", "tls", "bootstrap-ca.crt")
-	if err := os.MkdirAll(filepath.Dir(caCertPath), 0o755); err != nil {
-		t.Fatalf("mkdir CA cert dir: %v", err)
-	}
-	if err := os.WriteFile(caCertPath, []byte("not-a-real-cert"), 0o644); err != nil {
-		t.Fatalf("write fake CA cert: %v", err)
-	}
 
 	a := &app{root: dir, terraform: terraform, env: nil, out: ui.New(io.Discard, io.Discard)}
 

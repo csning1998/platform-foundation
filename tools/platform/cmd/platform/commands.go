@@ -10,11 +10,11 @@ import (
 )
 
 func (a *app) vaultCmd() *cobra.Command {
-	cmd := &cobra.Command{Use: "vault", Short: "Bastion and Production Vault operations"}
+	cmd := &cobra.Command{Use: "vault", Short: "Bastion and Downstream Vault operations"}
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "status",
-		Short: "Inspect Bastion and Production Vault reachability and seal status",
+		Short: "Inspect Bastion and Downstream Vault reachability and seal status",
 		RunE:  func(cmd *cobra.Command, args []string) error { return a.reportVaultStatus(cmd.Context()) },
 	})
 	cmd.AddCommand(&cobra.Command{

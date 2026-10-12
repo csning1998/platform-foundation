@@ -19,7 +19,6 @@ type Paths struct {
 	Home               string
 	bastionVaultAddr   string
 	bastionVaultCACert string
-	prodTokenRef       vaultclient.SecretRef
 }
 
 // NewPaths constructs Paths for a caller outside this package.
@@ -34,19 +33,6 @@ func NewPaths(projectRoot, ansibleDir, terraformDir, home, bastionVaultAddr, bas
 	}
 }
 
-// WithProdTokenRef returns a copy of Paths configured with a custom Production Vault token reference.
-func (p Paths) WithProdTokenRef(ref vaultclient.SecretRef) Paths {
-	p.prodTokenRef = ref
-	return p
-}
-
-func (p Paths) resolveProdTokenRef() vaultclient.SecretRef {
-	if p.prodTokenRef == (vaultclient.SecretRef{}) {
-		return ResolveProdTokenRef()
-	}
-	return p.prodTokenRef
-}
-
 func (p Paths) resolveBastionAddr() string {
 	if p.bastionVaultAddr != "" {
 		return p.bastionVaultAddr
@@ -54,23 +40,15 @@ func (p Paths) resolveBastionAddr() string {
 	return "https://172.16.0.1:8200"
 }
 
-func (p Paths) resolveTLSDir() string        { return filepath.Join(p.ProjectRoot, "vault", "tls") }
-func (p Paths) resolveRootTokenFile() string { return filepath.Join(p.Home, ".vault-token") }
+func (p Paths) resolveTLSDir() string { return filepath.Join(p.ProjectRoot, "vault", "tls") }
 func (p Paths) resolveCACertFile() string {
 	if p.bastionVaultCACert != "" {
 		return p.bastionVaultCACert
 	}
 	return filepath.Join(p.resolveTLSDir(), "ca.pem")
 }
-func (p Paths) resolveProdCACertFile() string {
-	return filepath.Join(p.TerraformDir, "layers", "shared-vault-frontend", "tls", "bootstrap-ca.crt")
-}
 
-// ProdCACertPath returns the on-disk path where shared-vault-frontend's Terraform output
-// writes the Production Vault CA certificate.
-func (p Paths) ProdCACertPath() string { return p.resolveProdCACertFile() }
-
-// SealStatus is one Vault instance's reachability, initialization, and seal state.
+// SealStatus is the reachability, initialization, and seal state of one Vault instance.
 type SealStatus = vaultclient.SealStatus
 
 // InspectStatusAt queries the Vault instance at addr, verifying its TLS certificate against
@@ -82,7 +60,7 @@ func InspectStatusAt(ctx context.Context, addr, caCert string) SealStatus {
 	})
 }
 
-// InspectBastionStatus queries Bastion Vault's full seal status.
+// InspectBastionStatus queries the full seal status of the Bastion Vault.
 func InspectBastionStatus(ctx context.Context, p Paths) SealStatus {
 	return InspectStatusAt(ctx, p.resolveBastionAddr(), p.resolveCACertFile())
 }
@@ -97,11 +75,6 @@ func GetBastionStatus(ctx context.Context, p Paths) (running, sealed bool, err e
 		return false, false, err
 	}
 	return vaultclient.ProbeState(ctx, client)
-}
-
-// SyncVaultToken extracts the root token from the user token file and updates the environment.
-func SyncVaultToken(p Paths, env interface{ Set(string, string) }) (string, error) {
-	return vaultclient.SyncSessionToken(p.Home, env)
 }
 
 // ReadKVv2Field reads mountPath/data/secretPath from a KV v2 engine and returns the specified field value.
