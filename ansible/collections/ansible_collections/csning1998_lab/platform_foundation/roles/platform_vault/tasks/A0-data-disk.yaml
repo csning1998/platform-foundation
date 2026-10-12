@@ -7,7 +7,7 @@
   block:
     - name: "A3a. Check current mount state"
       ansible.builtin.command:
-        cmd: "findmnt --source {{ platform_vault_data_device }} --mountpoint {{ vault_dir_data }}"
+        cmd: "findmnt --source {{ platform_vault_data_device }} --mountpoint {{ platform_vault_dir_data }}"
       register: _platform_vault_disk_mounted
       changed_when: false
       failed_when: false
@@ -37,7 +37,7 @@
 
         - name: "A3b-iv. Mount the data disk at the raft path and persist the mount in fstab"
           ansible.posix.mount:
-            path: "{{ vault_dir_data }}"
+            path: "{{ platform_vault_dir_data }}"
             src: "UUID={{ _platform_vault_disk_uuid.stdout }}"
             fstype: xfs
             opts: defaults
@@ -45,10 +45,10 @@
 
     - name: "A3c. Enforce ownership on the raft path"
       ansible.builtin.file:
-        path: "{{ vault_dir_data }}"
+        path: "{{ platform_vault_dir_data }}"
         state: directory
-        owner: "{{ vault_owner }}"
-        group: "{{ vault_group }}"
+        owner: "{{ utils_common_defaults_vault_owner }}"
+        group: "{{ utils_common_defaults_vault_group }}"
         mode: "0750"
 
   rescue:

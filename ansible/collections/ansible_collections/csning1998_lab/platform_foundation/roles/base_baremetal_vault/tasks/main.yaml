@@ -26,11 +26,13 @@
       changed_when: false
       failed_when: false
 
-    - name: "Step B1. Download and Unarchive Vault (v{{ vault_target_version }})"
+    - name: "Step B1. Download and Unarchive Vault (v{{ base_baremetal_vault_target_version }})"
       vars:
-        base_baremetal_vault_zip: "vault_{{ vault_target_version }}_{{ vault_target_os }}_{{ vault_target_arch }}.zip"
+        base_baremetal_vault_zip: >-
+          {{ 'vault_' ~ base_baremetal_vault_target_version ~ '_' ~ base_baremetal_vault_target_os
+             ~ '_' ~ base_baremetal_vault_target_arch ~ '.zip' }}
       ansible.builtin.unarchive:
-        src: "https://releases.hashicorp.com/vault/{{ vault_target_version }}/{{ base_baremetal_vault_zip }}"
+        src: "https://releases.hashicorp.com/vault/{{ base_baremetal_vault_target_version }}/{{ base_baremetal_vault_zip }}"
         dest: "/usr/local/bin"
         remote_src: true
         mode: "0755"
@@ -38,7 +40,7 @@
         group: root
       when: >-
         base_baremetal_vault_installed_version.rc != 0 or
-        vault_target_version not in
+        base_baremetal_vault_target_version not in
         (base_baremetal_vault_installed_version.stdout | default('')).split() | map('replace', 'v', '')
 
     - name: "Step B2. Verify Vault installation"
@@ -52,14 +54,14 @@
 
     - name: "Step B4. Create Vault system group"
       ansible.builtin.group:
-        name: "{{ vault_group | default('vault') }}"
+        name: "{{ utils_common_defaults_vault_group | default('vault') }}"
         system: true
         state: present
 
     - name: "Step B5. Create Vault system user"
       ansible.builtin.user:
-        name: "{{ vault_owner | default('vault') }}"
-        group: "{{ vault_group | default('vault') }}"
+        name: "{{ utils_common_defaults_vault_owner | default('vault') }}"
+        group: "{{ utils_common_defaults_vault_group | default('vault') }}"
         system: true
         shell: /usr/sbin/nologin
         create_home: false

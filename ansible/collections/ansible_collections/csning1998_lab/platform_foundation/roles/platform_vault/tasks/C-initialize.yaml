@@ -5,7 +5,7 @@
   block:
     - name: "C1a. Wait for Vault"
       ansible.builtin.wait_for:
-        port: "{{ vault_port_api }}"
+        port: "{{ platform_vault_port_api }}"
         delay: "{{ platform_vault_vault_wait_delay_seconds }}"
 
     - name: "C1b. Initialize Vault"
@@ -23,7 +23,7 @@
 
     - name: "C1c. Take the Vault Proxy route of identity {{ project_code }}"
       ansible.builtin.include_role:
-        name: utils_vault_operator_login
+        name: csning1998_lab.platform_foundation.utils_vault_operator_login
       vars:
         utils_vault_operator_login_use_ambient: true
       when: platform_vault_init_result.rc == 0
@@ -55,7 +55,7 @@
     - name: "C1-rescue1. Preserve Vault init secrets if initialization succeeded but persistence failed"
       ansible.builtin.copy:
         content: "{{ platform_vault_init_result.stdout }}"
-        dest: "{{ playbook_dir }}/../../vault-init-emergency.json"
+        dest: "{{ platform_vault_emergency_init_path }}"
         mode: "0600"
       when: platform_vault_init_result is defined and platform_vault_init_result.rc == 0
       no_log: true
@@ -67,7 +67,7 @@
         _c1_emergency_note: >-
           Vault was newly initialized during this execution but the root token and unseal keys
           could not be persisted to the Bastion Vault, and they have been saved to
-          vault-init-emergency.json at the repository root on the Ansible control
+          {{ platform_vault_emergency_init_path }} on the Ansible control
           machine (mode 0600). Retrieve them manually, complete the write to the
           Bastion Vault through the {{ project_code }} Vault Proxy, then delete that file.
       ansible.builtin.fail:

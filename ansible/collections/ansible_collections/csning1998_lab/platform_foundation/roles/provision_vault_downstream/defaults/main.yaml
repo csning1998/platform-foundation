@@ -13,3 +13,7 @@ provision_vault_downstream_pod_wait_delay_seconds: 10
 # A replica joins the raft cluster on its first unseal, and the join retries until the leader answers.
 provision_vault_downstream_unseal_retries: 24
 provision_vault_downstream_unseal_delay_seconds: 5
+
+# The control machine path which receives the init secrets when the write to the Bastion Vault fails.
+# The ansible-runner module writes the inventory at the Ansible root, hence the default is the repository root.
+provision_vault_downstream_emergency_init_path: "{{ inventory_dir }}/../vault-init-emergency.json"

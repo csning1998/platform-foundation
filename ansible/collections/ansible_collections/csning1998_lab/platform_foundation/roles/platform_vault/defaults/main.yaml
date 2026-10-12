@@ -23,6 +23,18 @@ platform_vault_vault_unseal_delay_seconds: 5
 
 # The CLI on a node reaches the listener at 127.0.0.1 and verifies the certificate against the common name of the service.
 platform_vault_local_cli_environment:
-  VAULT_ADDR: "https://127.0.0.1:{{ vault_port_api }}"
-  VAULT_CACERT: "{{ vault_dir_tls }}/vault-ca.crt"
+  VAULT_ADDR: "https://127.0.0.1:{{ platform_vault_port_api }}"
+  VAULT_CACERT: "{{ platform_vault_dir_tls }}/vault-ca.crt"
   VAULT_TLS_SERVER_NAME: "{{ platform_vault_tls_server_name }}"
+
+# Directory structure, listener ports, and raft cluster name of the Vault service.
+platform_vault_dir_config: "/etc/vault.d"
+platform_vault_dir_tls: "/etc/vault.d/tls"
+platform_vault_dir_data: "/opt/vault/data"
+platform_vault_port_api: 8200
+platform_vault_port_cluster: 8201
+platform_vault_cluster_name: "vault-ha-cluster"
+
+# The control machine path which receives the init secrets when the write to the Bastion Vault fails.
+# The ansible-runner module writes the inventory at the Ansible root, hence the default is the repository root.
+platform_vault_emergency_init_path: "{{ inventory_dir }}/../vault-init-emergency.json"

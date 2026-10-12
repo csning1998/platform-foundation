@@ -12,7 +12,7 @@
 
     - name: "D1b. Take the Vault Proxy route of identity {{ project_code }}"
       ansible.builtin.include_role:
-        name: utils_vault_operator_login
+        name: csning1998_lab.platform_foundation.utils_vault_operator_login
       vars:
         utils_vault_operator_login_use_ambient: true
       when:
@@ -80,7 +80,7 @@
 
     - name: "D2b. Take the Vault Proxy route of identity {{ project_code }}"
       ansible.builtin.include_role:
-        name: utils_vault_operator_login
+        name: csning1998_lab.platform_foundation.utils_vault_operator_login
       vars:
         utils_vault_operator_login_use_ambient: true
       when:

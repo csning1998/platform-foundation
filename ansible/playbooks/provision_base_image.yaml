@@ -11,7 +11,7 @@
   roles:
     - csning1998_lab.platform_foundation.base_docker
     - csning1998_lab.platform_foundation.base_docker_spiffe_helper
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
     - base_docker_keycloak
 
 - name: "Play: Provision Docker Base Image for Harbor Origin"
@@ -20,7 +20,7 @@
   roles:
     - csning1998_lab.platform_foundation.base_docker
     - csning1998_lab.platform_foundation.base_docker_spiffe_helper
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
     - base_docker_harbor
 
 - name: "Play: Provision Kubernetes (Kubeadm) Base Image"
@@ -28,41 +28,41 @@
   become: true
   roles:
     - base_kubernetes_kubeadm
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision MicroK8s Base Image"
   hosts: "base-kubernetes-microk8s"
   become: true
   roles:
     - base_kubernetes_microk8s
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision Postgres (Singular) Base Image"
   hosts: "base-baremetal-postgres"
   become: true
   roles:
     - base_baremetal_postgres
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision Redis (Singular) Base Image"
   hosts: "base-baremetal-redis"
   become: true
   roles:
     - base_baremetal_redis
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision MinIO (Singular) Base Image"
   hosts: "base-baremetal-minio"
   become: true
   roles:
     - base_baremetal_minio
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision Vault (Singular) Base Image"
   hosts: "base-baremetal-vault"
   become: true
   roles:
-    - base_baremetal_vault
+    - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision SPIRE Parent (Baremetal) Base Image"
   hosts: "base-baremetal-spire-parent"

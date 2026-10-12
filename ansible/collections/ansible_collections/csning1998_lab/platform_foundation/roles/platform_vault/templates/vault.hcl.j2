@@ -1,10 +1,10 @@
 
-cluster_name  = "{{ vault_cluster_name }}"
+cluster_name  = "{{ platform_vault_cluster_name }}"
 ui            = {{ platform_vault_vault_ui_enabled| lower }}      # Set to lower to prevent Parse Error
 disable_mlock = {{ platform_vault_vault_disable_mlock | lower }}  # Set to lower to prevent Parse Error
 
-api_addr     = "https://{{ advertise_ip }}:{{ vault_port_api }}"
-cluster_addr = "https://{{ advertise_ip }}:{{ vault_port_cluster }}"
+api_addr     = "https://{{ advertise_ip }}:{{ platform_vault_port_api }}"
+cluster_addr = "https://{{ advertise_ip }}:{{ platform_vault_port_cluster }}"
 
 telemetry {
   prometheus_retention_time = "30s"
@@ -12,29 +12,29 @@ telemetry {
 }
 
 storage "raft" {
-  path    = "{{ vault_dir_data }}"
+  path    = "{{ platform_vault_dir_data }}"
   node_id = "{{ node_id }}"
 
 {% if inventory_hostname not in groups['primary'] %}
   retry_join {
-    leader_api_addr         = "https://{{ hostvars[groups['primary'][0]]['advertise_ip'] }}:{{ vault_port_api }}"
-    leader_ca_cert_file     = "{{ vault_dir_tls }}/vault-ca.crt"
-    leader_client_cert_file = "{{ vault_dir_tls }}/vault.crt"
-    leader_client_key_file  = "{{ vault_dir_tls }}/vault.key"
+    leader_api_addr         = "https://{{ hostvars[groups['primary'][0]]['advertise_ip'] }}:{{ platform_vault_port_api }}"
+    leader_ca_cert_file     = "{{ platform_vault_dir_tls }}/vault-ca.crt"
+    leader_client_cert_file = "{{ platform_vault_dir_tls }}/vault.crt"
+    leader_client_key_file  = "{{ platform_vault_dir_tls }}/vault.key"
   }
 {% endif %}
 }
 
 listener "tcp" {
-  address       = "0.0.0.0:{{ vault_port_api }}"
+  address       = "0.0.0.0:{{ platform_vault_port_api }}"
   tls_disable   = false
 
   # Server Cert
-  tls_cert_file = "{{ vault_dir_tls }}/vault.crt"
-  tls_key_file  = "{{ vault_dir_tls }}/vault.key"
+  tls_cert_file = "{{ platform_vault_dir_tls }}/vault.crt"
+  tls_key_file  = "{{ platform_vault_dir_tls }}/vault.key"
 
   # Client Verification
-  tls_client_ca_file = "{{ vault_dir_tls }}/vault-ca.crt"
+  tls_client_ca_file = "{{ platform_vault_dir_tls }}/vault-ca.crt"
 
   telemetry {
     # Prometheus scrapes metrics over HTTPS and presents a token scoped to the alloy-metrics-read policy

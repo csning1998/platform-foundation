@@ -32,7 +32,7 @@
   block:
     - name: "A1. Read the kubeconfig of the cluster from the Bastion KV"
       ansible.builtin.include_role:
-        name: utils_vault_kv2_read
+        name: csning1998_lab.platform_foundation.utils_vault_kv2_read
       vars:
         utils_vault_kv2_read_access:
           endpoint: "{{ operator_vault_url }}"
@@ -119,7 +119,7 @@
       block:
         - name: "A8a. Take the Vault Proxy route of identity {{ project_code }}"
           ansible.builtin.include_role:
-            name: utils_vault_operator_login
+            name: csning1998_lab.platform_foundation.utils_vault_operator_login
           vars:
             utils_vault_operator_login_use_ambient: true
 
@@ -158,7 +158,7 @@
         - name: "A8-rescue1. Preserve the init secrets on the control machine"
           ansible.builtin.copy:
             content: "{{ _provision_vault_downstream_init.stdout }}"
-            dest: "{{ playbook_dir }}/../../vault-init-emergency.json"
+            dest: "{{ provision_vault_downstream_emergency_init_path }}"
             mode: "0600"
           no_log: true
 
@@ -166,13 +166,13 @@
           ansible.builtin.fail:
             msg: >-
               The Downstream Vault was initialized, but the root token and the unseal keys could not reach the
-              Bastion Vault. They are in vault-init-emergency.json at the repository root (mode 0600). Write them to
+              Bastion Vault. They are in {{ provision_vault_downstream_emergency_init_path }} (mode 0600). Write them to
               the init leaf by hand, then delete that file.
 
     - name: "A9. Read the unseal keys from the Bastion Vault"
       when: provision_vault_downstream_seal == 'shamir'
       ansible.builtin.include_role:
-        name: utils_vault_kv2_read
+        name: csning1998_lab.platform_foundation.utils_vault_kv2_read
       vars:
         utils_vault_kv2_read_access:
           endpoint: "{{ operator_vault_url }}"
