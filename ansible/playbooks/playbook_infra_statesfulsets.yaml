@@ -27,3 +27,10 @@
   become: true
   roles:
     - csning1998_lab.platform_foundation.platform_postgres
+
+# Redis Sentinel
+- name: "Play [Redis]: Configure Redis High Availability Cluster"
+  hosts: "{{ 'redis' if 'redis' in groups else [] }}"
+  become: true
+  roles:
+    - csning1998_lab.platform_foundation.platform_redis
