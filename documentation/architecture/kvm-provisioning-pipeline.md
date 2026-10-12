@@ -356,7 +356,7 @@ Location: `terraform/modules/kvm-provisioning/configure`.
 
 1. The module MUST drive Ansible execution via the `ansible/ansible` provider using `action "ansible_playbook_run"` blocks.
 2. The `local_file.inventory` resource MUST trigger playbook execution on `after_create` and `after_update` events. The inventory file SHALL append `jsonencode(var.status_trigger)` in comments to detect upstream virtual machine recreation.
-3. The `local_file.ansible_cfg` resource MUST render absolute paths for `roles_path` and `inventory` using `var.ansible_root_path`.
+3. The `local_file.ansible_cfg` resource MUST render absolute paths for `roles_path`, `collections_path`, and `inventory` using `var.ansible_root_path`.
 4. The `extra_vars` variable MUST declare `sensitive = true` to protect credentials from terminal logging.
 
 ### Item C. Module Classification
@@ -426,7 +426,7 @@ Location: `terraform/layers/platform-spire-parent`.
 
 ## Section 9. SPIRE Agent Consumption Contract
 
-Location: `ansible/roles/utils_spire_agent`.
+Location: `ansible/collections/ansible_collections/csning1998_lab/platform_foundation/roles/utils_spire_agent`.
 
 ### Item A. Role Structure
 

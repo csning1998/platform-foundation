@@ -1,0 +1,50 @@
+---
+utils_vault_agent_config_owner: "vault"
+utils_vault_agent_config_group: "vault"
+
+utils_vault_agent_service_owner: "root"
+utils_vault_agent_service_group: "root"
+
+utils_vault_agent_owner: "root"
+utils_vault_agent_group: "root"
+utils_vault_agent_config_dir: "/etc/vault.d"
+# Kept separate from utils_vault_agent_config_dir, which other files in this role share with
+# the vault:vault owner. A vault-owned process therefore cannot read the root-issued token.
+utils_vault_agent_token_dir: "{{ utils_vault_agent_config_dir }}/token"
+utils_vault_agent_cert_base_dir: "{{ utils_vault_agent_config_dir }}/certs"
+utils_vault_agent_cert_dirs:
+  - "{{ utils_vault_agent_cert_base_dir }}"
+utils_vault_agent_cert_mode: "0755"
+
+utils_vault_agent_cert_name: "server.crt"
+utils_vault_agent_key_name: "server.key"
+utils_vault_agent_ca_name: "ca.crt"
+
+# Certificate rendering MUST append the intermediate CA certificate from Terraform
+# because the active Vault CA chain contains a self-signed root certificate.
+utils_vault_agent_cert_content: "{{ '{{ .Data.certificate }}' }}\n{{ vault_intermediate_ca_b64 | b64decode }}"
+utils_vault_agent_key_content: "{{ '{{ .Data.private_key }}' }}"
+
+utils_vault_agent_cert_files:
+  - dest: "{{ utils_vault_agent_cert_base_dir }}/{{ utils_vault_agent_cert_name }}"
+    content: "{{ utils_vault_agent_cert_content }}"
+    mode: "0644"
+  - dest: "{{ utils_vault_agent_cert_base_dir }}/{{ utils_vault_agent_key_name }}"
+    content: "{{ utils_vault_agent_key_content }}"
+    mode: "0600"
+
+# Operational Defaults
+# Consuming playbooks MUST supply the active PKI mount path from Terraform
+# whenever target infrastructure diverges from default Bastion Vault conventions.
+utils_vault_agent_pki_mount_path: "pki_int"
+utils_vault_agent_wait_file: "{{ utils_vault_agent_cert_base_dir }}/{{ utils_vault_agent_cert_name }}"
+utils_vault_agent_post_command: "true"
+utils_vault_agent_ip_sans: "" # Corresponding to advertise_ip
+
+utils_vault_agent_helper_container_name: "spiffe-helper"
+utils_vault_agent_helper_image: "spiffe-helper:{{ utils_common_defaults_spiffe_helper_version }}"
+utils_vault_agent_socket_dir: "{{ utils_spire_agent_socket_dir | default('/run/spire-agent/public') }}"
+utils_vault_agent_jwt_dir: "/run/spiffe-helper"
+utils_vault_agent_jwt_file: "vault.jwt"
+utils_vault_agent_jwt_audience: "vault"
+utils_vault_agent_helper_health_port: 8090

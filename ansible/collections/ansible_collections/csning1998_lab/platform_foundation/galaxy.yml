@@ -1,0 +1,23 @@
+---
+namespace: csning1998_lab
+name: platform_foundation
+# The release job MUST write the repository SemVer tag into version before the build.
+version: 0.0.0
+readme: README.md
+authors:
+  - C.S. Ning
+description: Roles which build the platform images and configure the platform services of platform-foundation.
+repository: https://gitlab.com/csning1998-lab/platform-engineering-lab/platform-foundation
+license:
+  - GPL-3.0-or-later
+tags:
+  - infrastructure
+  - vault
+  - spire
+  - kubernetes
+dependencies:
+  ansible.posix: ">=2.1.0"
+  community.docker: ">=5.2.0"
+  community.general: ">=12.6.0"
+  community.hashi_vault: ">=7.1.0"
+  kubernetes.core: ">=6.3.0"
