@@ -27,14 +27,14 @@
   hosts: "base-kubernetes-kubeadm"
   become: true
   roles:
-    - base_kubernetes_kubeadm
+    - csning1998_lab.platform_foundation.base_kubernetes_kubeadm
     - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision MicroK8s Base Image"
   hosts: "base-kubernetes-microk8s"
   become: true
   roles:
-    - base_kubernetes_microk8s
+    - csning1998_lab.platform_foundation.base_kubernetes_microk8s
     - csning1998_lab.platform_foundation.base_baremetal_vault
 
 - name: "Play: Provision Postgres (Singular) Base Image"
