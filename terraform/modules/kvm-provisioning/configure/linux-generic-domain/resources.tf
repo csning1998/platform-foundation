@@ -210,6 +210,8 @@ resource "libvirt_volume" "cloud_init_iso" {
 
   lifecycle {
     replace_triggered_by = [libvirt_cloudinit_disk.cloud_init[each.key]]
+    # The ISO path lives in tmpfs and its hash drifts after a reboot, but a volume cannot update in place.
+    ignore_changes = [create]
   }
 }
 
