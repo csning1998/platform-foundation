@@ -25,8 +25,8 @@ provider "vault" {
 # Downstream Vault provider uses ephemeral bootstrap root token to configure initial JWT auth and tenant policies.
 provider "vault" {
   alias            = "downstream"
-  address          = local.downstream_vault.endpoint
-  ca_cert_file     = local.downstream_vault.ca_cert_path
+  address          = local.downstream_vault_config.endpoint
+  ca_cert_file     = local.downstream_vault_config.ca_cert_path
   token            = ephemeral.vault_kv_secret_v2.downstream_init.data["prod_vault_root_token"]
   skip_child_token = true
 }

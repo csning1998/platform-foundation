@@ -2,7 +2,7 @@
 # Vault OSS bounds neither the content of a policy nor the policies of an auth role, hence a component operator does not write any policy.
 # This layer declares every workload policy of a component, and the operator assigns only those names through allowed_parameters.
 locals {
-  # Cross-component KV grants and in-cluster workloads of each component, keyed as the operators of provision-spire-parent.
+  # Cross-component KV grants and in-cluster workloads of each component, keyed as the component operators.
   component_workloads = {
     "cilium" = {
       kv_read_paths             = [local.foundation_kv_paths["harbor-origin"]["frontend"].robot]
@@ -41,8 +41,8 @@ locals {
   workload_policies = merge(
     {
       for key, w in local.component_workloads : "${local.component_operators[key].cluster_name}-cluster-issuer" => {
-        "${local.downstream_vault.pki_mount_path}/sign/${local.component_operators[key].cluster_name}"  = { capabilities = ["create", "update"] }
-        "${local.downstream_vault.pki_mount_path}/issue/${local.component_operators[key].cluster_name}" = { capabilities = ["create", "update"] }
+        "${local.downstream_vault_config.pki_mount_path}/sign/${local.component_operators[key].cluster_name}"  = { capabilities = ["create", "update"] }
+        "${local.downstream_vault_config.pki_mount_path}/issue/${local.component_operators[key].cluster_name}" = { capabilities = ["create", "update"] }
       } if w.cluster_issuer
     },
     {
@@ -62,6 +62,7 @@ locals {
         ["default"],
         [for suffix in ["cluster-issuer", "external-secrets"] : "${operator.cluster_name}-${suffix}" if contains(keys(local.workload_policies), "${operator.cluster_name}-${suffix}")],
         key == "spire-child" ? sort(keys(local.child_tenants)) : [],
+        key == "spire-child" ? sort([for operator in local.terraform_operators : operator.role_name if operator.server == "child"]) : [],
       )
     }
   }
@@ -88,9 +89,9 @@ locals {
           }
         }
 
-        "sys/mounts/${local.downstream_vault.pki_mount_path}"                     = { capabilities = ["read"] }
-        "${local.downstream_vault.pki_mount_path}/roles/${operator.cluster_name}" = { capabilities = ["create", "read", "update", "delete"] }
-        "${local.downstream_vault.pki_mount_path}/issue/${operator.cluster_name}" = { capabilities = ["create", "update"] }
+        "sys/mounts/${local.downstream_vault_config.pki_mount_path}"                     = { capabilities = ["read"] }
+        "${local.downstream_vault_config.pki_mount_path}/roles/${operator.cluster_name}" = { capabilities = ["create", "read", "update", "delete"] }
+        "${local.downstream_vault_config.pki_mount_path}/issue/${operator.cluster_name}" = { capabilities = ["create", "update"] }
 
         "${vault_mount.kv.path}/data/${local.foundation_kv_paths["spire"]["child"].registrar}" = {
           capabilities = key == "spire-child" ? ["create", "read", "update", "delete", "patch"] : ["read"]
@@ -123,6 +124,23 @@ locals {
   }
 }
 
+module "spire_child_operator_identity" {
+  source = "../../modules/kvm-provisioning/helpers/terraform-operator-identity"
+
+  operator_identity_config = {
+    server            = "child"
+    targets           = local._spire_child_operator_targets
+    topology_identity = local.state.foundation_libvirt_resources.foundation_topology.identity
+  }
+}
+
+check "spire_child_operator_targets_exist" {
+  assert {
+    condition     = length(module.spire_child_operator_identity.operator_identity.missing_targets) == 0
+    error_message = "_spire_child_operator_targets names a component which foundation-libvirt-resources lacks: ${join(", ", module.spire_child_operator_identity.operator_identity.missing_targets)}."
+  }
+}
+
 resource "terraform_data" "component_workloads_validation" {
   input = keys(local.component_workloads)
 
@@ -150,9 +168,19 @@ resource "vault_policy" "component_operator" {
   policy = jsonencode({ path = local.component_operator_paths[each.key] })
 }
 
+locals {
+  # provision-spire-child creates the roles of the Child operators under the same names.
+  operator_role_names = merge(
+    { "vault-downstream" = vault_jwt_auth_backend_role.operator.role_name },
+    { for key, role in vault_jwt_auth_backend_role.component_operator : key => role.role_name },
+    { for key, operator in local.terraform_operators : key => operator.role_name if operator.server == "child" },
+  )
+}
+
+# The roles of the operators on the SPIRE Child live on the Child mount, which provision-spire-child creates.
 resource "vault_jwt_auth_backend_role" "component_operator" {
   provider = vault.downstream
-  for_each = local.component_operators
+  for_each = { for key, operator in local.component_operators : key => operator if operator.server == "parent" }
 
   backend         = local.jwt_auth.parent.mount_path
   role_name       = each.value.role_name

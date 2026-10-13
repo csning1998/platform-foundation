@@ -2,8 +2,8 @@
 output "downstream_tenants" {
   description = "Downstream Vault connection parameters, the SPIRE Parent JWT auth backend, and the login coordinates of every tenant workload on the Parent or the Child mount."
   value = {
-    endpoint     = local.downstream_vault.endpoint
-    ca_cert_path = local.downstream_vault.ca_cert_path
+    endpoint     = local.downstream_vault_config.endpoint
+    ca_cert_path = local.downstream_vault_config.ca_cert_path
     auth_mount   = local.jwt_auth.parent.mount_path
     audience     = local.jwt_auth.parent.audience
     kv_mount     = vault_mount.kv.path
@@ -30,7 +30,7 @@ output "downstream_vault_service_vip" {
 
 output "downstream_vault_endpoint" {
   description = "Downstream Vault API endpoint URL."
-  value       = local.downstream_vault.endpoint
+  value       = local.downstream_vault_config.endpoint
 }
 
 output "foundation_pki" {
@@ -45,7 +45,7 @@ output "foundation_vault_path" {
 
 output "downstream_vault_ca_cert_path" {
   description = "Filesystem path to the CA certificate bundle validating downstream Vault listener TLS."
-  value       = local.downstream_vault.ca_cert_path
+  value       = local.downstream_vault_config.ca_cert_path
 }
 
 output "downstream_vault_operators" {
@@ -53,9 +53,9 @@ output "downstream_vault_operators" {
   value = {
     for service in distinct([for operator in local.terraform_operators : operator.service]) : service => {
       for key, operator in local.terraform_operators : operator.component => {
-        auth_mount   = local.jwt_auth.parent.mount_path
-        role_name    = key == "vault-downstream" ? vault_jwt_auth_backend_role.operator.role_name : vault_jwt_auth_backend_role.component_operator[key].role_name
-        audience     = local.jwt_auth.parent.audience
+        auth_mount   = operator.server == "child" ? local.spire_child_jwt_auth.mount_path : local.jwt_auth.parent.mount_path
+        role_name    = local.operator_role_names[key]
+        audience     = operator.server == "child" ? local.spire_child_jwt_auth.audience : local.jwt_auth.parent.audience
         wrapper_name = operator.wrapper_name
         cluster_name = operator.cluster_name
         # The workload policies which this layer declares for the cluster, null when the component has none.
@@ -73,10 +73,17 @@ output "downstream_vault_operators" {
 }
 
 output "spire_child_jwt_auth" {
-  description = "Mount path and audience of the JWT backend of the SPIRE Child on the Downstream Vault, which provision-spire-child creates, and the tenants whose roles the backend carries with the policy of the same name."
+  description = "Mount path and audience of the JWT backend of the SPIRE Child on the Downstream Vault, which provision-spire-child creates, the tenants whose roles the backend carries with the policy of the same name, and the operators of the components deployed after the SPIRE Child, keyed by role name."
   value = {
     mount_path = local.spire_child_jwt_auth.mount_path
     audience   = local.spire_child_jwt_auth.audience
     tenants    = { for name, t in local.child_tenants : name => { spiffe_id = t.spiffe_id, policy_name = vault_policy.tenant[name].name } }
+    operators = {
+      for key, operator in local.terraform_operators : operator.role_name => {
+        spiffe_path = operator.spiffe_path
+        spiffe_id   = "spiffe://${local.spiffe_trust_domain}${operator.spiffe_path}"
+        policy_name = vault_policy.component_operator[key].name
+      } if operator.server == "child"
+    }
   }
 }
