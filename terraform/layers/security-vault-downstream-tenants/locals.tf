@@ -35,7 +35,7 @@ locals {
     }
   }
 
-  # Operators of the components deployed after the SPIRE Child, keyed as in output downstream_vault_config_operators.
+  # Operators of the components deployed after the SPIRE Child, keyed as in output downstream_vault_operators.
   # provision-spire-child registers these operators on the Child and creates their roles on the Child mount.
   _spire_child_operator_targets = {
     "cilium"        = { owner = local.foundation_project_code, service = "cilium", component = "hubble" }
