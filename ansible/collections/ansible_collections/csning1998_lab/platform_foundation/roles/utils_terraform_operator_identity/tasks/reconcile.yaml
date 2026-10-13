@@ -1,0 +1,140 @@
+---
+# Converges the operator identities of the agent instance of this host to the declared set.
+# Only operator entries of the same agent and wrappers of the same socket are candidates for removal.
+- name: "Block R0: Assert the Declared Identities"
+  ansible.builtin.assert:
+    that:
+      - utils_terraform_operator_identity_reconcile_identities | length > 0
+    fail_msg: >-
+      utils_terraform_operator_identity_reconcile_identities MUST list every identity which stays registered.
+      An empty map would remove every operator identity of this agent instance.
+
+- name: "Block R1: Remove Undeclared Operator Entries from the SPIRE Server"
+  become: false
+  block:
+    # The included server command role lacks the defaults of utils_common_defaults. The path therefore resolves here.
+    - name: "Step R1a. Resolve the SPIRE Server socket path on the Parent host"
+      ansible.builtin.set_fact:
+        _utils_terraform_operator_identity_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
+
+    - name: "Step R1b. List the registration entries of the SPIRE server"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_spire_server_command
+      vars:
+        # The anchor holds the coordinates shared by every call, and each call adds its own arguments.
+        <<: &server_command_vars
+          utils_spire_server_command_kind: "{{ utils_terraform_operator_identity_spire_server_kind }}"
+          utils_spire_server_command_parent_ssh_host: "{{ spire_parent_ssh_host | default('') }}"
+          utils_spire_server_command_parent_socket_path: "{{ _utils_terraform_operator_identity_parent_socket_path }}"
+          utils_spire_server_command_child_kubeconfig_kv_path: >-
+            {{ utils_terraform_operator_identity_child_kubeconfig_kv_path }}
+          utils_spire_server_command_terraform_operator_jwt_command: "{{ operator_vault_wrapper | default('') }}"
+          utils_spire_server_command_terraform_operator_vault_role: "{{ operator_vault_role | default('') }}"
+          utils_spire_server_command_terraform_operator_vault_auth_mount: "{{ operator_vault_auth_mount | default('') }}"
+          utils_spire_server_command_operator_vault_endpoint: "{{ operator_vault_url | default('') }}"
+          utils_spire_server_command_operator_vault_ca_cert_path: "{{ operator_vault_ca_cert_path | default('') }}"
+        utils_spire_server_command_arguments: "entry show -output json"
+
+    - name: "Step R1c. Assert that the server answered with entries"
+      ansible.builtin.assert:
+        that:
+          - (utils_spire_server_command_result.stdout | trim) != ''
+        fail_msg: "The SPIRE server returned no entry list."
+      when: not ansible_check_mode
+
+    # The agent of this instance is the parent of every declared entry. Entries of other agents stay untouched.
+    - name: "Step R1d. Select the undeclared operator entries of this agent"
+      vars:
+        _entries: "{{ (utils_spire_server_command_result.stdout | from_json).entries | default([]) }}"
+        _declared_paths: "{{ utils_terraform_operator_identity_reconcile_identities.values() | list }}"
+        _agent_parents: >-
+          {{
+            _entries
+            | selectattr('spiffe_id.path', 'in', _declared_paths)
+            | map(attribute='parent_id.path')
+            | unique
+            | list
+          }}
+      ansible.builtin.set_fact:
+        _utils_terraform_operator_identity_stale_entries: >-
+          {{
+            _entries
+            | selectattr('parent_id.path', 'in', _agent_parents)
+            | selectattr('spiffe_id.path', 'match', '^/[a-z0-9-]+/terraform-operator/')
+            | rejectattr('spiffe_id.path', 'in', _declared_paths)
+            | list
+          }}
+      when: (utils_spire_server_command_result.stdout | default('') | trim) != ''
+
+    - name: "Step R1e. Delete the undeclared operator entries"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_spire_server_command
+      vars:
+        <<: *server_command_vars
+        utils_spire_server_command_arguments: "entry delete -entryID {{ _utils_terraform_operator_identity_stale_entry.id }}"
+      loop: "{{ _utils_terraform_operator_identity_stale_entries | default([]) }}"
+      loop_control:
+        loop_var: _utils_terraform_operator_identity_stale_entry
+        label: "{{ _utils_terraform_operator_identity_stale_entry.spiffe_id.path }}"
+
+  rescue:
+    - name: "Block R1: Remove Undeclared Operator Entries failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+
+- name: "Block R2: Remove Undeclared Operator Wrappers from This Host"
+  become: true
+  block:
+    - name: "Step R2a. Find the wrappers which read the socket of this agent instance"
+      ansible.builtin.find:
+        paths: "{{ utils_terraform_operator_identity_wrapper_dir }}"
+        patterns: "spire-fetch-*"
+        contains: >-
+          SOCKET_PATH="{{ (utils_terraform_operator_identity_spire_agent_socket_dir ~ '/api.sock') | regex_escape }}"
+      register: _utils_terraform_operator_identity_wrappers
+
+    - name: "Step R2b. Select the identities whose wrapper no declared identity owns"
+      ansible.builtin.set_fact:
+        _utils_terraform_operator_identity_stale_names: >-
+          {{
+            _utils_terraform_operator_identity_wrappers.files
+            | map(attribute='path')
+            | map('basename')
+            | map('regex_replace', '^spire-fetch-', '')
+            | reject('in', utils_terraform_operator_identity_reconcile_identities.keys() | list)
+            | list
+          }}
+
+    # The drop-in names the service user exactly, hence the user name is read instead of derived.
+    - name: "Step R2c. Read the sudoers drop-in of each undeclared identity"
+      ansible.builtin.slurp:
+        src: "/etc/sudoers.d/terraform-operator-identity-{{ item }}"
+      loop: "{{ _utils_terraform_operator_identity_stale_names }}"
+      register: _utils_terraform_operator_identity_stale_sudoers
+      failed_when: false
+
+    - name: "Step R2d. Remove the sudoers drop-in of each undeclared identity"
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/terraform-operator-identity-{{ item }}"
+        state: absent
+      loop: "{{ _utils_terraform_operator_identity_stale_names }}"
+
+    - name: "Step R2e. Remove the wrapper of each undeclared identity"
+      ansible.builtin.file:
+        path: "{{ utils_terraform_operator_identity_wrapper_dir }}/spire-fetch-{{ item }}"
+        state: absent
+      loop: "{{ _utils_terraform_operator_identity_stale_names }}"
+
+    - name: "Step R2f. Remove the service user which each removed drop-in named"
+      ansible.builtin.user:
+        name: >-
+          {{ item.content | b64decode | regex_search('(?<=ALL=[(])[^)]+') }}
+        state: absent
+      loop: "{{ _utils_terraform_operator_identity_stale_sudoers.results | selectattr('content', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+  rescue:
+    - name: "Block R2: Remove Undeclared Operator Wrappers failed"
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
