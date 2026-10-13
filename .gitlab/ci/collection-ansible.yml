@@ -1,0 +1,79 @@
+---
+# Builds and publishes the csning1998_lab.platform_foundation collection.
+# The build job validates every merge request, and the release job publishes on each unprefixed SemVer tag.
+
+.collection-ansible:
+  image: python:3.13-alpine
+  variables:
+    COLLECTION_DIR: ansible/collections/ansible_collections/csning1998_lab/platform_foundation
+    COLLECTION_PACKAGE: csning1998_lab-platform_foundation
+
+.collection-ansible-build:
+  script:
+    - pip install --no-cache-dir ansible-core==2.20.5
+    - 'sed -i "s/^version: .*/version: ${COLLECTION_VERSION}/" "${COLLECTION_DIR}/galaxy.yml"'
+    - ansible-galaxy collection build "${COLLECTION_DIR}" --output-path dist
+    - TARBALL="${COLLECTION_PACKAGE}-${COLLECTION_VERSION}.tar.gz"
+    - (cd dist && sha256sum "${TARBALL}" > "${TARBALL}.sha256")
+    - tar -tzf "dist/${TARBALL}" > dist/contents.txt
+    - grep -q '^MANIFEST.json$' dist/contents.txt
+    - grep -q '^meta/runtime.yml$' dist/contents.txt
+    - |
+      for ROLE_DIR in "${COLLECTION_DIR}"/roles/*/; do
+        ROLE_NAME=$(basename "${ROLE_DIR}")
+        if ! grep -q "^roles/${ROLE_NAME}/" dist/contents.txt; then
+          echo "Role ${ROLE_NAME} is missing from the tarball." >&2
+          exit 1
+        fi
+      done
+
+.collection-ansible-upload:
+  script:
+    - apk add --no-cache curl
+    - TARBALL="${COLLECTION_PACKAGE}-${COLLECTION_VERSION}.tar.gz"
+    - |
+      for FILE in "${TARBALL}" "${TARBALL}.sha256"; do
+        curl --fail-with-body --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+          --upload-file "dist/${FILE}" \
+          "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${COLLECTION_PACKAGE}/${COLLECTION_VERSION}/${FILE}"
+      done
+
+build:ansible-collection:
+  extends: .collection-ansible
+  stage: build
+  variables:
+    COLLECTION_VERSION: 0.0.0-ci
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - ansible/collections/**/*
+        - .gitlab/ci/collection-ansible.yml
+  script:
+    - !reference [.collection-ansible-build, script]
+
+# Uploads a throwaway version from a merge request to verify the job token permission, and the version is deleted afterwards.
+release:ansible-collection:dry-run:
+  extends: .collection-ansible
+  stage: deploy
+  interruptible: false
+  variables:
+    COLLECTION_VERSION: 0.0.0-mr${CI_MERGE_REQUEST_IID}
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+      allow_failure: true
+  script:
+    - !reference [.collection-ansible-build, script]
+    - !reference [.collection-ansible-upload, script]
+
+release:ansible-collection:
+  extends: .collection-ansible
+  stage: deploy
+  interruptible: false
+  variables:
+    COLLECTION_VERSION: ${CI_COMMIT_TAG}
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+$/'
+  script:
+    - !reference [.collection-ansible-build, script]
+    - !reference [.collection-ansible-upload, script]
