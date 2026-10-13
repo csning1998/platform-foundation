@@ -54,9 +54,12 @@
       ansible.builtin.include_role:
         name: csning1998_lab.platform_foundation.utils_terraform_operator_identity
       vars:
-        utils_terraform_operator_identity_name: "{{ item }}"
-        utils_terraform_operator_identity_spiffe_path: "{{ _utils_terraform_operator_identity_spiffe_paths[item] }}"
+        utils_terraform_operator_identity_name: "{{ _operator_identity_name }}"
+        utils_terraform_operator_identity_spiffe_path: >-
+          {{ _utils_terraform_operator_identity_spiffe_paths[_operator_identity_name] }}
       loop: "{{ _utils_terraform_operator_identity_names }}"
+      loop_control:
+        loop_var: _operator_identity_name
 
 # Validates the wrappers without privilege escalation to verify drop-in sudoers permissions.
 # The Vault login with each JWT-SVID belongs to security-vault-downstream-tenants.

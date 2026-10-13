@@ -161,6 +161,11 @@
       when: utils_spire_agent_already_attested | default(false)
       become: true
       block:
+        # The included server command role lacks the defaults of utils_common_defaults, so the path resolves here.
+        - name: "Step D2c-0. Resolve the SPIRE Server socket path on the Parent host"
+          ansible.builtin.set_fact:
+            _utils_spire_agent_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
+
         - name: "Step D2c-1. Fetch current trust bundle from the SPIRE server"
           ansible.builtin.include_role:
             name: csning1998_lab.platform_foundation.utils_spire_server_command
@@ -169,7 +174,7 @@
             <<: &server_command_vars
               utils_spire_server_command_kind: "{{ utils_spire_agent_server_kind }}"
               utils_spire_server_command_parent_ssh_host: "{{ spire_parent_ssh_host | default('') }}"
-              utils_spire_server_command_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
+              utils_spire_server_command_parent_socket_path: "{{ _utils_spire_agent_parent_socket_path }}"
               utils_spire_server_command_child_kubeconfig_kv_path: "{{ utils_spire_agent_child_kubeconfig_kv_path }}"
               utils_spire_server_command_terraform_operator_jwt_command: "{{ operator_vault_wrapper | default('') }}"
               utils_spire_server_command_terraform_operator_vault_role: "{{ operator_vault_role | default('') }}"
