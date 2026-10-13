@@ -51,7 +51,7 @@ build:ansible-collection:
   script:
     - !reference [.collection-ansible-build, script]
 
-# Uploads a throwaway version from a merge request to verify the job token permission, and the version is deleted afterwards.
+# Uploads a throwaway version from a merge request to verify the job token permission. A maintainer deletes the version from the Package Registry.
 release:ansible-collection:dry-run:
   extends: .collection-ansible
   stage: deploy
