@@ -33,6 +33,7 @@ include:
       # Module publishing paused until terraform/modules/ gains an external consumer repository;
       # currently, layers reference modules by relative path.
       # - local: ".gitlab/ci/modules-terraform.yml"
+  - local: ".gitlab/ci/collection-ansible.yml"
 
 # Ansible ignores an ansible.cfg in the world-writable checkout of the runner, unless ANSIBLE_CONFIG names the file.
 lint:ansible:
