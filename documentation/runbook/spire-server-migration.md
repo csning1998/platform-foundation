@@ -66,7 +66,7 @@ Execute Terraform applies in strict DAG order:
 4. Any affected consumer layers declaring `terraform_operator_subject = { service = "<service>", component = "<component>" }` (via `platform terraform`).
 
 > [!WARNING]
-> Terraform operators for the moved component cannot log in between step 2 and step 3 when `<to>` is `child`, and between step 1 and step 2 when `<to>` is `parent`. Perform this apply sequence within a single continuous maintenance window.
+> Terraform operators for the moved component cannot log in from step 1 to step 3 when `<to>` is `child`, because step 1 removes the wrapper and the entry on the Parent. They cannot log in between step 1 and step 2 when `<to>` is `parent`, because the role on the Parent mount appears with step 2. Perform this apply sequence within a single continuous maintenance window.
 
 ### Step C. Reconciliation
 
