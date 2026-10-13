@@ -23,7 +23,7 @@ locals {
 locals {
   # Terraform chooses both robot secrets, which reach Harbor and the Downstream Vault through write-only arguments alone.
   # Incrementing robot_secret_version rotates both secrets in one apply.
-  robot_secret_version = 1
+  robot_secret_version = 2
 }
 
 locals {
@@ -98,7 +98,7 @@ locals {
     inventory_file  = "inventory-provision-harbor-origin-frontend.yaml"
   }
 
-  # Transforms the infra-* inventory structure into a dedicated group for this layer's business logic
+  # Transforms the infra-* inventory structure into a dedicated group for the business logic of this layer
   inventory_data = {
     all = {
       children = {
