@@ -96,8 +96,7 @@ locals {
     identity_key_path = local.state.platform_spire_child.foundation_ssh.identity_key_paths[local.spire_parent_cluster_name]
   }
 
-  # The registration on the SPIRE Parent runs over SSH. The operators of the workstation hold JWT-SVIDs of the SPIRE Parent
-  # alone, hence the workstation does not run an agent of the SPIRE Child.
+  # The registration on the SPIRE Parent runs over SSH. workstation-agent.tf installs the agent of the workstation for the SPIRE Child.
   inventory_data = {
     all = {
       children = {
