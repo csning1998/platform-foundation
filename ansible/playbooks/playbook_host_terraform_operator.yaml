@@ -21,6 +21,21 @@
   roles:
     - csning1998_lab.platform_foundation.utils_spire_agent
 
+# Deploys the second workstation SPIRE Agent, which attests to the SPIRE Child through the static agent VIP.
+- name: "Play [SPIRE Child Agent]: Provision the SPIRE Agent of this host for the SPIRE Child"
+  hosts: "{{ 'host_terraform_operator' if 'host_terraform_operator' in groups else [] }}"
+  become: true
+  tags:
+    - spire_agent_child
+  roles:
+    - role: csning1998_lab.platform_foundation.utils_spire_agent
+      vars:
+        utils_spire_agent_instance: child
+        utils_spire_agent_server_kind: child
+        utils_spire_agent_server_address: "{{ spire_child_agent_address }}"
+        utils_spire_agent_server_port: "{{ spire_child_agent_port }}"
+        utils_spire_agent_child_kubeconfig_kv_path: "{{ spire_child_kubeconfig_kv_path }}"
+
 # Registers per-component Terraform operator workload identities consumed by downstream external data sources.
 - name: "Play [Terraform Operator Identity]: Register JWT-SVID fetch wrapper"
   hosts: "{{ 'host_terraform_operator' if 'host_terraform_operator' in groups else [] }}"
@@ -57,13 +72,23 @@
         utils_terraform_operator_identity_name: "{{ _operator_identity_name }}"
         utils_terraform_operator_identity_spiffe_path: >-
           {{ _utils_terraform_operator_identity_spiffe_paths[_operator_identity_name] }}
+        # The platform CLI calls spire-fetch-<identity> on both SPIRE servers.
+        # The wrapper name therefore omits the instance suffix.
+        utils_terraform_operator_identity_wrapper_name: "spire-fetch-{{ _operator_identity_name }}"
       loop: "{{ _utils_terraform_operator_identity_names }}"
       loop_control:
         loop_var: _operator_identity_name
 
+    - name: "Remove the operator identities which the caller no longer declares"
+      ansible.builtin.include_role:
+        name: csning1998_lab.platform_foundation.utils_terraform_operator_identity
+        tasks_from: reconcile.yaml
+      vars:
+        utils_terraform_operator_identity_reconcile_identities: "{{ _utils_terraform_operator_identity_spiffe_paths }}"
+
 # Validates the wrappers without privilege escalation to verify drop-in sudoers permissions.
 # The Vault login with each JWT-SVID belongs to security-vault-downstream-tenants.
-# The login succeeds after the Downstream Vault trusts the SPIRE Parent.
+# The login succeeds after the Downstream Vault trusts the SPIRE server of each identity.
 - name: "Play [Terraform Operator Verify]: Fetch a JWT-SVID as each operator identity"
   hosts: "{{ 'host_terraform_operator' if 'host_terraform_operator' in groups else [] }}"
   become: false

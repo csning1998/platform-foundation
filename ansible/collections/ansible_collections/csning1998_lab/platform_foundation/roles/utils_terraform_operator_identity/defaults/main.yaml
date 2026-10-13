@@ -26,6 +26,10 @@ utils_terraform_operator_identity_spire_agent_bin: "/usr/local/bin/spire-agent"
 # selector isolation, each consumer MUST execute under a dedicated system account selected via unix:uid.
 utils_terraform_operator_identity_service_user: "svc-{{ utils_terraform_operator_identity_name }}"
 
+# tasks/reconcile.yaml input: every identity which stays registered through the agent instance of this host,
+# mapping the identity name to its SPIFFE path. The caller passes the complete declared set.
+utils_terraform_operator_identity_reconcile_identities: {}
+
 # Specifies the login user authorized to execute privilege escalation (sudo -u) targeting the service user.
 # Under ansible_connection: local, this variable SHALL resolve to the environment USER invoking the playbook.
 utils_terraform_operator_identity_operator_user: "{{ lookup('env', 'USER') }}"

@@ -21,7 +21,7 @@ locals {
       ]...),
       merge([
         for pki_role in t.pki_roles : {
-          "${local.downstream_vault.pki_mount_path}/issue/${pki_role}" = { capabilities = ["create", "update"] }
+          "${local.downstream_vault_config.pki_mount_path}/issue/${pki_role}" = { capabilities = ["create", "update"] }
         }
       ]...)
     )
@@ -39,8 +39,8 @@ locals {
     "${vault_mount.kv.path}/delete/${local.foundation_project_code}/*"  = { capabilities = ["update"] }
     "${vault_mount.kv.path}/destroy/${local.foundation_project_code}/*" = { capabilities = ["update"] }
 
-    "sys/mounts/${local.downstream_vault.pki_mount_path}" = { capabilities = ["create", "read", "update", "delete"] }
-    "${local.downstream_vault.pki_mount_path}/*"          = { capabilities = ["create", "read", "update", "delete", "list"] }
+    "sys/mounts/${local.downstream_vault_config.pki_mount_path}" = { capabilities = ["create", "read", "update", "delete"] }
+    "${local.downstream_vault_config.pki_mount_path}/*"          = { capabilities = ["create", "read", "update", "delete", "list"] }
 
     "sys/auth/oidc*"        = { capabilities = ["create", "read", "update", "delete", "sudo"] }
     "sys/mounts/auth/oidc*" = { capabilities = ["create", "read", "update", "delete", "sudo"] }

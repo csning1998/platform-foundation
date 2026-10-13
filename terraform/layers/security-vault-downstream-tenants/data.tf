@@ -23,5 +23,5 @@ ephemeral "vault_kv_secret_v2" "downstream_init" {
   provider = vault.bastion
 
   mount = "secret"
-  name  = local.downstream_vault.init_kv_path
+  name  = local.downstream_vault_config.init_kv_path
 }

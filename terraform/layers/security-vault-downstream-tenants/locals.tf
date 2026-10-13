@@ -19,12 +19,12 @@ locals {
   foundation_kv_paths     = local.state.foundation_libvirt_resources.foundation_vault_path.kv_paths
   spiffe_trust_domain     = local.state.platform_spire_parent.spire_agent_bootstrap.trust_domain
 
-  downstream_vault = {
+  downstream_vault_config = {
+    # provision-vault-downstream-frontend writes the root token of the initialization to this KV path of the Bastion Vault.
+    init_kv_path   = local.state.foundation_libvirt_resources.foundation_vault_path.kv_paths["vault-downstream"]["frontend"].init
     endpoint       = local.state.platform_vault_downstream_frontend.vault_endpoint.address
     ca_cert_path   = local.state.platform_vault_downstream_frontend.vault_endpoint.ca_cert_path
     pki_mount_path = local.state.platform_vault_downstream_frontend.pki_identity.intermediate_mount_path
-    # provision-vault-downstream-frontend writes the root token of the initialization to this KV path of the Bastion Vault.
-    init_kv_path = local.state.foundation_libvirt_resources.foundation_vault_path.kv_paths["vault-downstream"]["frontend"].init
   }
 
   # The SPIRE Parent mount keeps the audience vault, which the JWT-SVID wrappers of the workstation request.
@@ -35,8 +35,20 @@ locals {
     }
   }
 
+  # Operators of the components deployed after the SPIRE Child, keyed as in output downstream_vault_operators.
+  # provision-spire-child registers these operators on the Child and creates their roles on the Child mount.
+  _spire_child_operator_targets = {
+    "cilium"        = { owner = local.foundation_project_code, service = "cilium", component = "hubble" }
+    "harbor-origin" = { owner = local.foundation_project_code, service = "harbor-origin", component = "frontend" }
+    "keycloak"      = { owner = local.foundation_project_code, service = "keycloak", component = "frontend" }
+  }
+
   # Each operator binds its exact SPIFFE ID. A glob over terraform-operator/* would let every component assume the administrator.
-  terraform_operators = local.state.provision_spire_parent.terraform_operator
+  # provision-spire-parent declares the operators of the components deployed before the SPIRE Child.
+  terraform_operators = merge(
+    local.state.provision_spire_parent.terraform_operator,
+    module.spire_child_operator_identity.operator_identity.operators,
+  )
 
   # The workstation agents register under this cluster name on both SPIRE servers, as provision-spire-parent declares.
   workstation_cluster_name = "host-terraform-operator"
@@ -44,7 +56,7 @@ locals {
   component_operators      = { for key, operator in local.terraform_operators : key => operator if key != "vault-downstream" }
 }
 
-# Tenant names, SPIFFE IDs, KV paths, and PKI roles derive from the owner code, so no input repeats the project code.
+# Tenant names, SPIFFE IDs, KV paths, and PKI roles derive from the owner code. No input repeats the project code.
 locals {
   tenants = {
     for key, t in var.tenants : "${coalesce(t.owner, local.foundation_project_code)}-${key}" => {

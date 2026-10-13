@@ -22,37 +22,15 @@ locals {
 }
 
 locals {
-  # Components whose Terraform operator layers run from the local machine and log in to the Downstream Vault with a JWT-SVID,
-  # keyed by the name which consumer layers look up in output terraform_operator.
-  # The vault-downstream operator administers the Downstream Vault alone, since the platform-foundation Vault Proxy carries every Bastion change.
-  _spire_operator_targets = {
-    "cilium"           = { service = "cilium", component = "hubble" }
-    "harbor-origin"    = { service = "harbor-origin", component = "frontend" }
-    "keycloak"         = { service = "keycloak", component = "frontend" }
-    "spire-child"      = { service = "spire", component = "child" }
-    "vault-downstream" = { service = "vault-downstream", component = "frontend" }
+  # Operators of the components deployed before the SPIRE Child, keyed as in output terraform_operator.
+  # security-vault-downstream-tenants declares the operators of the components deployed after the SPIRE Child.
+  # The vault-downstream operator administers the Downstream Vault, and the platform-foundation Vault Proxy carries every Bastion change.
+  _spire_parent_operator_targets = {
+    "spire-child"      = { owner = local.foundation_project_code, service = "spire", component = "child" }
+    "vault-downstream" = { owner = local.foundation_project_code, service = "vault-downstream", component = "frontend" }
   }
 
-  # A target absent from foundation-libvirt-resources renders as a missing key here
-  # instead of an opaque "Invalid index" crash in spire_terraform_operator_specs.
-  _spire_operator_targets_missing = [
-    for key, t in local._spire_operator_targets :
-    key if !contains(keys(lookup(local.spire_parent_identity, t.service, {})), t.component)
-  ]
-
-  # Keyed by the identity string of the operator, <owner>-terraform-operator-<service>-<component>, which also names
-  # the role and the policy of the operator on the Downstream Vault.
-  spire_terraform_operator_specs = {
-    for key, t in local._spire_operator_targets :
-    "${local.foundation_project_code}-terraform-operator-${t.service}-${t.component}" => {
-      output_key   = key
-      service      = t.service
-      component    = t.component
-      spiffe_path  = "/${local.foundation_project_code}/terraform-operator/${t.service}/${t.component}"
-      cluster_name = local.spire_parent_identity[t.service][t.component].cluster_name
-    }
-    if !contains(local._spire_operator_targets_missing, key)
-  }
+  spire_parent_operators = module.spire_parent_operator_identity.operator_identity.operators
 }
 
 locals {
@@ -86,7 +64,7 @@ locals {
     spire_jwt_issuer                               = local.state.platform_spire_parent.spire_oidc.discovery_url
     spire_parent_join_token_kv_path                = local.foundation_kv_paths["spire"]["parent"].join_token
     spire_child_join_token_kv_path                 = local.foundation_kv_paths["spire"]["child"].join_token
-    utils_terraform_operator_identity_names        = jsonencode(keys(local.spire_terraform_operator_specs))
-    utils_terraform_operator_identity_spiffe_paths = jsonencode({ for name, spec in local.spire_terraform_operator_specs : name => spec.spiffe_path })
+    utils_terraform_operator_identity_names        = jsonencode(sort([for operator in local.spire_parent_operators : operator.role_name]))
+    utils_terraform_operator_identity_spiffe_paths = jsonencode({ for operator in local.spire_parent_operators : operator.role_name => operator.spiffe_path })
   }
 }

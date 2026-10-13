@@ -108,27 +108,44 @@ func TestReadOperatorSubject_RejectsSyntaxError(t *testing.T) {
 	}
 }
 
-// operatorTargetRe matches the literal service and component of each operator target of provision-spire-parent.
-var operatorTargetRe = regexp.MustCompile(`\{\s*service\s*=\s*"([a-z0-9-]+)",\s*component\s*=\s*"([a-z0-9-]+)"\s*\}`)
+// operatorTargetRe matches the literal service and component of each operator target, after the owner of the target.
+var operatorTargetRe = regexp.MustCompile(
+	`\{\s*owner\s*=\s*[^,]+,\s*service\s*=\s*"([a-z0-9-]+)",\s*component\s*=\s*"([a-z0-9-]+)"\s*\}`)
 
-// readOperatorTargets returns the operator targets which provision-spire-parent registers.
+// operatorTargetLists names the layer and the local of the operator targets of each SPIRE server.
+var operatorTargetLists = []struct{ layer, local string }{
+	{"provision-spire-parent", "_spire_parent_operator_targets"},
+	{"security-vault-downstream-tenants", "_spire_child_operator_targets"},
+}
+
+// readOperatorTargets returns the operator targets which the SPIRE Parent and the SPIRE Child register.
 func readOperatorTargets(t *testing.T) map[OperatorSubject]bool {
 	t.Helper()
-	content, err := os.ReadFile(filepath.Join(layersDir, "provision-spire-parent", "locals.tf"))
-	if err != nil {
-		t.Fatalf("read provision-spire-parent locals: %v", err)
-	}
-	start := strings.Index(string(content), "_spire_operator_targets = {")
-	end := strings.Index(string(content)[start:], "\n  }\n")
-	if start < 0 || end < 0 {
-		t.Fatal("provision-spire-parent declares no _spire_operator_targets block")
-	}
 	targets := map[OperatorSubject]bool{}
-	for _, m := range operatorTargetRe.FindAllStringSubmatch(string(content)[start:start+end], -1) {
-		targets[OperatorSubject{Service: m[1], Component: m[2]}] = true
-	}
-	if len(targets) == 0 {
-		t.Fatal("_spire_operator_targets of provision-spire-parent holds no target")
+	for _, list := range operatorTargetLists {
+		content, err := os.ReadFile(filepath.Join(layersDir, list.layer, "locals.tf"))
+		if err != nil {
+			t.Fatalf("read %s locals: %v", list.layer, err)
+		}
+		start := strings.Index(string(content), list.local+" = {")
+		if start < 0 {
+			t.Fatalf("%s declares no %s block", list.layer, list.local)
+		}
+		end := strings.Index(string(content)[start:], "\n  }\n")
+		if end < 0 {
+			t.Fatalf("%s of %s has no closing brace", list.local, list.layer)
+		}
+		matches := operatorTargetRe.FindAllStringSubmatch(string(content)[start:start+end], -1)
+		if len(matches) == 0 {
+			t.Fatalf("%s of %s holds no target", list.local, list.layer)
+		}
+		for _, m := range matches {
+			subject := OperatorSubject{Service: m[1], Component: m[2]}
+			if targets[subject] {
+				t.Errorf("%s of %s registers %+v, which the other SPIRE server also registers", list.local, list.layer, subject)
+			}
+			targets[subject] = true
+		}
 	}
 	return targets
 }
@@ -174,7 +191,7 @@ func TestReadOperatorSubject_MatchesRepositoryLayers(t *testing.T) {
 		{func(f layerFacts) bool { return f.err != nil }, "reads with an error"},
 		{func(f layerFacts) bool { return f.isJWTLayer() && !f.found }, "declares auth_login_jwt without " + SubjectLocal},
 		{func(f layerFacts) bool { return !f.isJWTLayer() && f.found }, "declares " + SubjectLocal + " without auth_login_jwt"},
-		{func(f layerFacts) bool { return f.found && !targets[f.subject] }, "declares a subject which provision-spire-parent registers as no operator"},
+		{func(f layerFacts) bool { return f.found && !targets[f.subject] }, "declares a subject which neither SPIRE server registers as an operator"},
 		{func(f layerFacts) bool {
 			return f.isJWTLayer() && !strings.Contains(f.source, "local.terraform_operator.auth_mount")
 		}, "logs in without local.terraform_operator.auth_mount"},
