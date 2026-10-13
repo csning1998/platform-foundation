@@ -159,12 +159,7 @@ func (a *app) packerMenu(ctx context.Context) error {
 
 // packerCategoryMenu reports done=true once a build ran or navigation exited since the loop of the caller stops on that signal.
 func (a *app) packerCategoryMenu(ctx context.Context, subDir, title string) (done bool, err error) {
-	var bases []string
-	if subDir == "distro" {
-		bases, err = packerops.ListDistroBases(a.packerDir)
-	} else {
-		bases, err = packerops.ListServiceBases(a.packerDir)
-	}
+	bases, err := a.resolveCategoryBases(subDir)
 	if err != nil {
 		return true, err
 	}
@@ -180,27 +175,38 @@ func (a *app) packerCategoryMenu(ctx context.Context, subDir, title string) (don
 	case index == len(labels)-1: // Back
 		return false, nil
 	case index == len(labels)-2: // Build ALL in <title>
-		if subDir == "distro" {
-			if err := packerops.Clean(a.packerDir, "all", nil, a.packerCache, a.out); err != nil {
-				return true, err
-			}
-		}
-		env, err := buildPackerExecutionEnv(ctx, a)
-		if err != nil {
-			return true, err
-		}
-		for _, b := range bases {
-			if err := packerops.Clean(a.packerDir, b, nil, a.packerCache, a.out); err != nil {
-				return true, err
-			}
-			if err := packerops.Build(ctx, a.packerDir, b, env, a.out); err != nil {
-				return true, err
-			}
-		}
-		return true, nil
+		return true, a.buildCategoryPackerImages(ctx, subDir, bases)
 	default:
 		return true, a.buildPackerImage(ctx, bases[index])
 	}
+}
+
+func (a *app) resolveCategoryBases(subDir string) ([]string, error) {
+	if subDir == "distro" {
+		return packerops.ListDistroBases(a.packerDir)
+	}
+	return packerops.ListServiceBases(a.packerDir)
+}
+
+func (a *app) buildCategoryPackerImages(ctx context.Context, subDir string, bases []string) error {
+	if subDir == "distro" {
+		if err := packerops.Clean(a.packerDir, "all", nil, a.packerCache, a.out); err != nil {
+			return err
+		}
+	}
+	env, err := buildPackerExecutionEnv(ctx, a)
+	if err != nil {
+		return err
+	}
+	for _, b := range bases {
+		if err := packerops.Clean(a.packerDir, b, nil, a.packerCache, a.out); err != nil {
+			return err
+		}
+		if err := packerops.Build(ctx, a.packerDir, b, env, a.out); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *app) packerBuildAllMenu(ctx context.Context) error {
