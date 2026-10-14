@@ -338,12 +338,12 @@ podman network rm owner-isolation
 
 ### Step A. Save the Registration Script (`spire-child-registration.sh`)
 
-This script logs in as the `spire-child` operator to read the Child admin kubeconfig and the owner coordinates. The admin creates one fixture entry of the other owner `opgitlab`. The `keycloak` operator then fetches a JWT-SVID with the Kubernetes audience, which kube-apiserver maps to the group `spire-owner-operator:platform-foundation`, and runs every registration case as a server-side dry run. The last part logs in to the Child mount with the Vault audience JWT-SVID of the same operator.
+This script logs in as the `spire-child` operator to read the Child admin kubeconfig and the owner coordinates. The admin creates one fixture entry of the platform, and then impersonates an operator of the owner `opgitlab` with the group `spire-owner-operator:opgitlab`, which kube-apiserver assigns to the JWT-SVID of such an operator. Every registration case runs as a server-side dry run. The `keycloak` operator fetches a JWT-SVID with the Kubernetes audience to confirm that the platform group holds no registration grant, and logs in to the Child mount with its Vault audience JWT-SVID.
 
 ```bash
 #!/usr/bin/env bash
-# The keycloak operator acts as the owner platform-foundation, and every caller request is a server-side dry run.
-# The fixture entry of the other owner and the Vault token are removed on exit.
+# The admin impersonates an operator of opgitlab, and every caller request is a server-side dry run.
+# The fixture entry of the platform and the Vault token are removed on exit.
 set -euo pipefail
 umask 077
 cd "${VERIFY_DIR:?export VERIFY_DIR first}"
@@ -351,7 +351,7 @@ LAYERS="${PF_ROOT:?export PF_ROOT as the platform-foundation checkout}/terraform
 FIXTURE=owner-isolation-verify-foreign
 cleanup() {
   [ -s admin.kubeconfig ] && KUBECONFIG=admin.kubeconfig kubectl delete clusterstaticentries.spire.spiffe.io "$FIXTURE" --ignore-not-found >/dev/null 2>&1 || true
-  rm -f admin.kubeconfig caller.kubeconfig err.txt
+  rm -f admin.kubeconfig platform.kubeconfig err.txt
   if [ -n "${VAULT_TOKEN:-}" ]; then vault token revoke -self >/dev/null 2>&1 || true; fi
 }
 trap cleanup EXIT
@@ -391,19 +391,24 @@ kind: ClusterStaticEntry
 metadata: { name: ${FIXTURE} }
 spec:
   className: ${CLASS}
-  spiffeID: spiffe://${TD}/opgitlab/verify/foreign
+  spiffeID: spiffe://${TD}/platform-foundation/verify/foreign
   parentID: spiffe://${TD}/spire/server
-  selectors: ["x509pop:subject:cn:opgitlab-verify-none.${TD}"]
+  selectors: ["x509pop:subject:cn:platform-foundation-verify-none.${TD}"]
 EOF
 
 k8s_jwt=$(sudo -u svc-platform-foundation-terraform-operator-keycloak-frontend /usr/local/bin/spire-agent api fetch jwt \
   -audience "$(jq -r .kubernetes_jwt_audience <<<"$endpoints")" -socketPath /run/spire-agent-child/public/api.sock -output json |
   jq -r 'try .[0].svids[0].svid catch empty')
 admin config view --raw --minify -o json |
-  jq --arg token "$k8s_jwt" '.users = [{name: "jwt", user: {token: $token}}] | .contexts[0].context.user = "jwt"' >caller.kubeconfig
+  jq --arg token "$k8s_jwt" '.users = [{name: "jwt", user: {token: $token}}] | .contexts[0].context.user = "jwt"' >platform.kubeconfig
 unset k8s_jwt
-caller() { KUBECONFIG=caller.kubeconfig kubectl "$@"; }
-echo "caller: $(caller auth whoami -o json | jq -c '.status.userInfo | {username, groups}')"
+platform() { KUBECONFIG=platform.kubeconfig kubectl "$@"; }
+echo "platform operator: $(platform auth whoami -o json | jq -c '.status.userInfo | {username, groups}')"
+caller() {
+  admin --as="spiffe://${TD}/opgitlab/terraform-operator/verify" \
+    --as-group=spire-owner-operator:opgitlab --as-group=system:authenticated "$@"
+}
+echo "owner caller: $(caller auth whoami -o json | jq -c '.status.userInfo | {username, groups}')"
 
 entry() {
   cat <<EOF
@@ -427,21 +432,21 @@ try() {
 }
 create() { entry "$@" | caller create --dry-run=server -f -; }
 
-OWN="spiffe://${TD}/platform-foundation/verify"
+OWN="spiffe://${TD}/opgitlab/verify"
 ALIAS="${OWN}/node/n1"
 SERVER="spiffe://${TD}/spire/server"
 UID_SEL='["unix:uid:65534"]'
 
 echo "--- registration bounds"
-try "node alias with owner CN"          allow create "$ALIAS" "$SERVER" "[\"x509pop:subject:cn:platform-foundation-verify-n1.${TD}\"]"
+try "node alias with owner CN"          allow create "$ALIAS" "$SERVER" "[\"x509pop:subject:cn:opgitlab-verify-n1.${TD}\"]"
 try "workload below owner alias"        allow create "${OWN}/app" "$ALIAS" "$UID_SEL"
 try "workstation parent"                allow create "${OWN}/operator" "$WORKSTATION" "$UID_SEL"
-try "spiffeID of another owner"         deny  create "spiffe://${TD}/opgitlab/verify/app" "$WORKSTATION" "$UID_SEL"
-try "owner prefix collision"            deny  create "spiffe://${TD}/platform-foundation-x/app" "$WORKSTATION" "$UID_SEL"
-try "dot-dot spiffeID"                  deny  create "${OWN}/../../opgitlab/app" "$WORKSTATION" "$UID_SEL"
+try "spiffeID of another owner"         deny  create "spiffe://${TD}/platform-foundation/verify/app" "$WORKSTATION" "$UID_SEL"
+try "owner prefix collision"            deny  create "spiffe://${TD}/opgitlab-x/app" "$WORKSTATION" "$UID_SEL"
+try "dot-dot spiffeID"                  deny  create "${OWN}/../../platform-foundation/app" "$WORKSTATION" "$UID_SEL"
 try "other join_token parent"           deny  create "${OWN}/app" "spiffe://${TD}/spire/agent/join_token/00000000-0000-0000-0000-000000000000" "$UID_SEL"
-try "alias with another owner CN"       deny  create "${OWN}/node/n2" "$SERVER" "[\"x509pop:subject:cn:opgitlab-n2.${TD}\"]"
-try "alias with a non-CN selector"      deny  create "${OWN}/node/n3" "$SERVER" "[\"x509pop:subject:cn:platform-foundation-n3.${TD}\", \"k8s_psat:cluster:x\"]"
+try "alias with another owner CN"       deny  create "${OWN}/node/n2" "$SERVER" "[\"x509pop:subject:cn:platform-foundation-n2.${TD}\"]"
+try "alias with a non-CN selector"      deny  create "${OWN}/node/n3" "$SERVER" "[\"x509pop:subject:cn:opgitlab-n3.${TD}\", \"k8s_psat:cluster:x\"]"
 try "admin true"                        deny  create "${OWN}/a" "$WORKSTATION" "$UID_SEL" "  admin: true"
 try "downstream true"                   deny  create "${OWN}/d" "$WORKSTATION" "$UID_SEL" "  downstream: true"
 try "dnsNames"                          deny  create "${OWN}/dns" "$WORKSTATION" "$UID_SEL" "  dnsNames: [\"vault.${TD}\"]"
@@ -449,6 +454,7 @@ try "patch the entry of another owner"  deny  caller patch --dry-run=server clus
   -p "{\"spec\":{\"spiffeID\":\"${OWN}/stolen\"}}"
 try "delete the entry of another owner" deny  caller delete --dry-run=server clusterstaticentries.spire.spiffe.io "$FIXTURE"
 try "create ClusterSPIFFEID (RBAC)"     deny  caller auth can-i create clusterspiffeids.spire.spiffe.io --quiet
+try "platform operator registration (RBAC)" deny platform auth can-i create clusterstaticentries.spire.spiffe.io --quiet
 
 echo "--- owner glob roles on the Child mount"
 mount=$(jq -r '.opgitlab.auth_mount' <<<"$owners")
@@ -457,9 +463,8 @@ for role in $(jq -r '.opgitlab | .operator.role_name, .workload.role_name' <<<"$
   try "platform JWT-SVID on ${role}" deny vault write -field=token "auth/${mount}/login" role="$role" jwt=- <<<"$vault_jwt"
 done
 unset vault_jwt
-for quota in $(vault list -format=json sys/quotas/rate-limit | jq -r '.[] | select(endswith("-opgitlab-terraform-operator"))'); do
-  vault read -format=json "sys/quotas/rate-limit/${quota}" | jq -c '.data | {path, role, rate, interval}'
-done
+child_cluster=$(terraform -chdir="$LAYERS/platform-spire-child" output -json foundation_topology | jq -r '.identity.spire.child.cluster_name')
+vault read -format=json "sys/quotas/rate-limit/${child_cluster}-opgitlab-terraform-operator" | jq -c '.data | {path, role, rate, interval}'
 ```
 
 ### Step B. Run the Registration Verification
@@ -471,8 +476,8 @@ bash "${VERIFY_DIR}/spire-child-registration.sh"
 Expected output:
 
 1. The server lists the node attestors `join_token k8s_psat x509pop`, the policy and its binding exist, and the workstation parameter matches an attested agent.
-2. The caller reports the username of the `keycloak` operator and the group `spire-owner-operator:platform-foundation`.
-3. Every registration case outputs `OK`. The three cases inside the owner prefix are admitted, and the remaining twelve cases are denied with the message of the rule which they break.
+2. The platform operator reports the username of the `keycloak` operator and the group `spire-owner-operator:platform-foundation`, and the owner caller reports the group `spire-owner-operator:opgitlab`.
+3. Every registration case outputs `OK`. The three cases inside the owner prefix are admitted, and the remaining thirteen cases are denied by the violated rule. The platform operator holds no grant on `clusterstaticentries`.
 4. Both owner roles reject the platform JWT-SVID, and the quota reports the role `opgitlab-terraform-operator` on the Child mount.
 
 ### Step C. Remove the Work Directory
@@ -488,4 +493,4 @@ rm -rf "${VERIFY_DIR}"
 | Date       | Vault   | SPIRE    | `spire-nested` | Kubernetes | Result                                                                                                                                                                            |
 | :--------- | :------ | :------- | :------------- | :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-10-14 | `2.0.4` | `1.15.3` | `0.30.2`       | `v1.36.5`  | All isolation properties verified successfully. Because Vault PKI glob matching crosses dots (`.`), the intermediate CA explicitly excludes platform domains.                     |
-| 2026-10-14 | `2.0.4` | `1.15.3` | `0.30.2`       | `v1.36.5`  | Node alias verified across certificate rotation. The live SPIRE Child admits the three owner cases and denies twelve others, and both owner roles reject the platform JWT-SVID.   |
+| 2026-10-14 | `2.0.4` | `1.15.3` | `0.30.2`       | `v1.36.5`  | Node alias verified across certificate rotation. The live SPIRE Child admits three owner cases, denies thirteen others, and grants the platform no registration.                  |

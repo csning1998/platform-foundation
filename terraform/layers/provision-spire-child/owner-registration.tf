@@ -1,8 +1,9 @@
 
 # Every owner registers its own entries through ClusterStaticEntry, and this file declares only the bounds of that registration.
 locals {
-  external_owners     = local.state.security_vault_downstream_tenants.downstream_vault_owners
-  registration_owners = sort(keys(local.state.security_vault_downstream_pki.spire_node_pki.role_names))
+  external_owners = local.state.security_vault_downstream_tenants.downstream_vault_owners
+  # The platform group MUST NOT receive the grant, since a platform component operator could register the identity of another component.
+  registration_owners = sort(keys(local.external_owners))
 
   owner_registration = {
     name               = "spire-owner-registration"
@@ -44,8 +45,9 @@ resource "vault_quota_rate_limit" "owner" {
   provider = vault.downstream
   for_each = vault_jwt_auth_backend_role.owner
 
-  name     = "${local.spire_child_cluster_name}-${each.key}"
-  path     = "auth/${vault_jwt_auth_backend.spire_child.path}"
+  name = "${local.spire_child_cluster_name}-${each.key}"
+  # Vault stores the mount path with a trailing slash, and a path without one forces a replacement on every plan.
+  path     = "auth/${vault_jwt_auth_backend.spire_child.path}/"
   role     = each.value.role_name
   rate     = local.owner_registration.login_rate.rate
   interval = local.owner_registration.login_rate.interval

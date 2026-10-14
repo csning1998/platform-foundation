@@ -31,9 +31,13 @@ locals {
 # The owner policies key on the owner code as a path prefix, hence the checks below keep codes, services, and networks exclusive.
 locals {
   owner_codes = concat([local.foundation_project_code], keys(local._external_owners))
+  # spire holds the agent and server IDs, and ns holds the Kubernetes workload IDs of the SPIRE Child.
+  reserved_owner_codes = concat(["spire", "ns"], keys(local.state.foundation_libvirt_resources.foundation_topology.identity))
   owner_code_conflicts = concat(
     [for code in distinct(local.owner_codes) : code if length([for c in local.owner_codes : c if c == code]) > 1],
     flatten([for a in local.owner_codes : [for b in local.owner_codes : "${a} prefixes ${b}" if a != b && startswith(b, "${a}-")]]),
+    [for code in keys(local._external_owners) : "${code} is reserved" if contains(local.reserved_owner_codes, code)],
+    [for code in keys(local._external_owners) : "${code} is malformed" if !can(regex("^[a-z0-9]+(-[a-z0-9]+)*$", code))],
   )
 
   all_services = concat(
@@ -59,7 +63,7 @@ resource "terraform_data" "external_owners_validation" {
   lifecycle {
     precondition {
       condition     = length(local.owner_code_conflicts) == 0
-      error_message = "Owner codes MUST be unique and MUST NOT prefix one another: ${join(", ", local.owner_code_conflicts)}."
+      error_message = "Owner codes MUST be unique, well formed, and outside the reserved names, and MUST NOT prefix one another: ${join(", ", local.owner_code_conflicts)}."
     }
     precondition {
       condition     = length(local.service_conflicts) == 0
