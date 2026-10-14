@@ -3,4 +3,6 @@
 spire_crds_chart_version   = "0.6.1"
 spire_nested_chart_version = "0.30.2"
 
+local_path_provisioner_chart_version = "0.0.37"
+
 spire_child_ca_subject_country = "TW"

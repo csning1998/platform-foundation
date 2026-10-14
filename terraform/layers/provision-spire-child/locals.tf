@@ -79,13 +79,11 @@ locals {
     upstream_bundle_field   = "bundle.crt"
   }
 
-  # OIDC discovery provider allocates the static VIP immediately following the control plane VIP.
-  spire_child_oidc_vip = cidrhost(local.spire_child_network.cidr_block, local.state.platform_spire_child.foundation_network_global.network_baseline.host_vip_offset + 1)
-
-  # The agents of the downstream VMs and of the operator workstation attest to the child server through this static VIP.
-  spire_child_agent_vip  = cidrhost(local.spire_child_network.cidr_block, local.state.platform_spire_child.foundation_network_global.network_baseline.host_vip_offset + 2)
+  # platform-spire-child allocates the VIPs and the issuer, which kube-apiserver trusts before this layer exists.
+  spire_child_oidc_vip   = local.state.platform_spire_child.spire_child_endpoints.oidc_vip
+  spire_child_jwt_issuer = local.state.platform_spire_child.spire_child_endpoints.oidc_issuer
+  spire_child_agent_vip  = local.state.platform_spire_child.spire_child_endpoints.agent_vip
   spire_child_agent_port = 443
-  spire_child_jwt_issuer = "https://${local.spire_child_oidc_vip}"
 }
 
 locals {

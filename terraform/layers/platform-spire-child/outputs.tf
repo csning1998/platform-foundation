@@ -24,10 +24,20 @@ output "foundation_ssh" {
   value       = local.state.foundation_libvirt_resources.foundation_ssh
 }
 
+output "spire_child_endpoints" {
+  description = "Static VIPs of the OIDC discovery provider and of the agent service of the SPIRE Child, the issuer which kube-apiserver and the Child JWT backend trust, the audience of a JWT-SVID for the Kubernetes API, and the group prefix of the owner operators."
+  value = merge(local.spire_child_endpoints, {
+    oidc_issuer               = local.spire_child_oidc_issuer
+    kubernetes_jwt_audience   = local.kubernetes_jwt_audience
+    kubernetes_operator_group = local.kubernetes_operator_group
+  })
+}
+
 output "talos_cluster" {
   description = "Facts of the SPIRE Child Talos cluster."
   value = {
     hostonly_addresses = module.establish_platform_spire_child_talos_cluster.hostonly_addresses
     bootstrap_node_key = module.establish_platform_spire_child_talos_cluster.bootstrap_node_key
+    volume_mount_path  = module.establish_platform_spire_child_talos_cluster.volume_mount_path
   }
 }

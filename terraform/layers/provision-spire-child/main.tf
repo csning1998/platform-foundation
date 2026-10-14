@@ -1,5 +1,6 @@
 
-# Namespace creation precedes chart deployment; CSI driver and agent daemonsets REQUIRE privileged PSS enforcement.
+# Pre-creates namespaces before Helm chart deployment to enforce explicit Pod Security Standards (PSS):
+# spire-system requires 'privileged' admission for the CSI driver and agent DaemonSets, while spire-server enforces 'restricted'.
 resource "kubernetes_namespace_v1" "spire_system" {
   depends_on = [ephemeral.talos_cluster_health.this]
 
@@ -173,6 +174,21 @@ resource "helm_release" "spire_crds" {
   namespace  = kubernetes_namespace_v1.spire_server.metadata[0].name
 }
 
+# The datastore claim lives on the Talos user volume of the platform layer and survives a release removal.
+module "local_path_provisioner" {
+  source     = "../../modules/kubernetes-addons/local-path-provisioner"
+  depends_on = [ephemeral.talos_cluster_health.this]
+
+  helm_config = {
+    chart_repository = "oci://ghcr.io/rancher/local-path-provisioner/charts"
+    version          = var.local_path_provisioner_chart_version
+  }
+  storage_config = {
+    node_path      = local.state.platform_spire_child.talos_cluster.volume_mount_path
+    reclaim_policy = "Retain"
+  }
+}
+
 # SPIRE parent workload registration MUST precede chart deployment to prevent upstream agent attestation failures.
 resource "helm_release" "spire_nested" {
   depends_on = [
@@ -195,6 +211,14 @@ resource "helm_release" "spire_nested" {
   timeout    = 900
 
   values = [yamlencode(local.spire_nested_values)]
+
+  # A server without a valid x509pop CA bundle fails to start, which halts every SVID of the Child.
+  lifecycle {
+    precondition {
+      condition     = can(regex("^-----BEGIN CERTIFICATE-----", trimspace(local.state.security_vault_downstream_pki.spire_node_pki.ca_cert_pem)))
+      error_message = "security-vault-downstream-pki MUST output the PEM CA certificate of the node attestation PKI."
+    }
+  }
 }
 
 locals {
@@ -228,8 +252,7 @@ locals {
     }
 
     "internal-spire-server" = {
-      # Ephemeral storage is tolerated as controller manager reconciles identities from ClusterSPIFFEID CRDs.
-      persistence = { type = "emptyDir" }
+      persistence = { type = "pvc", size = "1Gi", storageClass = module.local_path_provisioner.storage_class_name } # to preserve data after reboot
 
       # Agents outside the cluster reach the server through the agent VIP and attest with a single use join token.
       service = {
@@ -237,7 +260,15 @@ locals {
         port        = local.spire_child_agent_port
         annotations = { "lbipam.cilium.io/ips" = local.spire_child_agent_vip }
       }
-      nodeAttestor = { joinToken = { enabled = true } }
+      # VM agents attest with node certificates of the node attestation PKI, and owners bind workloads through node aliases.
+      nodeAttestor = {
+        joinToken = { enabled = true }
+        x509POP = {
+          enabled  = true
+          mode     = "externalPKI"
+          caBundle = { bundle = local.state.security_vault_downstream_pki.spire_node_pki.ca_cert_pem }
+        }
+      }
 
       upstreamAuthority = {
         spire = {

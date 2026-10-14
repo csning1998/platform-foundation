@@ -35,6 +35,31 @@ output "downstream_pki_issuer_chain_pem" {
   value       = "${trimspace(base64decode(module.vault_pki_setup.pki_issuer_cert_b64))}\n${trimspace(local.bastion_pki_downstream.cert_pem)}\n${trimspace(local.registry_bastion.pki.root_cert_pem)}\n"
 }
 
+output "spire_node_pki" {
+  description = "Node attestation PKI: the mount, the intermediate CA certificate which the x509pop node attestor of the SPIRE Child trusts, and the role of each owner code, which issues only common names starting with that owner code."
+  value = {
+    mount_path  = vault_mount.intermediate[local.node_pki_mount].path
+    ca_cert_pem = vault_pki_secret_backend_root_sign_intermediate.intermediate[local.node_pki_mount].certificate
+    role_names  = { for owner, role in vault_pki_secret_backend_role.node : owner => role.name }
+  }
+}
+
+output "owner_pki" {
+  description = "PKI intermediate of every external owner, keyed by owner code: the mount, the role, and the issuer chain which a leaf of the owner appends, from the owner intermediate up to the Bastion root."
+  value = {
+    for owner, o in local.owners : owner => {
+      mount_path = vault_mount.intermediate[o.pki.mount_path].path
+      role_name  = vault_pki_secret_backend_role.owner[owner].name
+      issuer_chain_pem = join("\n", [
+        trimspace(vault_pki_secret_backend_root_sign_intermediate.intermediate[o.pki.mount_path].certificate),
+        trimspace(base64decode(module.vault_pki_setup.pki_issuer_cert_b64)),
+        trimspace(local.bastion_pki_downstream.cert_pem),
+        trimspace(local.registry_bastion.pki.root_cert_pem),
+      ])
+    }
+  }
+}
+
 output "trust_bundle_pem" {
   description = "Public certificates which verify every platform endpoint, including the Bastion listener and the Bastion root, for consumers which verify Bastion side endpoints without a Bastion Vault identity."
   value       = local.trust_bundle_pem

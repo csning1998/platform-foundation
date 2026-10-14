@@ -63,6 +63,7 @@ locals {
         [for suffix in ["cluster-issuer", "external-secrets"] : "${operator.cluster_name}-${suffix}" if contains(keys(local.workload_policies), "${operator.cluster_name}-${suffix}")],
         key == "spire-child" ? sort(keys(local.child_tenants)) : [],
         key == "spire-child" ? sort([for operator in local.terraform_operators : operator.role_name if operator.server == "child"]) : [],
+        key == "spire-child" ? sort(flatten([for o in local.external_owners : [o.operator_role, o.workload_role]])) : [],
       )
     }
   }
@@ -116,6 +117,10 @@ locals {
           }
         ]...)
       ]...),
+      # The Child operator limits the login rate of every owner role on the Child mount.
+      key == "spire-child" ? {
+        "sys/quotas/rate-limit/${operator.cluster_name}-*" = { capabilities = ["create", "read", "update", "delete"] }
+      } : {},
     )
   }
 

@@ -159,13 +159,27 @@ variable "inline_manifests" {
   }
 }
 
-variable "volume_config" {
-  description = "Talos user volume which formats the data disk at device and mounts the disk at /var/mnt/<name>. Null leaves the data disk unformatted."
+variable "apiserver_config" {
+  description = "kube-apiserver settings. authentication_config is an AuthenticationConfiguration document in YAML, which the module writes to every node and passes to kube-apiserver. Null keeps the default authentication. Talos applies a change of the document only after a reboot."
   type = object({
-    name   = string
-    device = optional(string, "/dev/vdb")
+    authentication_config = optional(string)
+  })
+  default = {}
+}
+
+variable "volume_config" {
+  description = "Talos user volume mounted at /var/mnt/<name>. volume_type disk formats the data disk at device, and volume_type directory keeps the volume as a directory of the system disk, which needs no data disk. Null leaves the data disk unformatted."
+  type = object({
+    name        = string
+    volume_type = optional(string, "disk")
+    device      = optional(string, "/dev/vdb")
   })
   default = null
+
+  validation {
+    condition     = var.volume_config == null || contains(["disk", "directory"], var.volume_config.volume_type)
+    error_message = "volume_config.volume_type MUST be disk or directory."
+  }
 }
 
 variable "registry_mirror_config" {

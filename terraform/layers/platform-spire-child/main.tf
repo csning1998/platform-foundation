@@ -26,6 +26,8 @@ module "establish_platform_spire_child_talos_cluster" {
   talos_config               = var.talos_config
   node_config                = var.node_config
   inline_manifests           = module.helm_chart_cilium.inline_manifests
+  apiserver_config           = { authentication_config = local.kube_apiserver_authentication_config }
+  volume_config              = { name = "spire-server", volume_type = "directory" } # to preserve data after reboot
 }
 
 # Kubeconfig and TLS client credentials MUST be published to the Downstream KV for downstream automation.

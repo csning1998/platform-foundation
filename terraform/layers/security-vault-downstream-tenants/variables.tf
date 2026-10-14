@@ -1,8 +1,7 @@
 
 variable "tenants" {
-  description = "Tenant workloads keyed by the name below the owner code, each mapping a SPIFFE ID to a JWT auth role and KV and PKI ACL policies. owner defaults to the project code of the foundation layer. workload names a catalog service and component, and kubernetes names a namespace and a service account, and exactly one of the two MUST be set. kv_paths, kv_read_paths, and pki_roles are relative to the owner. issuer child binds a workload attested by the SPIRE Child, and provision-spire-child creates its role. issuer parent binds a workload attested by the SPIRE Parent, and this layer creates its role."
+  description = "Platform tenant workloads keyed by the name below the project code, each mapping a SPIFFE ID to a JWT auth role and KV and PKI ACL policies. workload names a catalog service and component, and kubernetes names a namespace and a service account, and exactly one of the two MUST be set. kv_paths, kv_read_paths, and pki_roles are relative to the project code. issuer child binds a workload attested by the SPIRE Child, and provision-spire-child creates its role. issuer parent binds a workload attested by the SPIRE Parent, and this layer creates its role. External owners register their own workloads, see _external_owners."
   type = map(object({
-    owner  = optional(string)
     issuer = optional(string, "child")
     workload = optional(object({
       service   = string
