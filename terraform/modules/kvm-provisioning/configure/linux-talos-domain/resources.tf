@@ -82,13 +82,6 @@ resource "libvirt_volume" "os_disk" {
   }
 }
 
-check "talos_cpu_pinning_capacity" {
-  assert {
-    condition     = local.talos_core_base >= 0
-    error_message = "Cluster vCPU total (${local.talos_total_vcpus}) exceeds the physical core count (${data.libvirt_node_info.host.cpu_cores_total}) on the host. Reduce node vcpu counts or provision on a host with more cores."
-  }
-}
-
 resource "libvirt_domain" "nodes" {
   depends_on = [
     libvirt_network.service_networks,
@@ -111,13 +104,9 @@ resource "libvirt_domain" "nodes" {
   os  = { type = "hvm", arch = "x86_64" }
   cpu = { mode = "host-passthrough" }
 
-  cpu_tune = {
-    vcpu_pin = [
-      for i in range(each.value.vcpu) : {
-        vcpu    = i
-        cpu_set = tostring(local.talos_node_core_offset[each.key] + i)
-      }
-    ]
+  # Per-cluster pinning cannot see the cores of other clusters, hence the caller assigns host CPUs explicitly.
+  cpu_tune = each.value.cpu_pin == null ? null : {
+    vcpu_pin = [for i, cpu in each.value.cpu_pin : { vcpu = i, cpu_set = tostring(cpu) }]
   }
 
   devices = {
@@ -187,9 +176,8 @@ resource "libvirt_domain" "nodes" {
       }
     ]
 
-    # Bound to the hypervisor's loopback interface; console access from elsewhere requires
-    # an SSH tunnel to the hypervisor rather than a direct, unauthenticated network path to
-    # a control-plane node's serial console.
+    # The console listens on the loopback interface of the hypervisor.
+    # Remote console access MUST pass through an SSH tunnel to the hypervisor.
     graphics = [{
       vnc = { listen = "127.0.0.1", autoport = "yes" }
     }]
