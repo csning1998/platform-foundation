@@ -64,28 +64,28 @@ locals {
 
   # Chart-standard namespace and service account names aligned with parent k8s_psat attestation allow-lists.
   spire_child_chart = {
-    system_namespace        = "spire-system"
-    server_namespace        = "spire-server"
-    upstream_agent_sa       = "spire-agent-upstream"
-    internal_server_sa      = "spire-internal-server"
-    internal_server_service = "spire-internal-server"
-    internal_server_pod     = "spire-internal-server-0"
-    registrar_sa            = "spire-child-registrar"
-    upstream_bundle_cm      = "spire-bundle-upstream"
-    oidc_service_name       = "spiffe-oidc-discovery-provider"
-    oidc_tls_secret         = "spiffe-oidc-discovery-provider-tls"
-    parent_attestor_sa      = "spire-parent-attestor"
-    parent_attestor_rbac    = "spire-parent-attestor"
-    upstream_bundle_field   = "bundle.crt"
+    system_namespace         = "spire-system"
+    server_namespace         = "spire-server"
+    upstream_agent_sa        = "spire-agent-upstream"
+    internal_server_sa       = "spire-internal-server"
+    internal_server_service  = "spire-internal-server"
+    internal_server_pod      = "spire-internal-server-0"
+    registrar_sa             = "spire-child-registrar"
+    upstream_bundle_cm       = "spire-bundle-upstream"
+    oidc_service_name        = "spiffe-oidc-discovery-provider"
+    oidc_tls_secret          = "spiffe-oidc-discovery-provider-tls"
+    parent_attestor_sa       = "spire-parent-attestor"
+    parent_attestor_rbac     = "spire-parent-attestor"
+    upstream_bundle_field    = "bundle.crt"
+    datastore_init_container = "set-datastore-ownership"
+    datastore_init_image     = "docker.io/library/busybox:1.37.0@sha256:66a6306db78bf2dbf3487f293aa8d6990d8e506fdffab9cc43fe422becf886e4"
   }
 
-  # OIDC discovery provider allocates the static VIP immediately following the control plane VIP.
-  spire_child_oidc_vip = cidrhost(local.spire_child_network.cidr_block, local.state.platform_spire_child.foundation_network_global.network_baseline.host_vip_offset + 1)
-
-  # The agents of the downstream VMs and of the operator workstation attest to the child server through this static VIP.
-  spire_child_agent_vip  = cidrhost(local.spire_child_network.cidr_block, local.state.platform_spire_child.foundation_network_global.network_baseline.host_vip_offset + 2)
+  # platform-spire-child allocates the VIPs and the issuer, which kube-apiserver trusts before this layer exists.
+  spire_child_oidc_vip   = local.state.platform_spire_child.spire_child_endpoints.oidc_vip
+  spire_child_jwt_issuer = local.state.platform_spire_child.spire_child_endpoints.oidc_issuer
+  spire_child_agent_vip  = local.state.platform_spire_child.spire_child_endpoints.agent_vip
   spire_child_agent_port = 443
-  spire_child_jwt_issuer = "https://${local.spire_child_oidc_vip}"
 }
 
 locals {

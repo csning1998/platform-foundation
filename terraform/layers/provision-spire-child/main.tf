@@ -1,5 +1,6 @@
 
-# Namespace creation precedes chart deployment; CSI driver and agent daemonsets REQUIRE privileged PSS enforcement.
+# Pre-creates namespaces before Helm chart deployment to enforce explicit Pod Security Standards (PSS):
+# spire-system requires 'privileged' admission for the CSI driver and agent DaemonSets, while spire-server enforces 'restricted'.
 resource "kubernetes_namespace_v1" "spire_system" {
   depends_on = [ephemeral.talos_cluster_health.this]
 
@@ -228,8 +229,16 @@ locals {
     }
 
     "internal-spire-server" = {
-      # Ephemeral storage is tolerated as controller manager reconciles identities from ClusterSPIFFEID CRDs.
-      persistence = { type = "emptyDir" }
+      # The datastore holds the attested agents and the entries registered through the CLI, which a reboot MUST NOT erase.
+      persistence = { type = "hostPath", hostPath = local.state.platform_spire_child.talos_cluster.volume_mount_path }
+      # Talos creates the user volume as root, and the server image runs as 1000:1000.
+      initContainers = [{
+        name            = local.spire_child_chart.datastore_init_container
+        image           = local.spire_child_chart.datastore_init_image
+        command         = ["chown", "1000:1000", "/run/spire/data"]
+        securityContext = { runAsUser = 0, runAsNonRoot = false }
+        volumeMounts    = [{ name = "spire-data", mountPath = "/run/spire/data" }]
+      }]
 
       # Agents outside the cluster reach the server through the agent VIP and attest with a single use join token.
       service = {

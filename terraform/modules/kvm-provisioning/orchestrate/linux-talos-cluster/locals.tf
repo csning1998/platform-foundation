@@ -46,35 +46,70 @@ locals {
     ]
   }
 
-  # The user volume formats the data disk and mounts the disk at /var/mnt/<name>.
-  storage_volume_patches = var.volume_config == null ? [] : [yamlencode({
-    apiVersion = "v1alpha1"
-    kind       = "UserVolumeConfig"
-    name       = var.volume_config.name
-    provisioning = {
-      diskSelector = { match = "disk.dev_path == '${var.volume_config.device}'" }
-      minSize      = "1GiB"
-    }
-  })]
+  # The user volume mounts at /var/mnt/<name>, on a formatted data disk or as a directory of the system disk.
+  storage_volume_patches = var.volume_config == null ? [] : [
+    var.volume_config.volume_type == "directory" ? yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "UserVolumeConfig"
+      name       = var.volume_config.name
+      volumeType = "directory"
+      }) : yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "UserVolumeConfig"
+      name       = var.volume_config.name
+      provisioning = {
+        diskSelector = { match = "disk.dev_path == '${var.volume_config.device}'" }
+        minSize      = "1GiB"
+      }
+    })
+  ]
 }
 
 # Machine Configuration & Manifests
 locals {
   # Talos 1.13 declares registry mirrors as separate documents. overridePath keeps the project path of the pull-through cache.
   config_registry_patches = var.registry_mirror_config == null ? [] : concat(
-    [for domain, project in var.registry_mirror_config.mirrors : yamlencode({
-      apiVersion = "v1alpha1"
-      kind       = "RegistryMirrorConfig"
-      name       = domain
-      endpoints  = [{ url = "https://${var.registry_mirror_config.host}/v2/${project}", overridePath = true }]
-    })],
-    [yamlencode({
-      apiVersion = "v1alpha1"
-      kind       = "RegistryTLSConfig"
-      name       = var.registry_mirror_config.host
-      ca         = var.registry_mirror_config.ca_pem
-    })]
+    [
+      for domain, project in var.registry_mirror_config.mirrors : yamlencode({
+        apiVersion = "v1alpha1"
+        kind       = "RegistryMirrorConfig"
+        name       = domain
+        endpoints  = [{ url = "https://${var.registry_mirror_config.host}/v2/${project}", overridePath = true }]
+      })
+    ],
+    [
+      yamlencode({
+        apiVersion = "v1alpha1"
+        kind       = "RegistryTLSConfig"
+        name       = var.registry_mirror_config.host
+        ca         = var.registry_mirror_config.ca_pem
+      })
+    ]
   )
+
+  # Talos 1.13 lacks a field for the AuthenticationConfiguration, hence a machine file carries the document into kube-apiserver.
+  # A path directly below /var/lib exists before the file is created at boot.
+  apiserver_authentication_config_path = "/var/lib/kube-apiserver-authentication-config.yaml"
+  apiserver_authentication_patches = var.apiserver_config.authentication_config == null ? [] : [yamlencode({
+    machine = {
+      files = [{
+        path        = local.apiserver_authentication_config_path
+        permissions = 292 # 0o444
+        op          = "create"
+        content     = var.apiserver_config.authentication_config
+      }]
+    }
+    cluster = {
+      apiServer = {
+        extraArgs = { "authentication-config" = local.apiserver_authentication_config_path }
+        extraVolumes = [{
+          hostPath  = local.apiserver_authentication_config_path
+          mountPath = local.apiserver_authentication_config_path
+          readonly  = true
+        }]
+      }
+    }
+  })]
 
   # The cilium manifest comes first. The other manifests follow in key order.
   config_inline_manifests = concat(
@@ -120,7 +155,7 @@ check "node_count_matches_catalog" {
 
 check "data_disk_attached" {
   assert {
-    condition     = var.volume_config == null || alltrue([for name, volumes in local.storage_attached_volumes : length(volumes) > 0])
+    condition     = var.volume_config == null || var.volume_config.volume_type != "disk" || alltrue([for name, volumes in local.storage_attached_volumes : length(volumes) > 0])
     error_message = "Every node requires one data volume from the foundation storage map, named <node prefix>-<ip suffix>-<name>."
   }
 }
