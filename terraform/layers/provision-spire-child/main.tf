@@ -174,6 +174,21 @@ resource "helm_release" "spire_crds" {
   namespace  = kubernetes_namespace_v1.spire_server.metadata[0].name
 }
 
+# The datastore claim lives on the Talos user volume of the platform layer and survives a release removal.
+module "local_path_provisioner" {
+  source     = "../../modules/kubernetes-addons/local-path-provisioner"
+  depends_on = [ephemeral.talos_cluster_health.this]
+
+  helm_config = {
+    chart_repository = "oci://ghcr.io/rancher/local-path-provisioner/charts"
+    version          = var.local_path_provisioner_chart_version
+  }
+  storage_config = {
+    node_path      = local.state.platform_spire_child.talos_cluster.volume_mount_path
+    reclaim_policy = "Retain"
+  }
+}
+
 # SPIRE parent workload registration MUST precede chart deployment to prevent upstream agent attestation failures.
 resource "helm_release" "spire_nested" {
   depends_on = [
@@ -229,16 +244,7 @@ locals {
     }
 
     "internal-spire-server" = {
-      # The datastore holds the attested agents and the entries registered through the CLI, which a reboot MUST NOT erase.
-      persistence = { type = "hostPath", hostPath = local.state.platform_spire_child.talos_cluster.volume_mount_path }
-      # Talos creates the user volume as root, and the server image runs as 1000:1000.
-      initContainers = [{
-        name            = local.spire_child_chart.datastore_init_container
-        image           = local.spire_child_chart.datastore_init_image
-        command         = ["chown", "1000:1000", "/run/spire/data"]
-        securityContext = { runAsUser = 0, runAsNonRoot = false }
-        volumeMounts    = [{ name = "spire-data", mountPath = "/run/spire/data" }]
-      }]
+      persistence = { type = "pvc", size = "1Gi", storageClass = module.local_path_provisioner.storage_class_name } # to preserve data after reboot
 
       # Agents outside the cluster reach the server through the agent VIP and attest with a single use join token.
       service = {

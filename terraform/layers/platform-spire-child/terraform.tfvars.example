@@ -1,8 +1,8 @@
 
 node_config = {
-  "00" = { ip_suffix = 200, vcpu = 2, ram = 2048 }
-  "01" = { ip_suffix = 201, vcpu = 2, ram = 2048 }
-  "02" = { ip_suffix = 202, vcpu = 2, ram = 2048 }
+  "00" = { ip_suffix = 200, vcpu = 2, ram = 3072 }
+  "01" = { ip_suffix = 201, vcpu = 2, ram = 3072 }
+  "02" = { ip_suffix = 202, vcpu = 2, ram = 3072 }
 }
 
 talos_config = {
