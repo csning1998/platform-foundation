@@ -117,13 +117,10 @@ locals {
           }
         ]...)
       ]...),
-      # provision-spire-child writes the kubeconfig of the registration ServiceAccount of every external owner.
-      merge([
-        for o in local.external_owners : {
-          "${vault_mount.kv.path}/data/${o.registration_kv_path}"     = { capabilities = ["create", "read", "update", "delete", "patch"] }
-          "${vault_mount.kv.path}/metadata/${o.registration_kv_path}" = { capabilities = ["read", "update", "delete"] }
-        } if key == "spire-child"
-      ]...),
+      # The Child operator limits the login rate of every owner role on the Child mount.
+      key == "spire-child" ? {
+        "sys/quotas/rate-limit/${operator.cluster_name}-*" = { capabilities = ["create", "read", "update", "delete"] }
+      } : {},
     )
   }
 

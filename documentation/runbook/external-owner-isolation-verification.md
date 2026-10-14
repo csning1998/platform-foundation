@@ -4,7 +4,7 @@ This runbook verifies the security boundaries isolating external owners on the s
 
 Run this verification suite whenever upgrading Vault, SPIRE, or the `spire-nested` Helm chart, or whenever updating owner policies, owner PKI intermediates, or Kubernetes admission policies.
 
-Sections 2 and 3 run entirely inside ephemeral local containers. Section 4 applies temporary verification resources to the target SPIRE Child cluster and automatically removes the temporary resources upon completion.
+Sections 2 and 3 run entirely inside ephemeral local containers. Section 4 runs against the live SPIRE Child and the Downstream Vault after `provision-spire-child` has been applied. Every request of the owner caller in Section 4 is a server-side dry run, and the one fixture entry of the script is removed on exit.
 
 ---
 
@@ -16,8 +16,9 @@ Sections 2 and 3 run entirely inside ephemeral local containers. Section 4 appli
 | :---------------------------------------------------------------------------------- | :--------------------------------------------------------------------------- | :------ |
 | A JWT-SVID outside the owner prefix cannot log in with the owner role               | `bound_claims_type = "glob"` on the `sub` claim                              | 2       |
 | A leaf certificate outside the owner names or owner network is rejected             | Owner PKI intermediate with `permitted_ip_ranges` and `excluded_dns_domains` | 2       |
-| A node attests only with a certificate signed by the designated node attestation CA | x509pop `external_pki` with `agent_path_template`                            | 3       |
+| A workload receives an owner identity only on a node with an owner certificate      | x509pop `external_pki` and a node alias selecting the subject CN             | 3       |
 | An owner registers entries only under its own prefix and designated nodes           | `ClusterStaticEntry` protected by a `ValidatingAdmissionPolicy`              | 4       |
+| A platform JWT-SVID cannot log in with an owner role on the live Child mount        | Owner glob roles and their rate limit quotas                                 | 4       |
 
 ### Item B. Prerequisites
 
@@ -25,12 +26,12 @@ Sections 2 and 3 run entirely inside ephemeral local containers. Section 4 appli
 2. Container images:
     - Section 2 uses `docker.io/hashicorp/vault:2.0` (matching the Bastion Vault version).
     - Section 3 uses `ghcr.io/spiffe/spire-server:1.15.3` and `ghcr.io/spiffe/spire-agent:1.15.3` (matching the `spire-nested` chart `0.30.2`).
-3. For Section 4: ensure `vault-proxy-env platform-foundation` is available, the `security-vault-downstream-tenants` layer has been applied, and the `spire-child` operator wrapper is configured on your workstation.
+3. For Section 4: ensure `vault-proxy-env platform-foundation` is available, `security-vault-downstream-tenants`, `platform-spire-child`, and `provision-spire-child` have been applied, and the `spire-child` and `keycloak` operator wrappers are configured on your workstation. The script calls `sudo` once to fetch a JWT-SVID as the `keycloak` service user.
 
 ### Item C. Test Data
 
 1. Sections 2 and 3 use mock identifiers: owner `example-owner`, rival owner `example-other`, and trust domain `example.test`.
-2. Section 4 dynamically inspects the trust domain and controller-manager class name from the target SPIRE Child cluster, testing against the mock owner `example-owner`.
+2. Section 4 reads the trust domain from the owner coordinates of `security-vault-downstream-tenants` and the class name from the controller-manager. The `keycloak` operator acts as the owner `platform-foundation`, and `opgitlab` acts as the other owner.
 
 ### Item D. Working Directory Setup
 
@@ -199,16 +200,16 @@ podman rm -f owner-isolation-vault
 
 ## Section 3. Node Attestation with x509pop
 
-### Step A. Verify the Agent Path and Trust Anchor Enforcement (`spire-x509pop.sh`)
+### Step A. Verify the Node Alias across Certificate Rotation (`spire-x509pop.sh`)
 
-This script starts an isolated SPIRE server configured with the `x509pop` node attestor in `external_pki` mode, pointing to a dedicated node attestation CA. The script spins up two agents: one holding a valid node certificate signed by the node CA, and a rogue agent holding a certificate signed by an untrusted CA.
+This script starts an isolated SPIRE server with the `x509pop` node attestor in `external_pki` mode and without `agent_path_template`, matching the server rendered by `spire-nested`. The server registers a node alias selecting the subject CN of an owner node and a workload entry below the alias. Two agents present certificates from the same node CA: one carries the owner CN, and the other carries a platform CN. The script then rotates the owner certificate and restarts the owner agent with an empty data directory.
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 cd "${VERIFY_DIR:?export VERIFY_DIR first}"
 umask 077
-mkdir -p x509pop/server x509pop/agent x509pop/rogue
+mkdir -p x509pop/server x509pop/agent x509pop/other
 cd x509pop
 
 new_ca() {
@@ -217,18 +218,18 @@ new_ca() {
         -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
 }
 new_leaf() {
-    openssl ecparam -name prime256v1 -genkey -noout -out "$3/node.key"
-    openssl req -new -key "$3/node.key" -subj "/CN=$2" -out "$3/node.csr"
+    openssl ecparam -name prime256v1 -genkey -noout -out "$2/node.key"
+    openssl req -new -key "$2/node.key" -subj "/CN=$1" -out "$2/node.csr"
     printf 'basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=clientAuth\n' >leaf.ext
-    openssl x509 -req -in "$3/node.csr" -CA "$1.crt" -CAkey "$1.key" -CAcreateserial -days 1 -extfile leaf.ext \
-        -out "$3/node.crt" 2>/dev/null
+    openssl x509 -req -in "$2/node.csr" -CA node-ca.crt -CAkey node-ca.key -CAcreateserial -days 1 -extfile leaf.ext \
+        -out "$2/node.crt" 2>/dev/null
+    chmod 644 "$2"/*
 }
 
 new_ca node-ca "Verify Node Attestation CA"
-new_ca rogue-ca "Rogue CA"
 cp node-ca.crt server/node-ca.crt
-new_leaf node-ca example-owner-gitlab-postgres-1 agent
-new_leaf rogue-ca platform-keycloak-frontend-1 rogue
+new_leaf example-owner-node-1.example.test agent
+new_leaf platform-foundation-node-1.example.test other
 
 cat >server/server.conf <<'EOF'
 server {
@@ -251,12 +252,11 @@ plugins {
     plugin_data {
       mode = "external_pki"
       ca_bundle_path = "/conf/node-ca.crt"
-      agent_path_template = "/{{ .PluginName }}/{{ .Subject.CommonName }}"
     }
   }
 }
 EOF
-for dir in agent rogue; do
+for dir in agent other; do
   cat >"$dir/agent.conf" <<'EOF'
 agent {
   data_dir = "/tmp/data"
@@ -282,34 +282,53 @@ plugins {
 }
 EOF
 done
-chmod 755 server agent rogue
-chmod 644 server/* agent/* rogue/*
+chmod 755 server agent other
+chmod 644 server/* agent/* other/*
 
 podman network create owner-isolation >/dev/null 2>&1 || true
 run() {
   podman run -d --name "owner-isolation-$1" --network owner-isolation --cap-drop=ALL --read-only \
     --tmpfs /tmp:rw,mode=1777 -v "$PWD/$2:/conf:ro,Z" "ghcr.io/spiffe/$3:1.15.3" -config "/conf/$4" >/dev/null
 }
+srv() { podman exec owner-isolation-spire-server /opt/spire/bin/spire-server "$@"; }
+fetch() {
+  podman exec "owner-isolation-spire-$1" /opt/spire/bin/spire-agent api fetch x509 -socketPath /tmp/agent/api.sock -timeout 5s 2>&1 |
+    grep -E 'SPIFFE ID|no identity' | head -1 || true
+}
+
 run spire-server server spire-server server.conf
 sleep 4
+srv entry create -node -spiffeID spiffe://example.test/example-owner/node/node-1 \
+  -selector x509pop:subject:cn:example-owner-node-1.example.test >/dev/null
+srv entry create -parentID spiffe://example.test/example-owner/node/node-1 \
+  -spiffeID spiffe://example.test/example-owner/app -selector unix:uid:0 >/dev/null
 run spire-agent agent spire-agent agent.conf
-run spire-rogue rogue spire-agent agent.conf
-sleep 10
+run spire-other other spire-agent agent.conf
+sleep 12
 
-podman exec owner-isolation-spire-server /opt/spire/bin/spire-server agent list | grep -E 'SPIFFE ID|Attestation type'
-podman logs owner-isolation-spire-rogue 2>&1 | grep -o 'PermissionDenied desc = [^"]*' | head -1
+echo "--- agents before rotation"
+srv agent list | grep 'SPIFFE ID'
+echo "--- owner node: $(fetch agent)"
+echo "--- platform node: $(fetch other)"
+
+new_leaf example-owner-node-1.example.test agent
+podman restart owner-isolation-spire-agent >/dev/null
+sleep 12
+echo "--- agents after rotation"
+srv agent list | grep 'SPIFFE ID'
+echo "--- owner node after rotation: $(fetch agent)"
 ```
 
 Expected output:
 
-1. The attested agent list shows only the legitimate agent: `spiffe://example.test/spire/agent/x509pop/example-owner-gitlab-postgres-1` with attestation type `x509pop`.
-2. The rogue agent fails node attestation with `certificate signed by unknown authority`.
-3. Note on configuration: `agent_path_template` requires a leading slash (`/`). SPIRE 1.15.3 rejects templates without a leading slash with `path must have a leading slash`.
+1. Both agents attest as `spiffe://example.test/spire/agent/x509pop/<certificate fingerprint>`. `spire-nested` renders no `agent_path_template` in `externalPKI` mode, and the agent ID therefore carries the fingerprint instead of the CN.
+2. The owner node receives `spiffe://example.test/example-owner/app`. The platform node, whose certificate comes from the same CA, reports `no identity issued`.
+3. After rotation, the agent list shows a third agent ID with a new fingerprint, and the owner node still receives `spiffe://example.test/example-owner/app` through the node alias. The agent of the old certificate stays listed until its SVID expires.
 
 ### Step B. Remove the SPIRE Containers
 
 ```bash
-podman rm -f owner-isolation-spire-server owner-isolation-spire-agent owner-isolation-spire-rogue
+podman rm -f owner-isolation-spire-server owner-isolation-spire-agent owner-isolation-spire-other
 podman network rm owner-isolation
 ```
 
@@ -317,172 +336,22 @@ podman network rm owner-isolation
 
 ## Section 4. Registration Bounds on the SPIRE Child
 
-### Step A. Save the Admission Script (`spire-child-admission.sh`)
+### Step A. Save the Registration Script (`spire-child-registration.sh`)
 
-This script creates an ephemeral ServiceAccount restricted to managing `clusterstaticentries`, creates a `ValidatingAdmissionPolicy` whose match condition selects the requests of that ServiceAccount, and runs positive and negative registration test cases. All resources use the `owner-isolation-verify` name/label and are automatically removed by a cleanup trap on exit.
-
-The admission policy uses anchored RE2 regular expressions rather than simple prefix matching (`startsWith`) to prevent path traversal attacks (such as injecting `..` segments).
+This script logs in as the `spire-child` operator to read the Child admin kubeconfig and the owner coordinates. The admin creates one fixture entry of the other owner `opgitlab`. The `keycloak` operator then fetches a JWT-SVID with the Kubernetes audience, which kube-apiserver maps to the group `spire-owner-operator:platform-foundation`, and runs every registration case as a server-side dry run. The last part logs in to the Child mount with the Vault audience JWT-SVID of the same operator.
 
 ```bash
 #!/usr/bin/env bash
-# An admission policy bounds the ClusterStaticEntry of one ServiceAccount to its owner prefix.
-# Run as KUBECONFIG=<Child admin kubeconfig> bash spire-child-admission.sh, which deletes every verify resource on exit.
-set -euo pipefail
-: "${KUBECONFIG:?KUBECONFIG MUST point to the Child admin kubeconfig}"
-[ -s "$KUBECONFIG" ] || { echo "KUBECONFIG ${KUBECONFIG} is empty or missing"; exit 1; }
-kubectl version --request-timeout=10s >/dev/null || { echo "the Child API server is unreachable"; exit 1; }
-
-NS_SERVER=spire-server
-POD=spire-internal-server-0
-CONTAINER=internal-spire-server
-SA_NS=owner-isolation-verify
-SA=example-owner-registrar
-AS="system:serviceaccount:${SA_NS}:${SA}"
-
-TD=$(kubectl -n "$NS_SERVER" get cm spire-internal-server -o json |
-  jq -r '.data["server.conf"] | capture("trust_domain\"?\\s*[:=]\\s*\"(?<td>[^\"]+)\"").td')
-CLASS=$(kubectl -n "$NS_SERVER" get cm spire-internal-controller-manager -o json |
-  jq -r '.data["controller-manager-config.yaml"] | capture("className:\\s*\"?(?<c>[^\"\\n]+)\"?").c')
-echo "trust_domain=${TD} className=${CLASS}"
-[ -n "$TD" ] && [ "$TD" != null ] && [ -n "$CLASS" ] && [ "$CLASS" != null ] || { echo "trust domain or className not found"; exit 1; }
-
-WORKSTATION="spiffe://${TD}/spire/agent/join_token/owner-isolation-verify-workstation"
-TD_RE=${TD//./\\.}
-
-cleanup() {
-  kubectl delete clusterstaticentries.spire.spiffe.io -l owner-isolation-verify=true --ignore-not-found >/dev/null 2>&1 || true
-  kubectl delete validatingadmissionpolicybinding owner-isolation-verify-owner-entries --ignore-not-found >/dev/null 2>&1 || true
-  kubectl delete validatingadmissionpolicy owner-isolation-verify-owner-entries --ignore-not-found >/dev/null 2>&1 || true
-  kubectl delete clusterrolebinding owner-isolation-verify-clusterstaticentries --ignore-not-found >/dev/null 2>&1 || true
-  kubectl delete clusterrole owner-isolation-verify-clusterstaticentries --ignore-not-found >/dev/null 2>&1 || true
-  kubectl delete namespace "$SA_NS" --ignore-not-found >/dev/null 2>&1 || true
-}
-trap cleanup EXIT
-
-kubectl apply -f - >/dev/null <<EOF
-apiVersion: v1
-kind: Namespace
-metadata: { name: ${SA_NS} }
----
-apiVersion: v1
-kind: ServiceAccount
-metadata: { name: ${SA}, namespace: ${SA_NS} }
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata: { name: owner-isolation-verify-clusterstaticentries }
-rules:
-  - apiGroups: ["spire.spiffe.io"]
-    resources: ["clusterstaticentries"]
-    verbs: ["create", "get", "list", "update", "patch", "delete"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata: { name: owner-isolation-verify-clusterstaticentries }
-roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: owner-isolation-verify-clusterstaticentries }
-subjects:
-  - { kind: ServiceAccount, name: ${SA}, namespace: ${SA_NS} }
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingAdmissionPolicy
-metadata: { name: owner-isolation-verify-owner-entries }
-spec:
-  failurePolicy: Fail
-  matchConstraints:
-    resourceRules:
-      - apiGroups: ["spire.spiffe.io"]
-        apiVersions: ["*"]
-        operations: ["CREATE", "UPDATE"]
-        resources: ["clusterstaticentries"]
-  matchConditions:
-    - name: owner-registrar
-      expression: 'request.userInfo.username == "${AS}"'
-  validations:
-    - expression: 'object.spec.spiffeID.matches(r"^spiffe://${TD_RE}/example-owner(/[a-z0-9_-][a-z0-9._-]*)+$")'
-      message: spiffeID MUST stay below the owner prefix
-    - expression: >-
-        object.spec.parentID == "${WORKSTATION}" ||
-        object.spec.parentID.matches(r"^spiffe://${TD_RE}/spire/agent/x509pop/example-owner-[a-z0-9-]+$")
-      message: parentID MUST be the workstation agent or an owner node
-    - expression: '!has(object.spec.admin) || object.spec.admin == false'
-      message: admin MUST be false
-    - expression: '!has(object.spec.downstream) || object.spec.downstream == false'
-      message: downstream MUST be false
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingAdmissionPolicyBinding
-metadata: { name: owner-isolation-verify-owner-entries }
-spec:
-  policyName: owner-isolation-verify-owner-entries
-  validationActions: ["Deny"]
-EOF
-sleep 5
-
-entry() {
-  local name=$1 spiffe=$2 parent=$3 extra=${4:-}
-  cat <<EOF
-apiVersion: spire.spiffe.io/v1alpha1
-kind: ClusterStaticEntry
-metadata: { name: ${name}, labels: { owner-isolation-verify: "true" } }
-spec:
-  className: ${CLASS}
-  spiffeID: ${spiffe}
-  parentID: ${parent}
-  selectors: ["unix:uid:65534"]
-${extra}
-EOF
-}
-
-try() {
-  local label=$1 expect=$2 result
-  shift 2
-  if "$@" >/dev/null 2>err.txt; then result=allow; else result=deny; fi
-  printf '%-34s %-6s expect=%-6s %s  %s\n' "$label" "$result" "$expect" \
-    "$([ "$result" = "$expect" ] && echo OK || echo MISMATCH)" "$(grep -o 'message: [^.]*\|denied[^:]*' err.txt | head -1)"
-}
-
-create_as() { entry "$@" | kubectl create --as="$AS" -f -; }
-
-try "allowed entry"                allow create_as owner-isolation-verify-allowed "spiffe://${TD}/example-owner/spike/allowed" "spiffe://${TD}/spire/agent/x509pop/example-owner-node-1"
-try "workstation parent"           allow create_as owner-isolation-verify-workstation "spiffe://${TD}/example-owner/terraform-operator/spike" "$WORKSTATION"
-try "platform spiffeID"            deny  create_as owner-isolation-verify-platform "spiffe://${TD}/platform-foundation/terraform-operator/keycloak/frontend" "$WORKSTATION"
-try "owner prefix collision"       deny  create_as owner-isolation-verify-collision "spiffe://${TD}/example-owner-x/spike" "$WORKSTATION"
-try "path-form spiffeID"           deny  create_as owner-isolation-verify-pathform "/example-owner/spike/pathform" "$WORKSTATION"
-try "dot-dot spiffeID"             deny  create_as owner-isolation-verify-dotdot "spiffe://${TD}/example-owner/../platform-foundation/x" "$WORKSTATION"
-try "platform node parent"         deny  create_as owner-isolation-verify-parent "spiffe://${TD}/example-owner/spike/p" "spiffe://${TD}/spire/agent/x509pop/platform-foundation-harbor-origin-frontend-1"
-try "admin true"                   deny  create_as owner-isolation-verify-admin "spiffe://${TD}/example-owner/spike/a" "$WORKSTATION" "  admin: true"
-try "downstream true"              deny  create_as owner-isolation-verify-downstream "spiffe://${TD}/example-owner/spike/d" "$WORKSTATION" "  downstream: true"
-try "update to platform spiffeID"  deny  kubectl patch --as="$AS" clusterstaticentries.spire.spiffe.io owner-isolation-verify-allowed --type=merge \
-  -p "{\"spec\":{\"spiffeID\":\"spiffe://${TD}/platform-foundation/terraform-operator/keycloak/frontend\"}}"
-try "create ClusterSPIFFEID (RBAC)" deny kubectl auth can-i create clusterspiffeids.spire.spiffe.io --as="$AS" --quiet
-
-sleep 20
-echo "--- controller-manager status of the allowed entries"
-kubectl get clusterstaticentries.spire.spiffe.io -l owner-isolation-verify=true \
-  -o custom-columns=NAME:.metadata.name,RENDERED:.status.rendered,MASKED:.status.masked,SET:.status.set
-echo "--- spire-server entry show"
-kubectl -n "$NS_SERVER" exec "$POD" -c "$CONTAINER" -- /opt/spire/bin/spire-server entry show \
-  -socketPath /tmp/spire-server/private/api.sock -spiffeID "spiffe://${TD}/example-owner/spike/allowed" |
-  grep -E 'SPIFFE ID|Parent ID|Selector|Entry ID'
-```
-
-### Step B. Save the Runner (`spire-child-run.sh`)
-
-This runner authenticates to the Downstream Vault as the `spire-child` operator, fetches the Child cluster admin kubeconfig from the Vault KV store, and runs `spire-child-admission.sh`.
-
-```bash
-#!/usr/bin/env bash
-# Logs in as the spire-child operator, fetches the Child admin kubeconfig, and runs spire-child-admission.sh.
-# CHECK_ONLY=1 stops after the read-only checks. The kubeconfig and the Vault token are removed on exit.
+# The keycloak operator acts as the owner platform-foundation, and every caller request is a server-side dry run.
+# The fixture entry of the other owner and the Vault token are removed on exit.
 set -euo pipefail
 umask 077
 cd "${VERIFY_DIR:?export VERIFY_DIR first}"
-PF_ROOT=${PF_ROOT:?export PF_ROOT as the platform-foundation checkout}
-TENANTS="${PF_ROOT}/terraform/layers/security-vault-downstream-tenants"
-KUBECONFIG_FILE="${VERIFY_DIR}/child.kubeconfig"
-
+LAYERS="${PF_ROOT:?export PF_ROOT as the platform-foundation checkout}/terraform/layers"
+FIXTURE=owner-isolation-verify-foreign
 cleanup() {
-  rm -f "$KUBECONFIG_FILE"
+  [ -s admin.kubeconfig ] && KUBECONFIG=admin.kubeconfig kubectl delete clusterstaticentries.spire.spiffe.io "$FIXTURE" --ignore-not-found >/dev/null 2>&1 || true
+  rm -f admin.kubeconfig caller.kubeconfig err.txt
   if [ -n "${VAULT_TOKEN:-}" ]; then vault token revoke -self >/dev/null 2>&1 || true; fi
 }
 trap cleanup EXIT
@@ -490,53 +359,123 @@ trap cleanup EXIT
 proxy_env=$(vault-proxy-env platform-foundation)
 eval "${proxy_env}"
 unset proxy_env
-endpoint=$(terraform -chdir="$TENANTS" output -raw downstream_vault_endpoint)
-ca_cert=$(terraform -chdir="$TENANTS" output -raw downstream_vault_ca_cert_path)
-operator=$(terraform -chdir="$TENANTS" output -json downstream_vault_operators | jq -c '.spire.child')
-kv_path=$(terraform -chdir="$TENANTS" output -json foundation_vault_path | jq -r '.kv_paths.spire.child.cluster_config')
+tenants() { terraform -chdir="$LAYERS/security-vault-downstream-tenants" output "$@"; }
+endpoints=$(terraform -chdir="$LAYERS/platform-spire-child" output -json spire_child_endpoints)
+operator=$(tenants -json downstream_vault_operators | jq -c '.spire.child')
+owners=$(tenants -json downstream_vault_owners)
+kv_path=$(tenants -json foundation_vault_path | jq -r '.kv_paths.spire.child.cluster_config')
 unset VAULT_TOKEN VAULT_CLIENT_CERT VAULT_CLIENT_KEY VAULT_AGENT_ADDR
-
-export VAULT_ADDR="$endpoint" VAULT_CACERT="$ca_cert"
+export VAULT_ADDR=$(tenants -raw downstream_vault_endpoint) VAULT_CACERT=$(tenants -raw downstream_vault_ca_cert_path)
 jwt=$("/usr/local/bin/$(jq -r .wrapper_name <<<"$operator")" | jq -r .jwt)
-VAULT_TOKEN=$(vault write -field=token "auth/$(jq -r .auth_mount <<<"$operator")/login" \
-  role="$(jq -r .role_name <<<"$operator")" jwt=- <<<"$jwt")
+VAULT_TOKEN=$(vault write -field=token "auth/$(jq -r .auth_mount <<<"$operator")/login" role="$(jq -r .role_name <<<"$operator")" jwt=- <<<"$jwt")
 export VAULT_TOKEN
 unset jwt
+vault kv get -mount=secret -field=content_b64 "$kv_path" | base64 -d >admin.kubeconfig
+admin() { KUBECONFIG=admin.kubeconfig kubectl "$@"; }
 
-vault kv get -mount=secret -field=content_b64 "$kv_path" | base64 -d >"$KUBECONFIG_FILE"
-export KUBECONFIG="$KUBECONFIG_FILE"
-kubectl version --request-timeout=10s -o json | jq -r '"server " + .serverVersion.gitVersion'
-kubectl get crd clusterstaticentries.spire.spiffe.io -o jsonpath='{.spec.versions[*].name}{"\n"}'
-[ "${CHECK_ONLY:-0}" = 1 ] && exit 0
-bash "${VERIFY_DIR}/spire-child-admission.sh"
+TD=$(jq -r '.opgitlab.operator.spiffe_prefix' <<<"$owners" | sed -E 's#^spiffe://([^/]+)/.*#\1#')
+CLASS=$(admin -n spire-server get cm spire-internal-controller-manager -o json |
+  jq -r '.data["controller-manager-config.yaml"] | capture("className:\\s*\"?(?<c>[^\"\\n]+)\"?").c')
+WORKSTATION=$(admin -n spire-server get cm spire-owner-registration -o jsonpath='{.data.workstation_agent_id}')
+
+echo "--- server attestors and registration objects"
+admin -n spire-server get cm spire-internal-server -o json | jq -r '.data["server.conf"] | fromjson | .plugins.NodeAttestor | map(keys[0]) | join(" ")'
+admin get validatingadmissionpolicy,validatingadmissionpolicybinding spire-owner-registration --no-headers | awk '{print $1}'
+admin -n spire-server exec spire-internal-server-0 -c internal-spire-server -- /opt/spire/bin/spire-server agent list \
+  -socketPath /tmp/spire-server/private/api.sock | grep -qF "$WORKSTATION" &&
+  echo "workstation parameter matches an attested agent" || echo "workstation parameter MISMATCH"
+
+admin apply -f - >/dev/null <<EOF
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterStaticEntry
+metadata: { name: ${FIXTURE} }
+spec:
+  className: ${CLASS}
+  spiffeID: spiffe://${TD}/opgitlab/verify/foreign
+  parentID: spiffe://${TD}/spire/server
+  selectors: ["x509pop:subject:cn:opgitlab-verify-none.${TD}"]
+EOF
+
+k8s_jwt=$(sudo -u svc-platform-foundation-terraform-operator-keycloak-frontend /usr/local/bin/spire-agent api fetch jwt \
+  -audience "$(jq -r .kubernetes_jwt_audience <<<"$endpoints")" -socketPath /run/spire-agent-child/public/api.sock -output json |
+  jq -r 'try .[0].svids[0].svid catch empty')
+admin config view --raw --minify -o json |
+  jq --arg token "$k8s_jwt" '.users = [{name: "jwt", user: {token: $token}}] | .contexts[0].context.user = "jwt"' >caller.kubeconfig
+unset k8s_jwt
+caller() { KUBECONFIG=caller.kubeconfig kubectl "$@"; }
+echo "caller: $(caller auth whoami -o json | jq -c '.status.userInfo | {username, groups}')"
+
+entry() {
+  cat <<EOF
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterStaticEntry
+metadata: { name: owner-isolation-verify-$RANDOM }
+spec:
+  className: ${CLASS}
+  spiffeID: $1
+  parentID: $2
+  selectors: $3
+${4:-}
+EOF
+}
+try() {
+  local label=$1 expect=$2 result
+  shift 2
+  if "$@" >/dev/null 2>err.txt; then result=allow; else result=deny; fi
+  printf '%-44s %-6s expect=%-6s %s  %s\n' "$label" "$result" "$expect" \
+    "$([ "$result" = "$expect" ] && echo OK || echo MISMATCH)" "$(grep -o 'denied request: [^.]*' err.txt | head -1)"
+}
+create() { entry "$@" | caller create --dry-run=server -f -; }
+
+OWN="spiffe://${TD}/platform-foundation/verify"
+ALIAS="${OWN}/node/n1"
+SERVER="spiffe://${TD}/spire/server"
+UID_SEL='["unix:uid:65534"]'
+
+echo "--- registration bounds"
+try "node alias with owner CN"          allow create "$ALIAS" "$SERVER" "[\"x509pop:subject:cn:platform-foundation-verify-n1.${TD}\"]"
+try "workload below owner alias"        allow create "${OWN}/app" "$ALIAS" "$UID_SEL"
+try "workstation parent"                allow create "${OWN}/operator" "$WORKSTATION" "$UID_SEL"
+try "spiffeID of another owner"         deny  create "spiffe://${TD}/opgitlab/verify/app" "$WORKSTATION" "$UID_SEL"
+try "owner prefix collision"            deny  create "spiffe://${TD}/platform-foundation-x/app" "$WORKSTATION" "$UID_SEL"
+try "dot-dot spiffeID"                  deny  create "${OWN}/../../opgitlab/app" "$WORKSTATION" "$UID_SEL"
+try "other join_token parent"           deny  create "${OWN}/app" "spiffe://${TD}/spire/agent/join_token/00000000-0000-0000-0000-000000000000" "$UID_SEL"
+try "alias with another owner CN"       deny  create "${OWN}/node/n2" "$SERVER" "[\"x509pop:subject:cn:opgitlab-n2.${TD}\"]"
+try "alias with a non-CN selector"      deny  create "${OWN}/node/n3" "$SERVER" "[\"x509pop:subject:cn:platform-foundation-n3.${TD}\", \"k8s_psat:cluster:x\"]"
+try "admin true"                        deny  create "${OWN}/a" "$WORKSTATION" "$UID_SEL" "  admin: true"
+try "downstream true"                   deny  create "${OWN}/d" "$WORKSTATION" "$UID_SEL" "  downstream: true"
+try "dnsNames"                          deny  create "${OWN}/dns" "$WORKSTATION" "$UID_SEL" "  dnsNames: [\"vault.${TD}\"]"
+try "patch the entry of another owner"  deny  caller patch --dry-run=server clusterstaticentries.spire.spiffe.io "$FIXTURE" --type=merge \
+  -p "{\"spec\":{\"spiffeID\":\"${OWN}/stolen\"}}"
+try "delete the entry of another owner" deny  caller delete --dry-run=server clusterstaticentries.spire.spiffe.io "$FIXTURE"
+try "create ClusterSPIFFEID (RBAC)"     deny  caller auth can-i create clusterspiffeids.spire.spiffe.io --quiet
+
+echo "--- owner glob roles on the Child mount"
+mount=$(jq -r '.opgitlab.auth_mount' <<<"$owners")
+vault_jwt=$(/usr/local/bin/spire-fetch-platform-foundation-terraform-operator-keycloak-frontend | jq -r .jwt)
+for role in $(jq -r '.opgitlab | .operator.role_name, .workload.role_name' <<<"$owners"); do
+  try "platform JWT-SVID on ${role}" deny vault write -field=token "auth/${mount}/login" role="$role" jwt=- <<<"$vault_jwt"
+done
+unset vault_jwt
+for quota in $(vault list -format=json sys/quotas/rate-limit | jq -r '.[] | select(endswith("-opgitlab-terraform-operator"))'); do
+  vault read -format=json "sys/quotas/rate-limit/${quota}" | jq -c '.data | {path, role, rate, interval}'
+done
 ```
 
-### Step C. Run the Read-only Check
-
-Run a preliminary check to confirm cluster connectivity and verify that the `ClusterStaticEntry` CRD is installed:
+### Step B. Run the Registration Verification
 
 ```bash
-CHECK_ONLY=1 bash "${VERIFY_DIR}/spire-child-run.sh"
-```
-
-Expected output: Prints the Kubernetes API server version and reports `v1alpha1` for the `ClusterStaticEntry` CRD. No resources are created.
-
-### Step D. Run the Admission Verification
-
-Execute the full verification script:
-
-```bash
-bash "${VERIFY_DIR}/spire-child-run.sh"
+bash "${VERIFY_DIR}/spire-child-registration.sh"
 ```
 
 Expected output:
 
-1. The first line prints the detected trust domain and controller-manager class name.
-2. Every test case outputs `OK`. The two authorized entries are admitted, while the remaining nine cases are denied.
-3. `spire-server entry show` lists the allowed entry with an entry ID prefixed by the SPIRE Child cluster name.
-4. Note on controller status: `status.set` on a `ClusterStaticEntry` may remain `false` even after the entry is active. Always confirm the registration state directly via `spire-server entry show`.
+1. The server lists the node attestors `join_token k8s_psat x509pop`, the policy and its binding exist, and the workstation parameter matches an attested agent.
+2. The caller reports the username of the `keycloak` operator and the group `spire-owner-operator:platform-foundation`.
+3. Every registration case outputs `OK`. The three cases inside the owner prefix are admitted, and the remaining twelve cases are denied with the message of the rule which they break.
+4. Both owner roles reject the platform JWT-SVID, and the quota reports the role `opgitlab-terraform-operator` on the Child mount.
 
-### Step E. Remove the Work Directory
+### Step C. Remove the Work Directory
 
 ```bash
 rm -rf "${VERIFY_DIR}"
@@ -546,6 +485,7 @@ rm -rf "${VERIFY_DIR}"
 
 ## Section 5. Recorded Results
 
-| Date       | Vault   | SPIRE    | `spire-nested` | Kubernetes | Result                                                                                                                                                        |
-| :--------- | :------ | :------- | :------------- | :--------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-10-14 | `2.0.4` | `1.15.3` | `0.30.2`       | `v1.36.5`  | All isolation properties verified successfully. Because Vault PKI glob matching crosses dots (`.`), the intermediate CA explicitly excludes platform domains. |
+| Date       | Vault   | SPIRE    | `spire-nested` | Kubernetes | Result                                                                                                                                                                            |
+| :--------- | :------ | :------- | :------------- | :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-14 | `2.0.4` | `1.15.3` | `0.30.2`       | `v1.36.5`  | All isolation properties verified successfully. Because Vault PKI glob matching crosses dots (`.`), the intermediate CA explicitly excludes platform domains.                     |
+| 2026-10-14 | `2.0.4` | `1.15.3` | `0.30.2`       | `v1.36.5`  | Node alias verified across certificate rotation. The live SPIRE Child admits the three owner cases and denies twelve others, and both owner roles reject the platform JWT-SVID.   |

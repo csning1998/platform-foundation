@@ -211,6 +211,14 @@ resource "helm_release" "spire_nested" {
   timeout    = 900
 
   values = [yamlencode(local.spire_nested_values)]
+
+  # A server without a valid x509pop CA bundle fails to start, which halts every SVID of the Child.
+  lifecycle {
+    precondition {
+      condition     = can(regex("^-----BEGIN CERTIFICATE-----", trimspace(local.state.security_vault_downstream_pki.spire_node_pki.ca_cert_pem)))
+      error_message = "security-vault-downstream-pki MUST output the PEM CA certificate of the node attestation PKI."
+    }
+  }
 }
 
 locals {
@@ -252,7 +260,15 @@ locals {
         port        = local.spire_child_agent_port
         annotations = { "lbipam.cilium.io/ips" = local.spire_child_agent_vip }
       }
-      nodeAttestor = { joinToken = { enabled = true } }
+      # VM agents attest with node certificates of the node attestation PKI, and owners bind workloads through node aliases.
+      nodeAttestor = {
+        joinToken = { enabled = true }
+        x509POP = {
+          enabled  = true
+          mode     = "externalPKI"
+          caBundle = { bundle = local.state.security_vault_downstream_pki.spire_node_pki.ca_cert_pem }
+        }
+      }
 
       upstreamAuthority = {
         spire = {

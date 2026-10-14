@@ -21,10 +21,9 @@ locals {
         for index in range(o.cidr_index.first, o.cidr_index.last + 1) :
         cidrsubnet(local.network_baseline.cidr_block, local.network_baseline.cidr_subnet_bits, index - local.network_baseline.cidr_nat_offset)
       ]
-      operator_role        = "${owner}-terraform-operator"
-      workload_role        = "${owner}-workload"
-      pki_mount_path       = "pki-owner-${owner}"
-      registration_kv_path = "${owner}/spire/registration"
+      operator_role  = "${owner}-terraform-operator"
+      workload_role  = "${owner}-workload"
+      pki_mount_path = "pki-owner-${owner}"
     }
   }
 }
