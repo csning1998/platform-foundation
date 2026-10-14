@@ -107,13 +107,19 @@ variable "talos_iso_path" {
 }
 
 variable "node_config" {
-  description = "Hardware resources and IP offsets of the control plane nodes, keyed by short keys such as 00. The module names each node <node prefix>-NN in sorted key order."
+  description = "Hardware resources and IP offsets of the control plane nodes, keyed by short keys such as 00. The module names each node <node prefix>-NN in sorted key order. cpu_pin lists one host CPU per vCPU, and null leaves vCPU placement to the host scheduler."
   type = map(object({
     ip_suffix      = number
     vcpu           = number
     ram            = number
+    cpu_pin        = optional(list(number))
     extra_networks = optional(map(string), {})
   }))
+
+  validation {
+    condition     = alltrue([for key, node in var.node_config : node.cpu_pin == null || length(node.cpu_pin) == node.vcpu])
+    error_message = "node_config.cpu_pin MUST list exactly one host CPU per vCPU."
+  }
 
   validation {
     condition     = length(var.node_config) > 0

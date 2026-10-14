@@ -28,6 +28,7 @@ variable "talos_cluster_vm_config" {
     nodes = map(object({
       vcpu                 = number
       ram                  = number
+      cpu_pin              = optional(list(number))
       os_disk_capacity_gib = optional(number, 40)
 
       # Pre-provisioned volumes, which foundation-libvirt-resources creates. The volumes attach after the OS disk in list order.

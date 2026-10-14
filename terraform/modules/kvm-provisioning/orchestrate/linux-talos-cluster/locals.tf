@@ -97,6 +97,7 @@ locals {
         ram                  = node.ram
         os_disk_capacity_gib = node.os_disk_capacity_gib
         interfaces           = node.interfaces
+        cpu_pin              = local.cluster_nodes[name].cpu_pin
         attached_volumes     = local.storage_attached_volumes[name]
       }
     }
