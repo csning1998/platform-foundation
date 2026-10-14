@@ -19,3 +19,9 @@ data "vault_generic_secret" "registry_bastion" {
   provider = vault.bastion
   path     = "registry/${local.foundation_project_code}/bastion"
 }
+
+# The SPIRE trust domains are the stage domains below which every catalog service of every owner is named.
+data "vault_generic_secret" "registry_platform_trust" {
+  provider = vault.bastion
+  path     = "registry/platform/trust"
+}

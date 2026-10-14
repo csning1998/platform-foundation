@@ -100,6 +100,11 @@ output "downstream_vault_owners" {
   }
 }
 
+output "spire_node_pki" {
+  description = "Mount path of the node attestation PKI, which security-vault-downstream-pki creates and with which every VM agent of the SPIRE Child attests."
+  value       = { mount_path = local.node_pki_mount_path }
+}
+
 output "spire_child_jwt_auth" {
   description = "Mount path and audience of the JWT backend of the SPIRE Child on the Downstream Vault, which provision-spire-child creates, the tenants whose roles the backend carries with the policy of the same name, and the operators of the components deployed after the SPIRE Child, keyed by role name."
   value = {
