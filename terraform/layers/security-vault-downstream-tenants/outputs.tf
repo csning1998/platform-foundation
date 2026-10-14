@@ -72,6 +72,34 @@ output "downstream_vault_operators" {
   }
 }
 
+output "downstream_vault_owners" {
+  description = "Login coordinates of every external owner, keyed by owner code: the Downstream endpoint and CA, the SPIRE Child JWT mount and audience, the operator and workload roles with their policies and SPIFFE ID prefixes, the KV mount and the registration kubeconfig path, the owner PKI and node attestation PKI mounts with the role named by the owner code, and the services and networks of the owner."
+  value = {
+    for owner, o in local.external_owners : owner => {
+      endpoint     = local.downstream_vault_config.endpoint
+      ca_cert_path = local.downstream_vault_config.ca_cert_path
+      auth_mount   = local.spire_child_jwt_auth.mount_path
+      audience     = local.spire_child_jwt_auth.audience
+      operator = {
+        role_name     = o.operator_role
+        policy_name   = vault_policy.external_owner_operator[owner].name
+        spiffe_prefix = "spiffe://${local.spiffe_trust_domain}/${owner}/terraform-operator/"
+      }
+      workload = {
+        role_name     = o.workload_role
+        policy_name   = vault_policy.external_owner_workload[owner].name
+        spiffe_prefix = "spiffe://${local.spiffe_trust_domain}/${owner}/"
+      }
+      kv_mount             = vault_mount.kv.path
+      registration_kv_path = o.registration_kv_path
+      pki                  = { mount_path = o.pki_mount_path, role_name = owner }
+      node_pki             = { mount_path = local.node_pki_mount_path, role_name = owner }
+      services             = o.services
+      cidr_blocks          = o.cidr_blocks
+    }
+  }
+}
+
 output "spire_child_jwt_auth" {
   description = "Mount path and audience of the JWT backend of the SPIRE Child on the Downstream Vault, which provision-spire-child creates, the tenants whose roles the backend carries with the policy of the same name, and the operators of the components deployed after the SPIRE Child, keyed by role name."
   value = {

@@ -1,8 +1,6 @@
-# One entry per tenant workload, keyed by the name below the owner code.
-# owner defaults to the project code of the foundation layer, and kv_paths, kv_read_paths, and pki_roles are relative to the owner.
+# One entry per tenant workload, keyed by the name below the project code, with kv_paths, kv_read_paths, and pki_roles relative to the project code.
 # workload names a catalog service and component, and kubernetes names a namespace and a service account.
-# issuer = "child": a workload attested by the SPIRE Child, such as a pod or a VM agent of the Child. provision-spire-child creates the role.
-# issuer = "parent": a workload attested by the SPIRE Parent. This layer creates the role.
+# issuer child binds a workload of the SPIRE Child, whose role provision-spire-child creates, and issuer parent binds one of the SPIRE Parent.
 tenants = {
   "e2e-probe" = {
     issuer     = "child"
@@ -13,13 +11,14 @@ tenants = {
   "keycloak-frontend" = {
     issuer        = "child"
     workload      = { service = "keycloak", component = "frontend" }
-    kv_read_paths = ["keycloak/frontend"]
+    kv_read_paths = ["keycloak/frontend/app"]
     pki_roles     = ["keycloak-frontend"]
   }
 
   "harbor-origin-frontend" = {
     issuer        = "child"
     workload      = { service = "harbor-origin", component = "frontend" }
-    kv_read_paths = ["harbor-origin/frontend"]
+    kv_read_paths = ["harbor-origin/frontend/app"]
+    pki_roles     = ["harbor-origin-frontend"]
   }
 }

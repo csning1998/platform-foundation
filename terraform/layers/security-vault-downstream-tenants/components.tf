@@ -63,6 +63,7 @@ locals {
         [for suffix in ["cluster-issuer", "external-secrets"] : "${operator.cluster_name}-${suffix}" if contains(keys(local.workload_policies), "${operator.cluster_name}-${suffix}")],
         key == "spire-child" ? sort(keys(local.child_tenants)) : [],
         key == "spire-child" ? sort([for operator in local.terraform_operators : operator.role_name if operator.server == "child"]) : [],
+        key == "spire-child" ? sort(flatten([for o in local.external_owners : [o.operator_role, o.workload_role]])) : [],
       )
     }
   }
@@ -115,6 +116,13 @@ locals {
             "${vault_mount.kv.path}/metadata/${local.foundation_kv_paths["spire"][server].join_token}/${cluster}/*" = { capabilities = ["create", "read", "update", "list"] }
           }
         ]...)
+      ]...),
+      # provision-spire-child writes the kubeconfig of the registration ServiceAccount of every external owner.
+      merge([
+        for o in local.external_owners : {
+          "${vault_mount.kv.path}/data/${o.registration_kv_path}"     = { capabilities = ["create", "read", "update", "delete", "patch"] }
+          "${vault_mount.kv.path}/metadata/${o.registration_kv_path}" = { capabilities = ["read", "update", "delete"] }
+        } if key == "spire-child"
       ]...),
     )
   }

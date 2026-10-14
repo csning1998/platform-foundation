@@ -56,18 +56,18 @@ locals {
   component_operators      = { for key, operator in local.terraform_operators : key => operator if key != "vault-downstream" }
 }
 
-# Tenant names, SPIFFE IDs, KV paths, and PKI roles derive from the owner code. No input repeats the project code.
+# Tenant names, SPIFFE IDs, KV paths, and PKI roles derive from the project code. No input repeats the project code.
 locals {
   tenants = {
-    for key, t in var.tenants : "${coalesce(t.owner, local.foundation_project_code)}-${key}" => {
+    for key, t in var.tenants : "${local.foundation_project_code}-${key}" => {
       issuer = t.issuer
       spiffe_id = (t.workload != null
-        ? "spiffe://${local.spiffe_trust_domain}/${coalesce(t.owner, local.foundation_project_code)}/${t.workload.service}/${t.workload.component}"
+        ? "spiffe://${local.spiffe_trust_domain}/${local.foundation_project_code}/${t.workload.service}/${t.workload.component}"
         : "spiffe://${local.spiffe_trust_domain}/ns/${t.kubernetes.namespace}/sa/${t.kubernetes.service_account}"
       )
-      kv_paths      = [for p in t.kv_paths : "${coalesce(t.owner, local.foundation_project_code)}/${p}"]
-      kv_read_paths = [for p in t.kv_read_paths : "${coalesce(t.owner, local.foundation_project_code)}/${p}"]
-      pki_roles     = [for r in t.pki_roles : "${coalesce(t.owner, local.foundation_project_code)}-${r}"]
+      kv_paths      = [for p in t.kv_paths : "${local.foundation_project_code}/${p}"]
+      kv_read_paths = [for p in t.kv_read_paths : "${local.foundation_project_code}/${p}"]
+      pki_roles     = [for r in t.pki_roles : "${local.foundation_project_code}-${r}"]
     }
   }
 }

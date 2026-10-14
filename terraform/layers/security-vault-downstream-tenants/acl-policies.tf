@@ -29,7 +29,15 @@ locals {
 }
 
 locals {
-  operator_policy_paths = {
+  # security-vault-downstream-pki mounts the node attestation PKI and the PKI intermediate of every external owner.
+  operator_owner_pki_paths = merge([
+    for mount in concat([local.node_pki_mount_path], [for o in local.external_owners : o.pki_mount_path]) : {
+      "sys/mounts/${mount}" = { capabilities = ["create", "read", "update", "delete"] }
+      "${mount}/*"          = { capabilities = ["create", "read", "update", "delete", "list"] }
+    }
+  ]...)
+
+  operator_policy_paths = merge(local.operator_owner_pki_paths, {
     "${vault_mount.kv.path}/data/${local.foundation_project_code}/*" = {
       capabilities = ["create", "read", "update", "delete"]
     }
@@ -57,5 +65,5 @@ locals {
     "identity/group-alias"      = { capabilities = ["create", "update"] }
     "identity/group-alias/id/*" = { capabilities = ["create", "read", "update", "delete"] }
     "sys/policies/acl/*"        = { capabilities = ["create", "read", "update", "delete"] }
-  }
+  })
 }
