@@ -1,5 +1,5 @@
 
-# pki-platform permits the platform domain and the cluster domain alone, hence the listener names of both runtimes exclude
+# pki-leaf-platform permits the platform domain and the cluster domain alone, hence the listener names of both runtimes exclude
 # localhost and a bare Service name.
 locals {
   vault_listener_dns_names    = local.state.foundation_libvirt_resources.foundation_pki.map[module.terraform_layer_context.primary_context.pki_key].dns_san

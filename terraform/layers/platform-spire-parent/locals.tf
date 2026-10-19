@@ -18,8 +18,8 @@ locals {
   }
   registry_spire_trust_domains = jsondecode(nonsensitive(data.vault_generic_secret.registry_platform_trust.data["spire_trust_domains"]))
 
-  bastion_pki_spire    = local.registry_bastion.pki.constrained_intermediates["pki-spire"]
-  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-platform"]
+  bastion_pki_spire    = local.registry_bastion.pki.constrained_intermediates["pki-intermediate-spire"]
+  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
 }
 
 locals {

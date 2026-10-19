@@ -23,13 +23,13 @@ locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)
   }
-  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-platform"]
+  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
 
-  # The backends present certificates of pki-platform or of the Downstream issuer below pki-downstream.
+  # The backends present certificates of pki-leaf-platform or of the Downstream issuer below pki-intermediate-vault-downstream.
   backend_ca_bundle_pem = join("\n", [
     trimspace(local.registry_bastion.pki.root_cert_pem),
     trimspace(local.bastion_pki_platform.cert_pem),
-    trimspace(local.registry_bastion.pki.constrained_intermediates["pki-downstream"].cert_pem),
+    trimspace(local.registry_bastion.pki.constrained_intermediates["pki-intermediate-vault-downstream"].cert_pem),
     "",
   ])
 }

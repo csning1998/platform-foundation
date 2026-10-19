@@ -9,7 +9,7 @@ output "runtime" {
 }
 
 output "vault_endpoint" {
-  description = "Connection facts of the Downstream Vault, which both runtimes publish on the VIP: the API URL, the VIP, the API port, and the path of the CA chain of the listener, the Bastion root and the pki-platform intermediate."
+  description = "Connection facts of the Downstream Vault, which both runtimes publish on the VIP: the API URL, the VIP, the API port, and the path of the CA chain of the listener, the Bastion root and the pki-leaf-platform intermediate."
   value = {
     address      = "https://${module.terraform_layer_context.primary_network_config.lb_config.vip}:${module.terraform_layer_context.primary_network_config.lb_config.ports["api"].frontend_port}"
     service_vip  = module.terraform_layer_context.primary_network_config.lb_config.vip

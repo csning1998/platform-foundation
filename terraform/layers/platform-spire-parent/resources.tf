@@ -1,5 +1,5 @@
 
-# The SPIRE Server signs its own intermediate CA against pki-spire, whose Name Constraints bind the SPIRE trust domains.
+# The SPIRE Server signs its own intermediate CA against pki-intermediate-spire, whose Name Constraints bind the SPIRE trust domains.
 # The AppRole below is the only identity which may call sign-intermediate, through the signer policy which pgg declares.
 locals {
   # The secret ID and the token work only from the addresses of the SPIRE Parent nodes on the Bastion network.
@@ -22,7 +22,7 @@ resource "vault_approle_auth_backend_role" "spire_parent_upstream_authority" {
   lifecycle {
     precondition {
       condition     = contains(local.registry_spire_trust_domains, local.spiffe_trust_domain)
-      error_message = "The SPIRE trust domain ${local.spiffe_trust_domain} is absent from spire_trust_domains of registry/platform/trust, and pki-spire would reject every SPIRE CA of the trust domain."
+      error_message = "The SPIRE trust domain ${local.spiffe_trust_domain} is absent from spire_trust_domains of registry/platform/trust, and pki-intermediate-spire would reject every SPIRE CA of the trust domain."
     }
   }
 }

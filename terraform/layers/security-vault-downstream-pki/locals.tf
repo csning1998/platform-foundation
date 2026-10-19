@@ -19,7 +19,7 @@ locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)
   }
-  bastion_pki_downstream = local.registry_bastion.pki.constrained_intermediates["pki-downstream"]
+  bastion_pki_downstream = local.registry_bastion.pki.constrained_intermediates["pki-intermediate-vault-downstream"]
 }
 
 locals {
@@ -28,7 +28,7 @@ locals {
     pki_mount_path = local.state.platform_vault_downstream_frontend.pki_identity.intermediate_mount_path
   }
   pki_lease_ttl_seconds = 60 * 60 * 24 * 365
-  # The Downstream issuer chains to the Bastion root through pki-downstream.
+  # The Downstream issuer chains to the Bastion root through pki-intermediate-vault-downstream.
   bastion_pki_chain_pem = "${trimspace(local.registry_bastion.pki.root_cert_pem)}\n${trimspace(local.bastion_pki_downstream.cert_pem)}\n"
   root_domain           = local.state.foundation_libvirt_resources.foundation_network_global.domain_suffix
 }

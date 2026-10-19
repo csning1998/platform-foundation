@@ -58,8 +58,8 @@ module "helm_chart_cilium" {
   }
 }
 
-# cert-manager issues the Vault listener certificate from pki-platform, since the Downstream Vault cannot sign its own listener.
-# The Kubernetes auth mount lives in the owned scope of the tenant, which admits the issuer policy of pki-platform.
+# cert-manager issues the Vault listener certificate from pki-leaf-platform, since the Downstream Vault cannot sign its own listener.
+# The Kubernetes auth mount lives in the owned scope of the tenant, which admits the issuer policy of pki-leaf-platform.
 module "vault_kubernetes_auth_talos" {
   count     = local.is_runtime_talos ? 1 : 0
   source    = "../../modules/vault-provisioning/vault-kubernetes-auth"
