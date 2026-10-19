@@ -17,9 +17,9 @@ locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)
   }
-  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-platform"]
+  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
 
-  # The listener of the Downstream Vault chains to the Bastion root through pki-platform.
+  # The listener of the Downstream Vault chains to the Bastion root through pki-leaf-platform.
   listener_ca_chain_pem = "${trimspace(local.registry_bastion.pki.root_cert_pem)}\n${trimspace(local.bastion_pki_platform.cert_pem)}\n"
 }
 

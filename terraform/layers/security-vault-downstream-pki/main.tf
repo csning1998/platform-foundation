@@ -43,12 +43,12 @@ resource "vault_policy" "management" {
 }
 
 # Combined certificate chain for local trust store installation: the Bastion listener CA, which is distinct from the PKI roots,
-# the Bastion root with pki-downstream, pki-platform which signs the Downstream Vault listener, and the Downstream issuer.
+# the Bastion root with pki-intermediate-vault-downstream, pki-leaf-platform which signs the Downstream Vault listener, and the Downstream issuer.
 locals {
   trust_bundle_pem = join("\n", [
     chomp(local.registry_bastion.vault.listener_ca_cert_pem),
     chomp(local.bastion_pki_chain_pem),
-    chomp(local.registry_bastion.pki.constrained_intermediates["pki-platform"].cert_pem),
+    chomp(local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"].cert_pem),
     chomp(base64decode(module.vault_pki_setup.pki_issuer_cert_b64)),
   ])
 }

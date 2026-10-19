@@ -182,7 +182,7 @@ resource "kubernetes_namespace_v1" "vault" {
   }
 }
 
-# pki-platform rejects a loopback and a bare name, hence the certificate carries the cluster domain names of the chart.
+# pki-leaf-platform rejects a loopback and a bare name, hence the certificate carries the cluster domain names of the chart.
 module "vault_listener_certificate" {
   count  = local.is_runtime_talos ? 1 : 0
   source = "../../modules/kubernetes-addons/platform-certificate"
