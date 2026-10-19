@@ -1,6 +1,6 @@
 ---
 platform_spire_parent_log_level: "INFO"
-platform_spire_parent_ca_ttl: "8760h" # 1 year, within the lifetime of the pki-spire intermediate
+platform_spire_parent_ca_ttl: "8760h" # 1 year, within the lifetime of the pki-intermediate-spire intermediate
 platform_spire_parent_default_svid_ttl: "1h"
 
 platform_spire_parent_upstream_ca_cert_path: "{{ utils_common_defaults_spire_dir_config }}/upstream-ca.pem"

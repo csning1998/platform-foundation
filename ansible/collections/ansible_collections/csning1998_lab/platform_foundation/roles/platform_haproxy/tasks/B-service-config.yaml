@@ -10,7 +10,7 @@
         group: haproxy
         mode: "0700"
 
-    # The backends present certificates of pki-platform or of the Downstream issuer below pki-downstream.
+    # The backends present certificates of pki-leaf-platform or of the Downstream issuer below pki-intermediate-vault-downstream.
     - name: "B1b. Deploy the CA bundle for backend verification"
       ansible.builtin.copy:
         content: "{{ platform_haproxy_ca_bundle_b64 | b64decode }}"
@@ -20,7 +20,7 @@
         mode: "0644"
       notify: Restart HAProxy
 
-    # A certificate from a rebuilt pki-platform fails the chain check,
+    # A certificate from a rebuilt pki-leaf-platform fails the chain check,
     # and a certificate inside the renewal window fails checkend.
     - name: "B1c. Verify the held stats certificate against the CA bundle"
       ansible.builtin.command:
@@ -49,7 +49,7 @@
       failed_when: false
 
     # The workstation issues the certificate through the Vault Proxy, and the private key never enters a Terraform state.
-    - name: "B1e. Issue the stats certificate from pki-platform"
+    - name: "B1e. Issue the stats certificate from pki-leaf-platform"
       when: _platform_haproxy_stats_chain.rc != 0 or _platform_haproxy_stats_expiry.rc != 0
       block:
         - name: "B1e-i. Take the Vault Proxy route of identity {{ project_code }}"
