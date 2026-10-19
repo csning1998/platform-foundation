@@ -40,6 +40,6 @@ variable "pki_engine_config" {
 }
 
 variable "bastion_pki_inter_mount_path" {
-  description = "Mount path of the constrained Bastion Vault PKI engine which signs the CSR, such as pki-downstream."
+  description = "Mount path of the constrained Bastion Vault PKI engine which signs the CSR, such as pki-intermediate-vault-downstream."
   type        = string
 }
