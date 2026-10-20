@@ -1,6 +1,6 @@
 # platform-spire-parent
 
-The layer provisions the SPIRE Parent VM, the AppRole of the upstream authority on `pki-spire`, and the PKI role of the OIDC listener on `pki-platform`.
+The layer provisions the SPIRE Parent VM, the AppRole of the upstream authority on `pki-intermediate-spire`, and the PKI role of the OIDC listener on `pki-leaf-platform`.
 
 The layer MUST run in the environment of the platform-foundation Vault Proxy, which the `.envrc` at the repository root loads.
 
@@ -14,7 +14,7 @@ The plan stops when the SPIRE trust domain is absent from `spire_trust_domains` 
 
 A state loss is the removal of the remote state of the layer while the Bastion Vault objects of the layer remain.
 
-The Bastion Vault objects of the layer are the AppRole role `<cluster_name>-upstream-authority` and the PKI role `<cluster_name>` on `pki-platform`.
+The Bastion Vault objects of the layer are the AppRole role `<cluster_name>-upstream-authority` and the PKI role `<cluster_name>` on `pki-leaf-platform`.
 
 An apply in the Proxy environment overwrites both roles in place, and neither role requires an import.
 
