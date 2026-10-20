@@ -63,16 +63,6 @@ models:
   #   # frequency_penalty: 0.0
   #   # presence_penalty: 0.0
   #   # seed: 42
-
-  # Azure OpenAI configuration
-  azure-gpt-5.4-mini:
-    provider: azure-openai
-    model: gpt-5.4-mini
-    prompt_file: .gitlab/code_review_guidelines/generic_rules.md
-    # Optional tuning parameters:
-    max_tokens: 32768
-    #   # (Requires REVIEW_BASE_URL and REVIEW_API_VERSION provided via CI/CD inputs or environment variables)
-
   # xAI Grok configuration example (Grok 4.x flagship series)
   # grok-4-7:
   #   provider: grok
@@ -83,6 +73,15 @@ models:
   #   # Optional tuning parameters:
   #   # max_tokens: 16384
   #   # top_p: 0.95
+
+  # Azure OpenAI configuration
+  azure-gpt-5.4-mini:
+    provider: azure-openai
+    model: gpt-5.4-mini
+    prompt_file: .gitlab/code_review_guidelines/generic_rules.md
+    # Optional tuning parameters:
+    max_tokens: 32768
+    # (Requires REVIEW_BASE_URL and REVIEW_API_VERSION provided via CI/CD inputs or environment variables)
 
 slots:
   primary: claude-sonnet-5.5

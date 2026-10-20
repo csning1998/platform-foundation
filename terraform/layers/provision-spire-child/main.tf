@@ -27,7 +27,7 @@ resource "kubernetes_namespace_v1" "spire_server" {
   }
 }
 
-# The upstream agent trusts pki-spire, the upstream root of the SPIRE trust bundle, for its first connection to the SPIRE Parent.
+# The upstream agent trusts pki-intermediate-spire, the upstream root of the SPIRE trust bundle, for its first connection to the SPIRE Parent.
 resource "kubernetes_config_map_v1" "upstream_bundle" {
   metadata {
     name      = local.spire_child_chart.upstream_bundle_cm

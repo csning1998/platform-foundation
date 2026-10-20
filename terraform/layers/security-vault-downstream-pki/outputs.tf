@@ -31,8 +31,8 @@ output "downstream_pki_management_policies" {
 }
 
 output "downstream_pki_issuer_chain_pem" {
-  description = "Certificate chain which a leaf of the Downstream issuer appends: the Downstream issuer, pki-downstream, and the Bastion root."
-  value       = "${trimspace(base64decode(module.vault_pki_setup.pki_issuer_cert_b64))}\n${trimspace(local.bastion_pki_downstream.cert_pem)}\n${trimspace(local.registry_bastion.pki.root_cert_pem)}\n"
+  description = "Certificate chain which a leaf of the Downstream issuer appends: the Downstream issuer, pki-intermediate-vault-downstream, and the Bastion root."
+  value       = "${trimspace(base64decode(module.vault_pki_setup.pki_issuer_cert_b64))}\n${trimspace(local.bastion_pki_downstream_cert_pem)}\n${trimspace(local.registry_bastion.pki.trust_anchors[local.bastion_pki_downstream.root_ca_id])}\n"
 }
 
 output "spire_node_pki" {
@@ -53,8 +53,8 @@ output "owner_pki" {
       issuer_chain_pem = join("\n", [
         trimspace(vault_pki_secret_backend_root_sign_intermediate.intermediate[o.pki.mount_path].certificate),
         trimspace(base64decode(module.vault_pki_setup.pki_issuer_cert_b64)),
-        trimspace(local.bastion_pki_downstream.cert_pem),
-        trimspace(local.registry_bastion.pki.root_cert_pem),
+        trimspace(local.bastion_pki_downstream_cert_pem),
+        trimspace(local.registry_bastion.pki.trust_anchors[local.bastion_pki_downstream.root_ca_id]),
       ])
     }
   }

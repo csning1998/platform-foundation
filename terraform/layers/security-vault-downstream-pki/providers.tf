@@ -3,7 +3,7 @@ terraform {
   required_providers {
     vault = {
       source  = "hashicorp/vault"
-      version = "5.5.0"
+      version = "5.13.0"
     }
     local = {
       source  = "hashicorp/local"
@@ -20,7 +20,7 @@ terraform {
   }
 }
 
-# The .envrc of the layer routes VAULT_ADDR to the platform-foundation Vault Proxy. The tenant ACL grants sign-intermediate on pki-downstream.
+# The .envrc of the layer routes VAULT_ADDR to the platform-foundation Vault Proxy. The tenant ACL grants sign-intermediate on pki-intermediate-vault-downstream.
 provider "vault" {
   alias            = "bastion"
   skip_child_token = true

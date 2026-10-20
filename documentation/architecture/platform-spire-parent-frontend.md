@@ -25,19 +25,19 @@ This specification states the coordination contract between the SPIRE trust doma
 
 1. Bastion Vault's `pki-root` mount holds a self-signed P-384 Root CA, Tier 1 of the hierarchy, which expires before 2036.
 2. `pki-root` signs three constrained P-256 intermediates for the tenant `platform-foundation`, Tier 2 of the hierarchy. RFC 5280 Name Constraints in each certificate bind every subordinate certificate, whatever a caller of `root/sign-intermediate` passes.
-3. `pki-spire` permits the SPIRE trust domains of `registry/platform/trust` alone and signs the Intermediate CA of SPIRE Parent through the `upstreamauthority/vault` plugin.
-4. `pki-downstream` permits the platform domain, the Hubble names, and the platform network, excludes the Bastion publish network and every SPIFFE URI under the platform domain, and signs the Issuing Intermediate of Downstream Vault.
-5. `pki-platform` carries a zero path length, issues leaf certificates alone, and permits the platform domain, `cluster.local`, and the platform network. The listeners of SPIRE Parent OIDC and Downstream Vault take their certificates from `pki-platform`.
-6. Module `vault-pki-setup`, invoked by layer `security-vault-downstream-pki`, realizes the Tier 3 role for Downstream Vault. Downstream Vault generates the P-256 CSR and keeps the private key, `pki-downstream` signs the CSR through `root/sign-intermediate`, and the signed certificate returns to Downstream Vault. The signing request carries a DNS name inside the permitted subtree, since a signer with permitted DNS constraints rejects a CA certificate without one.
+3. `pki-intermediate-spire` permits the SPIRE trust domains of `registry/platform/trust` alone and signs the Intermediate CA of SPIRE Parent through the `upstreamauthority/vault` plugin.
+4. `pki-intermediate-vault-downstream` permits the platform domain, the Hubble names, and the platform network, excludes the Bastion publish network and every SPIFFE URI under the platform domain, and signs the Issuing Intermediate of Downstream Vault.
+5. `pki-leaf-platform` carries a zero path length, issues leaf certificates alone, and permits the platform domain, `cluster.local`, and the platform network. The listeners of SPIRE Parent OIDC and Downstream Vault take their certificates from `pki-leaf-platform`.
+6. Module `vault-pki-setup`, invoked by layer `security-vault-downstream-pki`, realizes the Tier 3 role for Downstream Vault. Downstream Vault generates the P-256 CSR and keeps the private key, `pki-intermediate-vault-downstream` signs the CSR through `root/sign-intermediate`, and the signed certificate returns to Downstream Vault. The signing request carries a DNS name inside the permitted subtree, since a signer with permitted DNS constraints rejects a CA certificate without one.
 7. SPIRE Parent's own Intermediate CA additionally signs SPIRE Child's Intermediate CA on the SPIRE branch, and SPIRE Child signs a workload's leaf SVID.
 8. Resource `pki_root` carries `prevent_destroy = true` in `parent-group-governance`.
 
 ### Item D. Listener Certificates Outside the Terraform State
 
-1. The listener certificates of SPIRE Parent OIDC and Downstream Vault issue from `pki-platform`. The arrangement is permanent since these listeners precede the Downstream Issuing Intermediate.
-2. Layer `platform-spire-parent` creates the PKI role `<cluster_name>` on `pki-platform`. The role `platform_spire_parent` issues the OIDC listener certificate from the operator workstation with the tenant token and writes the certificate and the key to the VM, hence neither enters a Terraform state.
-3. The play keeps a held certificate which chains to the current `pki-platform` and stays valid beyond 30 days, and issues a new certificate otherwise.
-4. Layer `platform-vault-downstream-frontend` creates the Kubernetes auth mount and the PKI role of cert-manager on `pki-platform` in the owned scope of the tenant. cert-manager signs the Downstream Vault listener through the assignable policy `pki-platform-issuer-platform-foundation`.
+1. The listener certificates of SPIRE Parent OIDC and Downstream Vault issue from `pki-leaf-platform`. The arrangement is permanent since these listeners precede the Downstream Issuing Intermediate.
+2. Layer `platform-spire-parent` creates the PKI role `<cluster_name>` on `pki-leaf-platform`. The role `platform_spire_parent` issues the OIDC listener certificate from the operator workstation with the tenant token and writes the certificate and the key to the VM, hence neither enters a Terraform state.
+3. The play keeps a held certificate which chains to the current `pki-leaf-platform` and stays valid beyond 30 days, and issues a new certificate otherwise.
+4. Layer `platform-vault-downstream-frontend` creates the Kubernetes auth mount and the PKI role of cert-manager on `pki-leaf-platform` in the owned scope of the tenant. cert-manager signs the Downstream Vault listener through the assignable policy `pki-leaf-platform-issuer-platform-foundation`.
 5. Keycloak, Harbor Origin, and Cilium start after Downstream Vault and take their listener certificates from the Downstream Issuing Intermediate. The layer `security-vault-downstream-pki` declares the PKI role of each service.
 
 ### Item E. Per-Issuer JWT Federation Boundary
@@ -56,9 +56,9 @@ This specification states the coordination contract between the SPIRE trust doma
 flowchart TD
     subgraph BASTION ["Bastion Vault: Tier 1 Root, Tier 2 Constrained Intermediates"]
         ROOT["pki-root: P-384 Root CA\n(prevent_destroy)"]
-        SPIRE_INTER["pki-spire"]
-        DOWN_INTER["pki-downstream"]
-        PLATFORM_INTER["pki-platform: leaf only"]
+        SPIRE_INTER["pki-intermediate-spire"]
+        DOWN_INTER["pki-intermediate-vault-downstream"]
+        PLATFORM_INTER["pki-leaf-platform: leaf only"]
     end
 
     subgraph PARENT ["SPIRE Parent: Bare Metal"]
@@ -94,11 +94,11 @@ flowchart TD
 
 ## Section 2. Design Rationale
 
-### Item A. Bastion `pki-spire` Precedes Downstream Vault in Sequencing
+### Item A. Bastion `pki-intermediate-spire` Precedes Downstream Vault in Sequencing
 
 1. SPIFFE/SPIRE deployment is prioritized ahead of the Downstream Vault provisioning chain.
 2. Signing SPIRE Parent's Intermediate CA against Downstream Vault would require Downstream Vault's own PKI to already be available, while the Downstream Vault trusts the JWT-SVIDs of SPIRE Parent.
-3. Signing against Bastion Vault's `pki-spire` mount removes that ordering dependency since Bastion Vault MUST already be available before any Terraform apply operation across the repository.
+3. Signing against Bastion Vault's `pki-intermediate-spire` mount removes that ordering dependency since Bastion Vault MUST already be available before any Terraform apply operation across the repository.
 
 ### Item B. `join_token` Node Attestor Selection
 
@@ -112,7 +112,7 @@ flowchart TD
 2. The `upstreamauthority/vault` plugin supports AppRole, Token, and TLS client certificate authentication for that bootstrap request.
 3. TLS client certificate authentication is excluded since issuance of that certificate would itself require prior authentication against the Bastion Vault, which the bootstrap request under evaluation seeks to reach.
 4. Token authentication carries a coarser permission scope than AppRole.
-5. AppRole authentication is selected. Layer `platform-spire-parent` creates the AppRole `<cluster_name>-upstream-authority` with the policy `pki-spire-signer-platform-foundation`, which `parent-group-governance` declares. The role `platform_spire_parent` issues the secret ID with the tenant token and writes the secret ID to a root-only `EnvironmentFile` of the SPIRE Server unit as `VAULT_APPROLE_SECRET_ID`, hence the secret ID never enters a Terraform state.
+5. AppRole authentication is selected. Layer `platform-spire-parent` creates the AppRole `<cluster_name>-upstream-authority` with the policy `pki-intermediate-spire-signer-platform-foundation`, which `parent-group-governance` declares. The role `platform_spire_parent` issues the secret ID with the tenant token and writes the secret ID to a root-only `EnvironmentFile` of the SPIRE Server unit as `VAULT_APPROLE_SECRET_ID`, hence the secret ID never enters a Terraform state.
 
 ### Item D. `docker` Workload Attestor and Rootless Podman Alignment
 
@@ -144,7 +144,7 @@ flowchart TD
 
 1. A full rebuild of Bastion Vault that discards Raft storage forces re-signing of SPIRE's Intermediate CA since the shared `pki-root` trust anchor would no longer exist.
 2. That failure mode already exists in the pre-SPIRE PKI design, affecting Downstream Vault's own intermediate certificate under the same condition.
-3. SPIRE's adoption of `pki-spire` introduces no new instance of that risk.
+3. SPIRE's adoption of `pki-intermediate-spire` introduces no new instance of that risk.
 
 ## Section 4. Trust Chain Establishment at the Bastion Vault Boundary
 
@@ -163,7 +163,7 @@ flowchart TD
 
 1. Resource `vault_jwt_auth_backend.spire_parent` of layer `security-vault-downstream-tenants` declares `oidc_discovery_url` as `https://<spire_parent_node_ip>:<spire_oidc_port>`.
 2. Vault validates `oidc_discovery_url` through an active HTTP fetch at resource creation, hence the layer runs after `platform-spire-parent`.
-3. Argument `oidc_discovery_ca_pem` takes the field `discovery_ca_pem` of the output `spire_oidc` of `platform-spire-parent`, the Bastion root followed by the `pki-platform` certificate, as one PEM string.
+3. Argument `oidc_discovery_ca_pem` takes the field `discovery_ca_pem` of the output `spire_oidc` of `platform-spire-parent`, the Bastion root followed by the `pki-leaf-platform` certificate, as one PEM string.
 
 ### Item D. Tenant ACL Scope
 
@@ -172,14 +172,14 @@ flowchart TD
 3. The auth mount category scopes mount management to `sys/auth/platform-foundation-*`, `sys/mounts/auth/platform-foundation-*`, and `auth/platform-foundation-*`.
 4. The auth role category scopes AppRole and GitLab JWT role management to the `platform-foundation-` prefix.
 5. Every auth rule carries `allowed_parameters`, which limits `token_policies` and `policies` to the exact assignable policies of its scope, published in the field `assignable_policies` of `registry/platform-foundation/bastion`.
-6. The PKI category grants read on the `pki-platform` mount, role management under `roles/platform-foundation-*`, and issuance under `issue/platform-foundation-*`.
+6. The PKI category grants read on the `pki-leaf-platform` mount, role management under `roles/platform-foundation-*`, and issuance under `issue/platform-foundation-*`.
 7. The tenant does not write any policy, since Vault OSS bounds neither the content of a policy nor the policies of an auth role.
 
 ### Item E. Cross-Tenant Grants
 
 1. The tenant policy does not grant `secret/data/parent-group-governance/terraform/state-backend` or `secret/data/parent-group-governance/github/publication`, which the governance Vault Proxy reads alone.
-2. The tenant policy grants create and update on `pki-downstream/root/sign-intermediate`, which layer `security-vault-downstream-pki` uses through the platform-foundation Vault Proxy.
-3. The SPIRE upstream authority AppRole holds the policy `pki-spire-signer-platform-foundation`, which grants create and update on `pki-spire/root/sign-intermediate` only.
+2. The tenant policy grants create and update on `pki-intermediate-vault-downstream/root/sign-intermediate`, which layer `security-vault-downstream-pki` uses through the platform-foundation Vault Proxy.
+3. The SPIRE upstream authority AppRole holds the policy `pki-intermediate-spire-signer-platform-foundation`, which grants create and update on `pki-intermediate-spire/root/sign-intermediate` only.
 4. The layers `platform-spire-parent`, `provision-spire-parent`, `platform-vault-downstream-frontend`, `provision-vault-downstream-frontend`, `security-vault-downstream-tenants`, and `security-vault-downstream-pki` run through the platform-foundation Vault Proxy. The Proxy logs in with the client certificate of the identity, and the Ansible plays of these layers present the same certificate.
 5. The cert role of the identity binds its token to `127.0.0.1/32`. The SPIRE upstream authority AppRole binds its secret ID and its token to the addresses of the SPIRE Parent nodes on `vault-bastion-publish`.
 6. The registry of `parent-group-governance` records each cross-tenant grant together with its reason.

@@ -43,12 +43,12 @@
         msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
 
 # The workstation issues the certificate through the Vault Proxy, and the private key never enters a Terraform state.
-# A certificate from a rebuilt pki-platform fails the chain check,
+# A certificate from a rebuilt pki-leaf-platform fails the chain check,
 # and a certificate inside the renewal window fails checkend.
-- name: "Block A2: Issue the Listener Certificate from pki-platform"
+- name: "Block A2: Issue the Listener Certificate from pki-leaf-platform"
   become: true
   block:
-    - name: "A2a. Write the CA chain of the listener, the Bastion root and the pki-platform intermediate"
+    - name: "A2a. Write the CA chain of the listener, the Bastion root and the pki-leaf-platform intermediate"
       ansible.builtin.copy:
         content: "{{ platform_vault_ca_chain_b64 | b64decode }}"
         dest: "{{ platform_vault_dir_tls }}/vault-ca.crt"
@@ -145,7 +145,7 @@
           notify: Restart Vault Service
           no_log: true
 
-    - name: "A2e. Trust the Bastion root and pki-platform on the OS level"
+    - name: "A2e. Trust the Bastion root and pki-leaf-platform on the OS level"
       ansible.builtin.copy:
         content: "{{ platform_vault_ca_chain_b64 | b64decode }}"
         dest: /usr/local/share/ca-certificates/vault-ca.crt

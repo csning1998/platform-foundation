@@ -18,9 +18,12 @@
     - name: "Step A0c. Combine version check stdout/stderr for downstream comparison"
       ansible.builtin.set_fact:
         _utils_spire_agent_installed_version_str: >-
-          {{ ((_utils_spire_agent_installed_version.stdout | default('')) ~
-            (_utils_spire_agent_installed_version.stderr | default(''))
-            ) | regex_search('[0-9]+\.[0-9]+\.[0-9]+') | default('', true) }}
+          {{
+            (
+              (_utils_spire_agent_installed_version.stdout | default('')) ~
+              (_utils_spire_agent_installed_version.stderr | default(''))
+            ) | regex_search('[0-9]+\.[0-9]+\.[0-9]+') | default('', true)
+          }}
 
     - name: "Step A1a. Create extraction directory"
       ansible.builtin.file:
@@ -35,15 +38,29 @@
     - name: "Step A1b. Download SPIRE archive with checksum verification (v{{ utils_spire_agent_target_version }})"
       vars:
         utils_spire_agent_platform: >-
-          {{ utils_spire_agent_target_os ~ "-" ~ utils_spire_agent_target_arch
-              ~ "-" ~ utils_spire_agent_target_libc }}
+          {{
+            (
+              utils_spire_agent_target_os ~ "-" ~
+              utils_spire_agent_target_arch ~ "-" ~
+              utils_spire_agent_target_libc
+            )
+          }}
         utils_spire_agent_tarball: >-
-          {{ "spire-" ~ utils_spire_agent_target_version ~ "-"
-              ~ utils_spire_agent_platform ~ ".tar.gz" }}
+          {{
+            (
+              "spire-" ~ utils_spire_agent_target_version ~ "-" ~
+              utils_spire_agent_platform ~ ".tar.gz"
+            )
+          }}
       ansible.builtin.get_url:
         url: >-
-          {{ "https://github.com/spiffe/spire/releases/download/v" ~ utils_spire_agent_target_version
-              ~ "/" ~ utils_spire_agent_tarball }}
+          {{
+            (
+              "https://github.com/spiffe/spire/releases/download/v" ~
+              utils_spire_agent_target_version ~ "/" ~
+              utils_spire_agent_tarball
+            )
+          }}
         dest: "/tmp/spire-agent-install/{{ utils_spire_agent_tarball }}"
         checksum: "sha256:{{ utils_spire_agent_target_sha256 }}"
         mode: "0644"
@@ -55,11 +72,20 @@
     - name: "Step A1c. Unarchive SPIRE (v{{ utils_spire_agent_target_version }})"
       vars:
         utils_spire_agent_platform: >-
-          {{ utils_spire_agent_target_os ~ "-" ~ utils_spire_agent_target_arch
-              ~ "-" ~ utils_spire_agent_target_libc }}
+          {{
+            (
+              utils_spire_agent_target_os ~ "-" ~
+              utils_spire_agent_target_arch ~ "-" ~
+              utils_spire_agent_target_libc
+            )
+          }}
         utils_spire_agent_tarball: >-
-          {{ "spire-" ~ utils_spire_agent_target_version ~ "-"
-              ~ utils_spire_agent_platform ~ ".tar.gz" }}
+          {{
+            (
+              "spire-" ~ utils_spire_agent_target_version ~ "-" ~
+              utils_spire_agent_platform ~ ".tar.gz"
+            )
+          }}
       ansible.builtin.unarchive:
         src: "/tmp/spire-agent-install/{{ utils_spire_agent_tarball }}"
         dest: /tmp/spire-agent-install
@@ -144,6 +170,11 @@
 - name: "Block D: Determine Bootstrap State"
   become: true
   block:
+    # The included server command role lacks the defaults of utils_common_defaults, so the path resolves here.
+    - name: "Step D0. Resolve the SPIRE Server socket path on the Parent host"
+      ansible.builtin.set_fact:
+        _utils_spire_agent_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
+
     # Bootstrap verification MUST evaluate live agent health because static inspection of
     # agent-data.json does not distinguish expired credentials from valid SVIDs.
     - name: "Step D1. Check current agent health as the attestation-state signal"
@@ -161,11 +192,6 @@
       when: utils_spire_agent_already_attested | default(false)
       become: true
       block:
-        # The included server command role lacks the defaults of utils_common_defaults, so the path resolves here.
-        - name: "Step D2c-0. Resolve the SPIRE Server socket path on the Parent host"
-          ansible.builtin.set_fact:
-            _utils_spire_agent_parent_socket_path: "{{ utils_common_defaults_spire_dir_data }}/private/api.sock"
-
         - name: "Step D2c-1. Fetch current trust bundle from the SPIRE server"
           ansible.builtin.include_role:
             name: csning1998_lab.platform_foundation.utils_spire_server_command
@@ -178,8 +204,7 @@
               utils_spire_server_command_child_kubeconfig_kv_path: "{{ utils_spire_agent_child_kubeconfig_kv_path }}"
               utils_spire_server_command_terraform_operator_jwt_command: "{{ operator_vault_wrapper | default('') }}"
               utils_spire_server_command_terraform_operator_vault_role: "{{ operator_vault_role | default('') }}"
-              utils_spire_server_command_terraform_operator_vault_auth_mount: >-
-                {{ operator_vault_auth_mount | default('') }}
+              utils_spire_server_command_terraform_operator_vault_auth_mount: "{{ operator_vault_auth_mount | default('') }}"
               utils_spire_server_command_operator_vault_endpoint: "{{ operator_vault_url | default('') }}"
               utils_spire_server_command_operator_vault_ca_cert_path: "{{ operator_vault_ca_cert_path | default('') }}"
             utils_spire_server_command_arguments: "bundle show"
@@ -196,8 +221,10 @@
             utils_spire_server_command_result.unreachable | default(false) | bool or
             utils_spire_server_command_result.rc | int != 0 or
             _utils_spire_agent_local_bundle.failed | default(true) or
-            (_utils_spire_agent_local_bundle.content | default('') | b64decode | trim) !=
-            (utils_spire_server_command_result.stdout | default('') | trim)
+            (
+              (_utils_spire_agent_local_bundle.content | default('') | b64decode | trim) !=
+              (utils_spire_server_command_result.stdout | default('') | trim)
+            )
           block:
             - name: "Step D2c-3a. Remove stale agent identity data"
               ansible.builtin.file:
