@@ -10,7 +10,8 @@
         group: haproxy
         mode: "0700"
 
-    # The backends present certificates of pki-leaf-platform or of the Downstream issuer below pki-intermediate-vault-downstream.
+    # The backends present certificates of pki-leaf-platform or of the Downstream issuer
+    # below pki-intermediate-vault-downstream.
     - name: "B1b. Deploy the CA bundle for backend verification"
       ansible.builtin.copy:
         content: "{{ platform_haproxy_ca_bundle_b64 | b64decode }}"
