@@ -20,6 +20,9 @@ locals {
 
   bastion_pki_spire    = local.registry_bastion.pki.constrained_intermediates["pki-intermediate-spire"]
   bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
+
+  bastion_pki_spire_cert_pem    = local.bastion_pki_spire.issuer_certs[local.bastion_pki_spire.root_ca_id]
+  bastion_pki_platform_cert_pem = local.bastion_pki_platform.issuer_certs[local.bastion_pki_platform.root_ca_id]
 }
 
 locals {
@@ -34,7 +37,7 @@ locals {
   spire_parent_node_ip = one(module.terraform_layer_context.cluster_network.node_ips)
 
   # Documentation: documentation/architecture/platform-spire-parent-frontend.md Section 1 Item C.
-  oidc_ca_chain_pem = "${trimspace(local.registry_bastion.pki.root_cert_pem)}\n${trimspace(local.bastion_pki_platform.cert_pem)}\n"
+  oidc_ca_chain_pem = "${trimspace(local.registry_bastion.pki.trust_anchors[local.bastion_pki_platform.root_ca_id])}\n${trimspace(local.bastion_pki_platform_cert_pem)}\n"
 
   # k8s:psat node attestation configures trusted ServiceAccount allowlists for downstream SPIRE child clusters.
   spire_child_k8s_psat_clusters = [

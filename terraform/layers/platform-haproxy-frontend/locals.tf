@@ -23,15 +23,26 @@ locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)
   }
-  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
+  bastion_pki_platform   = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
+  bastion_pki_downstream = local.registry_bastion.pki.constrained_intermediates["pki-intermediate-vault-downstream"]
+
+  bastion_pki_platform_cert_pem   = local.bastion_pki_platform.issuer_certs[local.bastion_pki_platform.root_ca_id]
+  bastion_pki_downstream_cert_pem = local.bastion_pki_downstream.issuer_certs[local.bastion_pki_downstream.root_ca_id]
 
   # The backends present certificates of pki-leaf-platform or of the Downstream issuer below pki-intermediate-vault-downstream.
-  backend_ca_bundle_pem = join("\n", [
-    trimspace(local.registry_bastion.pki.root_cert_pem),
-    trimspace(local.bastion_pki_platform.cert_pem),
-    trimspace(local.registry_bastion.pki.constrained_intermediates["pki-intermediate-vault-downstream"].cert_pem),
-    "",
-  ])
+  backend_ca_bundle_pem = join("\n", concat(
+    [
+      for root_id in distinct([
+        local.bastion_pki_platform.root_ca_id,
+        local.bastion_pki_downstream.root_ca_id,
+      ]) : trimspace(local.registry_bastion.pki.trust_anchors[root_id])
+    ],
+    [
+      trimspace(local.bastion_pki_platform_cert_pem),
+      trimspace(local.bastion_pki_downstream_cert_pem),
+      "",
+    ]
+  ))
 }
 
 # Kubernetes-native runtimes stay on the Cilium Service/L2Announcement path. Any other

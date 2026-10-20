@@ -17,10 +17,11 @@ locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)
   }
-  bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
+  bastion_pki_platform          = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
+  bastion_pki_platform_cert_pem = local.bastion_pki_platform.issuer_certs[local.bastion_pki_platform.root_ca_id]
 
   # The listener of the Downstream Vault chains to the Bastion root through pki-leaf-platform.
-  listener_ca_chain_pem = "${trimspace(local.registry_bastion.pki.root_cert_pem)}\n${trimspace(local.bastion_pki_platform.cert_pem)}\n"
+  listener_ca_chain_pem = "${trimspace(local.registry_bastion.pki.trust_anchors[local.bastion_pki_platform.root_ca_id])}\n${trimspace(local.bastion_pki_platform_cert_pem)}\n"
 }
 
 # The runtime of the component in the service catalog selects the declarations of runtime-talos.tf or runtime-vm.tf.

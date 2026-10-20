@@ -31,5 +31,5 @@ output "spire_oidc" {
 
 output "spire_upstream_ca_pem" {
   description = "Certificate of pki-intermediate-spire, the upstream root of the SPIRE trust bundle, which an upstream agent of the SPIRE Child trusts before its first attestation."
-  value       = local.bastion_pki_spire.cert_pem
+  value       = local.bastion_pki_spire_cert_pem
 }
