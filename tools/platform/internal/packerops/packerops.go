@@ -135,7 +135,6 @@ func Build(ctx context.Context, packerDir, base string, env []string, out *ui.Pr
 		"-var-file=../values.pkrvars.hcl",
 		"-var-file="+base+".pkrvars.hcl",
 		"-var", "build_name="+base,
-		"-var", "secrets_path=secret/data/"+config.ProjectCode+"/guest_vm",
 		".",
 	)
 	buildCmd.Dir, buildCmd.Env = targetDir, env
