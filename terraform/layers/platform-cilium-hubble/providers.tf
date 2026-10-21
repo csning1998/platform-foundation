@@ -42,7 +42,7 @@ provider "vault" {
   skip_child_token = true
 }
 
-# The OCI registry client of the provider lacks a CA option. The operator host trust store MUST hold the Downstream PKI trust bundle.
+# The OCI registry client of the provider lacks a CA option. SSL_CERT_DIR of the repository .envrc supplies the Downstream PKI trust bundle.
 provider "helm" {
   registries = [
     {
