@@ -1,4 +1,5 @@
-// Package terraformops reports the presence of Terraform layer directories.
+// Package terraformops reports the presence of Terraform layer directories and removes the GitLab HTTP backend
+// states of the layers.
 package terraformops
 
 import (
