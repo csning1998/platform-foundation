@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"platform/internal/config"
+	"platform/internal/terraformops"
 	"platform/internal/ui"
 )
 
@@ -249,9 +250,48 @@ func TestPurgeLibvirtResources_AbortsWhenNotConfirmed(t *testing.T) {
 }
 
 func TestPurgeAllInfrastructure_AbortsWhenNotConfirmed(t *testing.T) {
+	t.Setenv("TF_HTTP_PASSWORD", "test-token")
 	a, out := newOperationsApp(t, "n\n")
-	if err := a.purgeAllInfrastructure(); err != nil {
+	if err := a.purgeAllInfrastructure(context.Background()); err != nil {
 		t.Fatalf("purgeAllInfrastructure abort: %v", err)
+	}
+	if !strings.Contains(out.String(), operationAbortedMsg) {
+		t.Errorf("output = %q, want it to contain %q", out.String(), operationAbortedMsg)
+	}
+}
+
+func TestPurgeAllInfrastructure_RequiresTheStateTokenBeforeConfirmation(t *testing.T) {
+	t.Setenv("TF_HTTP_PASSWORD", "")
+	a, out := newOperationsApp(t, "y\n")
+	if err := a.purgeAllInfrastructure(context.Background()); !errors.Is(err, terraformops.ErrStateTokenMissing) {
+		t.Fatalf("purgeAllInfrastructure error = %v, want ErrStateTokenMissing", err)
+	}
+	if strings.Contains(out.String(), "Libvirt") {
+		t.Errorf("purgeAllInfrastructure touched libvirt without the state token: %q", out.String())
+	}
+}
+
+func TestPurgeRemoteStates_ListsTheStatesAndDeletesNothingWhenNotConfirmed(t *testing.T) {
+	a, out := newOperationsApp(t, "n\n")
+	for _, layer := range []string{"platform-a", "administration-gitlab-project"} {
+		dir := filepath.Join(a.terraform, "layers", layer)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", layer, err)
+		}
+		backend := "terraform {\n  backend \"http\" {\n    address = \"https://gitlab.invalid/api/v4/projects/7/terraform/state/" + layer + "\"\n  }\n}\n"
+		if err := os.WriteFile(filepath.Join(dir, "providers.tf"), []byte(backend), 0o644); err != nil {
+			t.Fatalf("write %s: %v", layer, err)
+		}
+	}
+
+	if err := a.purgeRemoteStates(context.Background(), "test-token"); err != nil {
+		t.Fatalf("purgeRemoteStates: %v", err)
+	}
+	if !strings.Contains(out.String(), "platform-a: https://gitlab.invalid") {
+		t.Errorf("output does not list platform-a: %q", out.String())
+	}
+	if strings.Contains(out.String(), "administration-gitlab-project") || strings.Contains(out.String(), "Deleted the state") {
+		t.Errorf("output lists a retained layer or reports a deletion: %q", out.String())
 	}
 	if !strings.Contains(out.String(), operationAbortedMsg) {
 		t.Errorf("output = %q, want it to contain %q", out.String(), operationAbortedMsg)

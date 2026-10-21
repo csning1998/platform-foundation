@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/apenella/go-ansible/v2/pkg/playbook"
 	"gitlab.com/csning1998-lab/terraform/terraform-provider-sshclient/sshops"
@@ -16,6 +18,7 @@ import (
 	"platform/internal/config"
 	"platform/internal/libvirtops"
 	"platform/internal/packerops"
+	"platform/internal/sshclientops"
 	"platform/internal/terraformops"
 	"platform/internal/ui"
 	"platform/internal/vaultops"
@@ -233,7 +236,13 @@ func (a *app) purgeLibvirtResources() error {
 	return libvirtops.Purge(a.out)
 }
 
-func (a *app) purgeAllInfrastructure() error {
+// purgeAllInfrastructure removes what a greenfield rebuild requires gone: the libvirt resources, the SSH client
+// material of the clusters, and the GitLab HTTP backend states except the administration layers.
+func (a *app) purgeAllInfrastructure(ctx context.Context) error {
+	token := os.Getenv("TF_HTTP_PASSWORD")
+	if token == "" {
+		return terraformops.ErrStateTokenMissing
+	}
 	if !a.confirmExecution() {
 		return nil
 	}
@@ -243,7 +252,33 @@ func (a *app) purgeAllInfrastructure() error {
 	if err := libvirtops.Purge(a.out); err != nil {
 		return err
 	}
-	return terraformops.ReportCleanupStatus(a.terraform, "all", getConfiguredTerraformLayers(a.env), a.out)
+	if err := sshclientops.Purge(a.home, a.out); err != nil {
+		return err
+	}
+	return a.purgeRemoteStates(ctx, token)
+}
+
+// purgeRemoteStates lists the states of a greenfield rebuild and deletes each listed state after a second confirmation.
+func (a *app) purgeRemoteStates(ctx context.Context, token string) error {
+	states, err := terraformops.ListPurgeableStates(a.terraform)
+	if err != nil {
+		return err
+	}
+	a.out.Print(ui.Step, "GitLab HTTP backend states to delete, with every version of each state:")
+	for _, state := range states {
+		a.out.Print(ui.Task, state.Layer+": "+state.Address)
+	}
+	if !a.confirmExecution() {
+		return nil
+	}
+	client := &http.Client{Timeout: 30 * time.Second}
+	for _, state := range states {
+		if err := terraformops.DeleteRemoteState(ctx, client, token, state); err != nil {
+			return err
+		}
+		a.out.Print(ui.OK, "Deleted the state of "+state.Layer)
+	}
+	return nil
 }
 
 func (a *app) switchStrategy() error {
