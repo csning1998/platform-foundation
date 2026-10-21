@@ -13,6 +13,7 @@ import (
 	"github.com/apenella/go-ansible/v2/pkg/playbook"
 
 	"platform/internal/ansibleops"
+	"platform/internal/config"
 	"platform/internal/ui"
 )
 
@@ -21,7 +22,7 @@ const DownstreamLayer = "platform-vault-downstream-frontend"
 
 var (
 	// ErrProxyEnvironmentMissing reports a shell without the environment of the platform-foundation Vault Proxy.
-	ErrProxyEnvironmentMissing = errors.New("vaultops: VAULT_ADDR, VAULT_CACERT, VAULT_TOKEN, VAULT_CLIENT_CERT, or VAULT_CLIENT_KEY is empty, allow the .envrc with direnv allow or run eval \"$(vault-proxy-env platform-foundation)\"")
+	ErrProxyEnvironmentMissing = errors.New("vaultops: VAULT_ADDR, VAULT_CACERT, VAULT_TOKEN, VAULT_CLIENT_CERT, or VAULT_CLIENT_KEY is empty, allow the .envrc with direnv allow or run eval \"$(vault-proxy-env " + config.VaultProxyIdentity + ")\"")
 	// ErrDownstreamInventoryMissing reports a Downstream Vault without the inventory of the VM runtime.
 	ErrDownstreamInventoryMissing = errors.New("vaultops: the Downstream Vault has no VM runtime inventory, apply " + DownstreamLayer + " first, and the Talos runtime unseals through transit without this command")
 )

@@ -20,6 +20,7 @@ import (
 
 	vaultapi "github.com/hashicorp/vault/api"
 
+	"platform/internal/config"
 	"platform/internal/operatorops"
 )
 
@@ -31,7 +32,7 @@ var (
 	// ErrClusterConfigMissing reports a cluster without a cluster-config leaf, for example a cluster of the VM runtime.
 	ErrClusterConfigMissing = errors.New("clusterops: the Vault holds no cluster-config of the target")
 	// ErrProxyEnvironmentMissing reports a shell without the environment of the platform-foundation Vault Proxy.
-	ErrProxyEnvironmentMissing = errors.New("clusterops: VAULT_ADDR, VAULT_TOKEN, VAULT_CLIENT_CERT, or VAULT_CLIENT_KEY is empty, allow the .envrc with direnv allow or run eval \"$(vault-proxy-env platform-foundation)\"")
+	ErrProxyEnvironmentMissing = errors.New("clusterops: VAULT_ADDR, VAULT_TOKEN, VAULT_CLIENT_CERT, or VAULT_CLIENT_KEY is empty, allow the .envrc with direnv allow or run eval \"$(vault-proxy-env " + config.VaultProxyIdentity + ")\"")
 )
 
 // catalogWordsRe matches a service or component name of the service catalog.
