@@ -192,26 +192,47 @@
         regexp: "^{{ item.vrid }} "
       loop: "{{ platform_haproxy_lb_service_segments }}"
 
-    - name: "B4b. Generate PBR bash script"
-      ansible.builtin.template:
-        src: "pbr-rules.sh.j2"
-        dest: "/usr/local/bin/pbr-rules.sh"
-        mode: "0755"
-      notify: Restart PBR
+    - name: "B4b. Read the netplan ethernet definitions"
+      ansible.builtin.command:
+        cmd: netplan get ethernets
+      register: _platform_haproxy_netplan_ethernets
+      changed_when: false
 
-    - name: "B4c. Generate PBR Service"
-      ansible.builtin.template:
-        src: "pbr-rules.service.j2"
-        dest: "/etc/systemd/system/pbr-rules.service"
-        mode: "0644"
-      notify: Restart PBR
+    # The caller supplies the interface alias alone. The netplan definition ID resolves from set-name.
+    - name: "B4c. Map each interface alias to its netplan definition ID"
+      ansible.builtin.set_fact:
+        _platform_haproxy_netplan_ids: >-
+          {{ dict(_entries | map(attribute='value.set-name') | zip(_entries | map(attribute='key'))) }}
+      vars:
+        _entries: >-
+          {{
+            _platform_haproxy_netplan_ethernets.stdout
+            | from_yaml | dict2items | selectattr('value.set-name', 'defined') | list
+          }}
 
-    - name: "B4d. Start and enable PBR Service"
-      ansible.builtin.systemd:
-        name: pbr-rules.service
-        state: started
-        enabled: true
-        daemon_reload: true
+    - name: "B4d. Assert a netplan definition for every VIP interface"
+      ansible.builtin.assert:
+        that:
+          - _missing | length == 0
+        fail_msg: "No netplan definition declares set-name for {{ _missing | join(', ') }}."
+      vars:
+        _missing: >-
+          {{
+            platform_haproxy_lb_keepalived_segments
+            | map(attribute='interface_alias')
+            | difference(_platform_haproxy_netplan_ids.keys() | list)
+          }}
+
+    - name: "B4e. Declare the source routing of each VIP in netplan"
+      ansible.builtin.template:
+        src: pbr-netplan.yaml.j2
+        dest: /etc/netplan/60-platform-haproxy-pbr.yaml
+        owner: root
+        group: root
+        mode: "0600"
+      notify:
+        - Apply Netplan
+        - Restart Keepalived
 
   rescue:
     - name: "Block B4: Policy-Based Routing for symmetric VIP return traffic failed"

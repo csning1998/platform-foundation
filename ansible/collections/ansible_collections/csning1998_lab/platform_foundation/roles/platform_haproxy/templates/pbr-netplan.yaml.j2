@@ -1,0 +1,21 @@
+---
+# The main routing table holds one route per destination prefix, insufficient when two VIPs on two interfaces
+# reply to the same external client range. One table per VIP keeps each reply on the interface of the VIP.
+# systemd-networkd owns these rules, which therefore survive a restart of systemd-networkd.
+network:
+  version: 2
+  ethernets:
+{% for seg in platform_haproxy_lb_keepalived_segments %}
+    {{ _platform_haproxy_netplan_ids[seg.interface_alias] }}:
+      routing-policy:
+        - from: {{ seg.vip }}
+          table: {{ seg.vrid }}
+          priority: {{ 100 + loop.index0 }}
+      routes:
+        - to: {{ seg.cidr }}
+          scope: link
+          table: {{ seg.vrid }}
+        - to: default
+          via: {{ seg.gateway }}
+          table: {{ seg.vrid }}
+{% endfor %}

@@ -19,7 +19,10 @@
     - multipathd.service
     - multipathd.socket
 
-    # Automatic updates can introduce instability in immutable infrastructure.
+    # Automatic updates restart systemd-networkd, which drops routing rules absent from its .network files.
+    # unattended-upgrades.service only finishes an interrupted upgrade at shutdown.
+    - apt-daily.service
+    - apt-daily-upgrade.service
     - unattended-upgrades.service
 
     # Desktop and hardware integration services are redundant in a headless virtual machine.
@@ -29,14 +32,35 @@
     - switcheroo-control.service
 
     # Ubuntu-specific promotional notifications and telemetry.
-    - ua-timer.timer
     - ua-timer.service
-    - motd-news.timer
     - motd-news.service
   when: >
     item in ansible_facts.services or
     item ~ '.service' in ansible_facts.services or
     item | regex_replace('\.service$', '') in ansible_facts.services
+
+# The timers resolve from the unit files because service_facts lists service units alone.
+- name: "Gather timer unit files"
+  ansible.builtin.stat:
+    path: "/usr/lib/systemd/system/{{ item }}"
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+    - ua-timer.timer
+    - motd-news.timer
+  register: _foundation_common_timer_units
+
+- name: "Minimal: Stop and Mask unnecessary timers"
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ item.item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop: "{{ _foundation_common_timer_units.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists
 
 # dbus-activated packagekit is installed by the gitlab-ce package during dpkg configuration,
 # which makes that masked unit activation fail with UnitMasked
