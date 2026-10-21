@@ -12,6 +12,7 @@ import (
 	"gitlab.com/csning1998-lab/terraform/terraform-provider-sshclient/sshops"
 
 	"platform/internal/ansibleops"
+	"platform/internal/clusterops"
 	"platform/internal/config"
 	"platform/internal/libvirtops"
 	"platform/internal/packerops"
@@ -172,18 +173,35 @@ func appendKVs(target map[string]string, kvs []string) {
 	}
 }
 
+func readGuestCredentialEnvThroughProxy(ctx context.Context) ([]string, error) {
+	client, err := clusterops.NewBastionClient(os.Getenv)
+	if err != nil {
+		return nil, err
+	}
+	return packerops.ReadGuestCredentialEnv(ctx, client)
+}
+
 // errVaultProxyEnvironmentMissing reports a shell which has not loaded the environment of the platform-foundation Vault Proxy.
 var errVaultProxyEnvironmentMissing = errors.New(`VAULT_ADDR is empty: allow the .envrc with direnv allow, or run eval "$(vault-proxy-env ` + config.VaultProxyIdentity + `)"`)
 
-// buildPackerExecutionEnv hands Packer the environment of the platform-foundation Vault Proxy, which the vault()
-// function of the templates reads, and the variables of .env.
-func buildPackerExecutionEnv(_ context.Context, a *app) ([]string, error) {
+// buildPackerExecutionEnv hands Packer the variables of .env and the guest VM credentials which the CLI reads.
+// Packer reads no Vault, since a Packer built with Go before 1.27 rejects the ML-DSA-87 chain of the Vault Proxy.
+func buildPackerExecutionEnv(ctx context.Context, a *app) ([]string, error) {
 	if os.Getenv("VAULT_ADDR") == "" {
 		return nil, errVaultProxyEnvironmentMissing
+	}
+	read := a.readGuestCredentialEnv
+	if read == nil {
+		read = readGuestCredentialEnvThroughProxy
+	}
+	credentials, err := read(ctx)
+	if err != nil {
+		return nil, err
 	}
 	merged := make(map[string]string)
 	appendKVs(merged, os.Environ())
 	appendKVs(merged, a.env.Environ())
+	appendKVs(merged, credentials)
 
 	out := make([]string, 0, len(merged))
 	for k, v := range merged {
