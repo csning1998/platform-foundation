@@ -93,9 +93,8 @@ locals {
   }
 
   ansible_config = {
-    root_path       = abspath("${path.root}/../../../ansible")
-    ssh_config_path = local.state.platform_harbor_origin_frontend.generic_cluster.ssh_config_file_path
-    inventory_file  = "inventory-provision-harbor-origin-frontend.yaml"
+    root_path      = abspath("${path.root}/../../../ansible")
+    inventory_file = "inventory-provision-harbor-origin-frontend.yaml"
   }
 
   # Transforms the infra-* inventory structure into a dedicated group for the business logic of this layer
