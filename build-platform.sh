@@ -50,7 +50,10 @@ SONAR_TOKEN="${sonar_token}" podman run --rm --network host \
     "${scanner_image}"
 
 # Binary compilation MUST produce path-independent executables matching deployment images.
+# The binary MUST use Go 1.27 or later, since an earlier crypto/x509 rejects the ML-DSA-87 chain of the Vault Proxy.
+# The pin applies to this step alone, since golangci-lint built with Go 1.26 refuses a module which pins the toolchain.
+readonly build_toolchain="go1.27.2"
 for binary in "${cli_binaries[@]}"; do
-    CGO_ENABLED=1 go build -C tools/"${cli_module}" -trimpath -ldflags='-s -w' -o ../../"${binary}" ./cmd/"${binary}"
+    GOTOOLCHAIN="${build_toolchain}" CGO_ENABLED=1 go build -C tools/"${cli_module}" -trimpath -ldflags='-s -w' -o ../../"${binary}" ./cmd/"${binary}"
     echo "built: $(pwd)/${binary}"
 done
