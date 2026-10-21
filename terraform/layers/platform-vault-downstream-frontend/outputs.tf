@@ -55,11 +55,13 @@ output "talos_cluster" {
 }
 
 output "generic_cluster" {
-  description = "Facts of the VM runtime, with null fields on the Talos runtime: whether the runtime applies, the node addresses, the Node Exporter scrape targets, and the KV path of the init leaf which holds the Shamir keys."
+  description = "Facts of the VM runtime, with null fields on the Talos runtime: whether the runtime applies, the node addresses, the Node Exporter scrape targets, the KV path of the init leaf which holds the Shamir keys, and the Ansible inventory and unseal variables file which the platform CLI reads."
   value = {
-    enabled      = !local.is_runtime_talos
-    node_ips     = local.is_runtime_talos ? null : module.terraform_layer_context.cluster_network.node_ips
-    init_kv_path = local.is_runtime_talos ? null : local.foundation_kv_paths.init
+    enabled                  = !local.is_runtime_talos
+    node_ips                 = local.is_runtime_talos ? null : module.terraform_layer_context.cluster_network.node_ips
+    init_kv_path             = local.is_runtime_talos ? null : local.foundation_kv_paths.init
+    ansible_inventory_path   = one(module.establish_platform_vault_generic_cluster[*].ansible_inventory.file_path)
+    ansible_unseal_vars_path = one(local_file.unseal_vars[*].filename)
     node_exporter_targets = local.is_runtime_talos ? null : {
       ips  = module.terraform_layer_context.cluster_network.node_ips
       port = module.terraform_layer_context.node_exporter_port
