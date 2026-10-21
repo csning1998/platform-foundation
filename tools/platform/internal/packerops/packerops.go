@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,9 +14,38 @@ import (
 	"sort"
 	"strings"
 
+	vaultapi "github.com/hashicorp/vault/api"
+
 	"platform/internal/config"
 	"platform/internal/ui"
 )
+
+// guestCredentialPath is the KV v2 path, under mount secret, of the guest VM credentials of this repository.
+var guestCredentialPath = config.ProjectCode + "/guest_vm"
+
+// guestCredentialFields lists the fields of the guest VM credentials, each equal to the Packer variable name.
+var guestCredentialFields = []string{"ssh_username", "ssh_password", "ssh_password_hash", "ssh_public_key_path"}
+
+// ErrGuestCredentialMissing reports a guest VM credential leaf without a field which the templates read.
+var ErrGuestCredentialMissing = errors.New("packerops: the guest VM credentials lack a field")
+
+// ReadGuestCredentialEnv reads the guest VM credentials through client and returns one PKR_VAR_ entry per field.
+// An error names a field and never a value.
+func ReadGuestCredentialEnv(ctx context.Context, client *vaultapi.Client) ([]string, error) {
+	secret, err := client.KVv2("secret").Get(ctx, guestCredentialPath)
+	if err != nil {
+		return nil, fmt.Errorf("packerops: read secret/%s: %w", guestCredentialPath, err)
+	}
+	env := make([]string, 0, len(guestCredentialFields))
+	for _, field := range guestCredentialFields {
+		value, ok := secret.Data[field].(string)
+		if !ok || value == "" {
+			return nil, fmt.Errorf("%w: %s", ErrGuestCredentialMissing, field)
+		}
+		env = append(env, "PKR_VAR_"+field+"="+value)
+	}
+	return env, nil
+}
 
 // Clean removes output directories for specified targets and cleans non-ISO files from the host cache.
 func Clean(packerDir, target string, allBases []string, cacheDir string, out *ui.Printer) error {
@@ -105,7 +135,6 @@ func Build(ctx context.Context, packerDir, base string, env []string, out *ui.Pr
 		"-var-file=../values.pkrvars.hcl",
 		"-var-file="+base+".pkrvars.hcl",
 		"-var", "build_name="+base,
-		"-var", "secrets_path=secret/data/"+config.ProjectCode+"/guest_vm",
 		".",
 	)
 	buildCmd.Dir, buildCmd.Env = targetDir, env

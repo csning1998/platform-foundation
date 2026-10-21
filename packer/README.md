@@ -930,21 +930,21 @@ packer/
 
 為了符合資安規範，設定流程中的 Guest OS 資訊（如帳號、密碼與 SSH 公鑰）會收斂到 HashiCorp Vault 進行動態存取。其中
 
-1. 在 `base-os/source.pkr.hcl` 中，認證資料透過 `vault()` 函數抓取：
+1. `platform` CLI 經 Vault Proxy 讀取 `secret/platform-foundation/guest_vm`，並把每個欄位以 `PKR_VAR_<欄位>` 環境變數傳給 Packer。範本本身不呼叫 `vault()`，原因是 Packer 1.16.1 以 Go 1.26 建置，無法驗證 Vault Proxy 的 ML-DSA-87 憑證鏈。
 
     ```hcl
     locals {
-        ssh_username      = vault(var.secrets_path, "ssh_username")
-        ssh_password      = vault(var.secrets_path, "ssh_password")
-        ssh_password_hash = vault(var.secrets_path, "ssh_password_hash")
+        ssh_username      = var.ssh_username
+        ssh_password      = var.ssh_password
+        ssh_password_hash = var.ssh_password_hash
     }
     ```
 
-2. 而在 Ansible Provisioner 中，部署的金鑰亦透過 Vault 取得路徑，並傳遞予 Ansible Playbook 進行 `authorized_keys` 之寫入：
+2. Ansible Provisioner 以 `var.ssh_public_key_path` 取得部署金鑰的路徑，並傳遞予 Ansible Playbook 進行 `authorized_keys` 之寫入：
 
     ```hcl
     extra_arguments = [
-        "--extra-vars", "public_key_file=${vault(var.secrets_path, "ssh_public_key_path")}"
+        "--extra-vars", "public_key_file=${var.ssh_public_key_path}"
     ]
     ```
 

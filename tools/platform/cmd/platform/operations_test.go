@@ -33,6 +33,8 @@ func newOperationsApp(t *testing.T, input string) (*app, *bytes.Buffer) {
 		env:         env,
 		out:         ui.New(&out, io.Discard),
 		in:          bufio.NewReader(strings.NewReader(input)),
+
+		readGuestCredentialEnv: fakeGuestCredentialEnv,
 	}
 	return a, &out
 }
@@ -48,10 +50,11 @@ func TestBuildPackerExecutionEnv_DoesNotDuplicateNetVars(t *testing.T) {
 	env.Set(config.KeyPKRVarNetDevice, "virtio-net")
 
 	a := &app{
-		root: dir,
-		home: dir,
-		env:  env,
-		out:  ui.New(io.Discard, io.Discard),
+		root:                   dir,
+		home:                   dir,
+		env:                    env,
+		out:                    ui.New(io.Discard, io.Discard),
+		readGuestCredentialEnv: fakeGuestCredentialEnv,
 	}
 
 	got, err := buildPackerExecutionEnv(context.Background(), a)
@@ -88,7 +91,7 @@ func TestBuildPackerImage_RejectsUnknownBaseAndPreservesStaleOutput(t *testing.T
 	if err != nil {
 		t.Fatalf("config.Load: %v", err)
 	}
-	a := &app{root: dir, home: dir, packerDir: packerDir, env: env, out: ui.New(io.Discard, io.Discard)}
+	a := &app{root: dir, home: dir, packerDir: packerDir, env: env, out: ui.New(io.Discard, io.Discard), readGuestCredentialEnv: fakeGuestCredentialEnv}
 
 	err = a.buildPackerImage(context.Background(), "ubuntu-25")
 	if err == nil || !strings.Contains(err.Error(), "unknown Packer base") {
@@ -126,7 +129,7 @@ func TestBuildPackerExecutionEnv_SetsExpectedNetVars(t *testing.T) {
 			t.Setenv("VAULT_ADDR", "https://127.0.0.1:18211")
 			t.Setenv("VAULT_CLIENT_CERT", "/example/client.pem")
 
-			a := &app{root: dir, home: dir, env: env, out: ui.New(io.Discard, io.Discard)}
+			a := &app{root: dir, home: dir, env: env, out: ui.New(io.Discard, io.Discard), readGuestCredentialEnv: fakeGuestCredentialEnv}
 
 			got, err := buildPackerExecutionEnv(context.Background(), a)
 			if err != nil {
@@ -152,6 +155,33 @@ func TestBuildPackerExecutionEnv_RequiresTheVaultProxyEnvironment(t *testing.T) 
 
 	if _, err := buildPackerExecutionEnv(context.Background(), a); !errors.Is(err, errVaultProxyEnvironmentMissing) {
 		t.Errorf("buildPackerExecutionEnv error = %v, want errVaultProxyEnvironmentMissing", err)
+	}
+}
+
+func fakeGuestCredentialEnv(context.Context) ([]string, error) {
+	return []string{"PKR_VAR_ssh_username=tester"}, nil
+}
+
+func TestBuildPackerExecutionEnv_AppendsTheGuestCredentials(t *testing.T) {
+	t.Setenv("VAULT_ADDR", "https://127.0.0.1:18211")
+	a, _ := newOperationsApp(t, "")
+	a.readGuestCredentialEnv = fakeGuestCredentialEnv
+
+	got, err := buildPackerExecutionEnv(context.Background(), a)
+	if err != nil {
+		t.Fatalf("buildPackerExecutionEnv: %v", err)
+	}
+	assertSingleEnvEntry(t, got, "PKR_VAR_ssh_username", "PKR_VAR_ssh_username=tester")
+}
+
+func TestBuildPackerExecutionEnv_PropagatesTheCredentialReadError(t *testing.T) {
+	t.Setenv("VAULT_ADDR", "https://127.0.0.1:18211")
+	a, _ := newOperationsApp(t, "")
+	errRead := errors.New("read failed")
+	a.readGuestCredentialEnv = func(context.Context) ([]string, error) { return nil, errRead }
+
+	if _, err := buildPackerExecutionEnv(context.Background(), a); !errors.Is(err, errRead) {
+		t.Errorf("buildPackerExecutionEnv error = %v, want %v", err, errRead)
 	}
 }
 

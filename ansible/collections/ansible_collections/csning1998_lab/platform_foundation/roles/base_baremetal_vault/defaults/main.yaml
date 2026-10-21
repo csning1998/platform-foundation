@@ -1,4 +1,4 @@
 ---
 base_baremetal_vault_target_os: "linux"
 base_baremetal_vault_target_arch: "amd64"
-base_baremetal_vault_target_version: "2.0.1"
+base_baremetal_vault_target_version: "2.2.0"

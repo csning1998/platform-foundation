@@ -45,7 +45,25 @@ variable "net_device" {
   default = "virtio-net"
 }
 
-variable "secrets_path" {
-  description = "KV-v2 data path of the guest VM credentials, passed by the platform CLI from the project code."
+# The platform CLI reads the guest VM credentials and passes each field as PKR_VAR_<name>.
+variable "ssh_username" {
+  description = "Login name of the guest VM."
+  type        = string
+}
+
+variable "ssh_password" {
+  description = "Password of the guest VM login."
+  type        = string
+  sensitive   = true
+}
+
+variable "ssh_password_hash" {
+  description = "Crypt hash of the guest VM password for the autoinstall identity."
+  type        = string
+  sensitive   = true
+}
+
+variable "ssh_public_key_path" {
+  description = "Path of the public key which the image authorizes for the guest VM login."
   type        = string
 }

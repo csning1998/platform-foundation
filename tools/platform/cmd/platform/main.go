@@ -4,6 +4,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -29,6 +30,9 @@ type app struct {
 	env              *config.Env
 	out              *ui.Printer
 	in               *bufio.Reader
+
+	// readGuestCredentialEnv replaces the read of the guest VM credentials through the Vault Proxy when set.
+	readGuestCredentialEnv func(context.Context) ([]string, error)
 }
 
 func main() {
