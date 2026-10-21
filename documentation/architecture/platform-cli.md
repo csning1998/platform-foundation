@@ -61,6 +61,7 @@
 6. `platform layer clean` MUST NOT delete a state, because Terraform remote state is stored in the GitLab HTTP backend.
 7. Menu option 9 MUST delete the GitLab HTTP backend state of every layer whose backend address a `.tf` file declares, except a layer whose name begins with `administration-`. An administration layer manages the GitLab project which hosts every state.
 8. Menu option 9 MUST list the states before deletion and MUST require a second confirmation. Menu option 9 MUST read the GitLab token from `TF_HTTP_PASSWORD` and MUST stop before any deletion when the variable is empty.
+9. Menu option 9 MUST resolve the state list before the first confirmation and MUST stop before any purge when the resolution fails, since the libvirt and SSH purges cannot be undone.
 
 ### Item F. Libvirt and KVM Operations (`libvirt`)
 

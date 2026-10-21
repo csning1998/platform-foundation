@@ -238,10 +238,15 @@ func (a *app) purgeLibvirtResources() error {
 
 // purgeAllInfrastructure removes what a greenfield rebuild requires gone: the libvirt resources, the SSH client
 // material of the clusters, and the GitLab HTTP backend states except the administration layers.
+// Every read-only precondition precedes the first confirmation, which keeps a failed read from a half-purged host.
 func (a *app) purgeAllInfrastructure(ctx context.Context) error {
 	token := os.Getenv("TF_HTTP_PASSWORD")
 	if token == "" {
 		return terraformops.ErrStateTokenMissing
+	}
+	states, err := terraformops.ListPurgeableStates(a.terraform)
+	if err != nil {
+		return err
 	}
 	if !a.confirmExecution() {
 		return nil
@@ -255,15 +260,11 @@ func (a *app) purgeAllInfrastructure(ctx context.Context) error {
 	if err := sshclientops.Purge(a.home, a.out); err != nil {
 		return err
 	}
-	return a.purgeRemoteStates(ctx, token)
+	return a.purgeRemoteStates(ctx, token, states)
 }
 
-// purgeRemoteStates lists the states of a greenfield rebuild and deletes each listed state after a second confirmation.
-func (a *app) purgeRemoteStates(ctx context.Context, token string) error {
-	states, err := terraformops.ListPurgeableStates(a.terraform)
-	if err != nil {
-		return err
-	}
+// purgeRemoteStates lists states and deletes each listed state after a second confirmation.
+func (a *app) purgeRemoteStates(ctx context.Context, token string, states []terraformops.RemoteState) error {
 	a.out.Print(ui.Step, "GitLab HTTP backend states to delete, with every version of each state:")
 	for _, state := range states {
 		a.out.Print(ui.Task, state.Layer+": "+state.Address)

@@ -252,6 +252,9 @@ func TestPurgeLibvirtResources_AbortsWhenNotConfirmed(t *testing.T) {
 func TestPurgeAllInfrastructure_AbortsWhenNotConfirmed(t *testing.T) {
 	t.Setenv("TF_HTTP_PASSWORD", "test-token")
 	a, out := newOperationsApp(t, "n\n")
+	if err := os.MkdirAll(filepath.Join(a.terraform, "layers"), 0o755); err != nil {
+		t.Fatalf("mkdir layers: %v", err)
+	}
 	if err := a.purgeAllInfrastructure(context.Background()); err != nil {
 		t.Fatalf("purgeAllInfrastructure abort: %v", err)
 	}
@@ -271,6 +274,18 @@ func TestPurgeAllInfrastructure_RequiresTheStateTokenBeforeConfirmation(t *testi
 	}
 }
 
+func TestPurgeAllInfrastructure_StopsBeforeConfirmationWhenTheLayersAreUnreadable(t *testing.T) {
+	t.Setenv("TF_HTTP_PASSWORD", "test-token")
+	a, out := newOperationsApp(t, "y\n")
+
+	if err := a.purgeAllInfrastructure(context.Background()); err == nil {
+		t.Fatal("purgeAllInfrastructure without terraform/layers = nil, want the read error")
+	}
+	if strings.Contains(out.String(), confirmExecutionPrompt) || strings.Contains(strings.ToLower(out.String()), "libvirt") {
+		t.Errorf("purgeAllInfrastructure reached the confirmation or libvirt after a failed state read: %q", out.String())
+	}
+}
+
 func TestPurgeRemoteStates_ListsTheStatesAndDeletesNothingWhenNotConfirmed(t *testing.T) {
 	a, out := newOperationsApp(t, "n\n")
 	for _, layer := range []string{"platform-a", "administration-gitlab-project"} {
@@ -284,7 +299,11 @@ func TestPurgeRemoteStates_ListsTheStatesAndDeletesNothingWhenNotConfirmed(t *te
 		}
 	}
 
-	if err := a.purgeRemoteStates(context.Background(), "test-token"); err != nil {
+	states, err := terraformops.ListPurgeableStates(a.terraform)
+	if err != nil {
+		t.Fatalf("ListPurgeableStates: %v", err)
+	}
+	if err := a.purgeRemoteStates(context.Background(), "test-token", states); err != nil {
 		t.Fatalf("purgeRemoteStates: %v", err)
 	}
 	if !strings.Contains(out.String(), "platform-a: https://gitlab.invalid") {
