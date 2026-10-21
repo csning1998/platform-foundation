@@ -21,9 +21,4 @@ const (
 
 	StrategyNative    = "native"
 	StrategyContainer = "container"
-
-	// DefaultBastionVaultAddr is the default network address for Bastion Vault.
-	DefaultBastionVaultAddr = "https://172.16.0.1:8200"
-	// DefaultBastionVaultCACert is the default relocatable path to the parent group Bastion Vault CA certificate.
-	DefaultBastionVaultCACert = "${PROJECT_ROOT}/../../parent-group-governance/vault/tls/ca.pem"
 )

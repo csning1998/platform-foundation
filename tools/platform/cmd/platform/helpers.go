@@ -6,22 +6,16 @@ import (
 )
 
 func (a *app) newVaultPaths() vaultops.Paths {
-	caCert := ""
-	if a.env != nil {
-		caCert = a.env.GetExpanded(config.KeyBastionVaultCACert)
-	}
+	caCert := a.env.GetExpandedOrDefault(config.KeyBastionVaultCACert, config.DefaultBastionVaultCACert)
 	return vaultops.NewPaths(a.root, a.ansibleDir, a.terraform, a.home, a.resolveBastionVaultAddr(), caCert)
 }
 
-// Returns the explicitly injected bastion address or falls back to BASTION_VAULT_ADDR from .env.
+// Returns the explicitly injected bastion address, then BASTION_VAULT_ADDR from .env, then the upstream default.
 func (a *app) resolveBastionVaultAddr() string {
 	if a.bastionVaultAddr != "" {
 		return a.bastionVaultAddr
 	}
-	if a.env != nil {
-		return a.env.GetExpanded(config.KeyBastionVaultAddr)
-	}
-	return ""
+	return a.env.GetExpandedOrDefault(config.KeyBastionVaultAddr, config.DefaultBastionVaultAddr)
 }
 
 func getConfiguredPackerBases(env *config.Env) []string {

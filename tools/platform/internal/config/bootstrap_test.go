@@ -53,8 +53,6 @@ func TestBootstrapEnv_FirstRunInitializesDefaults(t *testing.T) {
 		KeyEnvironmentStrategy: "native",
 		KeyAllPackerBases:      "",
 		KeyAllTerraformLayers:  "",
-		KeyBastionVaultAddr:    DefaultBastionVaultAddr,
-		KeyBastionVaultCACert:  DefaultBastionVaultCACert,
 		KeyUhome:               "${HOME}",
 		KeyPKRVarNetDevice:     "virtio-net",
 	}
@@ -150,18 +148,20 @@ func TestBootstrapEnv_BackfillsMissingStrategyOnExistingFile(t *testing.T) {
 	}
 }
 
-func TestBootstrapEnv_CACertIsRelocatable(t *testing.T) {
+func TestBootstrapEnv_LeavesUpstreamDefaultsOutOfEnv(t *testing.T) {
 	root := t.TempDir()
 	out := ui.New(io.Discard, io.Discard)
 	e, err := BootstrapEnv(root, filepath.Join(root, "packer"), filepath.Join(root, "terraform"), out)
 	if err != nil {
 		t.Fatalf("BootstrapEnv: %v", err)
 	}
-	caCert := e.Get(KeyBastionVaultCACert)
-	if !strings.Contains(caCert, "${PROJECT_ROOT}") {
-		t.Errorf("BASTION_VAULT_CACERT = %q, want variable-expanded relocatable path containing ${PROJECT_ROOT}", caCert)
+	for _, key := range []string{KeyBastionVaultAddr, KeyBastionVaultCACert} {
+		if v, ok := e.values[key]; ok {
+			t.Errorf("BootstrapEnv wrote %s = %q, want the key absent", key, v)
+		}
 	}
-	if caCert != DefaultBastionVaultCACert {
-		t.Errorf("BASTION_VAULT_CACERT = %q, want %q", caCert, DefaultBastionVaultCACert)
+	want := strings.Replace(DefaultBastionVaultCACert, "${PROJECT_ROOT}", root, 1)
+	if got := e.GetExpandedOrDefault(KeyBastionVaultCACert, DefaultBastionVaultCACert); got != want {
+		t.Errorf("default BASTION_VAULT_CACERT = %q, want %q", got, want)
 	}
 }

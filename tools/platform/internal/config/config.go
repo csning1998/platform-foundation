@@ -142,3 +142,13 @@ func (e *Env) GetExpanded(key string) string {
 	}
 	return e.Expand(v)
 }
+
+// GetExpandedOrDefault returns GetExpanded of key, or fallback after expansion when .env does not declare key.
+func (e *Env) GetExpandedOrDefault(key, fallback string) string {
+	if e != nil {
+		if _, ok := e.values[key]; ok {
+			return e.GetExpanded(key)
+		}
+	}
+	return e.Expand(fallback)
+}

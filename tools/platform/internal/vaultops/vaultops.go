@@ -4,7 +4,6 @@ package vaultops
 
 import (
 	"context"
-	"path/filepath"
 
 	vaultapi "github.com/hashicorp/vault/api"
 
@@ -33,21 +32,6 @@ func NewPaths(projectRoot, ansibleDir, terraformDir, home, bastionVaultAddr, bas
 	}
 }
 
-func (p Paths) resolveBastionAddr() string {
-	if p.bastionVaultAddr != "" {
-		return p.bastionVaultAddr
-	}
-	return "https://172.16.0.1:8200"
-}
-
-func (p Paths) resolveTLSDir() string { return filepath.Join(p.ProjectRoot, "vault", "tls") }
-func (p Paths) resolveCACertFile() string {
-	if p.bastionVaultCACert != "" {
-		return p.bastionVaultCACert
-	}
-	return filepath.Join(p.resolveTLSDir(), "ca.pem")
-}
-
 // SealStatus is the reachability, initialization, and seal state of one Vault instance.
 type SealStatus = vaultclient.SealStatus
 
@@ -62,14 +46,14 @@ func InspectStatusAt(ctx context.Context, addr, caCert string) SealStatus {
 
 // InspectBastionStatus queries the full seal status of the Bastion Vault.
 func InspectBastionStatus(ctx context.Context, p Paths) SealStatus {
-	return InspectStatusAt(ctx, p.resolveBastionAddr(), p.resolveCACertFile())
+	return InspectStatusAt(ctx, p.bastionVaultAddr, p.bastionVaultCACert)
 }
 
 // GetBastionStatus checks whether Bastion Vault is reachable and reports its sealed state.
 func GetBastionStatus(ctx context.Context, p Paths) (running, sealed bool, err error) {
 	client, err := vaultclient.NewClient(vaultclient.Config{
-		Address:    p.resolveBastionAddr(),
-		CACertPath: p.resolveCACertFile(),
+		Address:    p.bastionVaultAddr,
+		CACertPath: p.bastionVaultCACert,
 	})
 	if err != nil {
 		return false, false, err

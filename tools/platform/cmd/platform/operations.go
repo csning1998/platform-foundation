@@ -173,7 +173,7 @@ func appendKVs(target map[string]string, kvs []string) {
 }
 
 // errVaultProxyEnvironmentMissing reports a shell which has not loaded the environment of the platform-foundation Vault Proxy.
-var errVaultProxyEnvironmentMissing = errors.New(`VAULT_ADDR is empty: allow the .envrc with direnv allow, or run eval "$(vault-proxy-env platform-foundation)"`)
+var errVaultProxyEnvironmentMissing = errors.New(`VAULT_ADDR is empty: allow the .envrc with direnv allow, or run eval "$(vault-proxy-env ` + config.VaultProxyIdentity + `)"`)
 
 // buildPackerExecutionEnv hands Packer the environment of the platform-foundation Vault Proxy, which the vault()
 // function of the templates reads, and the variables of .env.

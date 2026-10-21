@@ -50,13 +50,9 @@ func generateTestCACert(t *testing.T, targetPath string) {
 func newLiveTestPaths(t *testing.T, bastionAddr string) Paths {
 	t.Helper()
 	root := t.TempDir()
-	p := Paths{ProjectRoot: root, Home: t.TempDir(), bastionVaultAddr: bastionAddr}
-	tlsDir := p.resolveTLSDir()
-	if err := os.MkdirAll(tlsDir, 0o755); err != nil {
-		t.Fatalf("mkdir tls: %v", err)
-	}
-	generateTestCACert(t, filepath.Join(tlsDir, "ca.pem"))
-	return p
+	caCert := filepath.Join(root, "ca.pem")
+	generateTestCACert(t, caCert)
+	return Paths{ProjectRoot: root, Home: t.TempDir(), bastionVaultAddr: bastionAddr, bastionVaultCACert: caCert}
 }
 
 func fakeSealStatusHandler(sequence ...bool) http.HandlerFunc {
