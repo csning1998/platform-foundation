@@ -1,7 +1,12 @@
 
 output "downstream_pki_trust_bundle_path" {
-  description = "Absolute path to the combined CA trust bundle, for manual import into a local OS/browser trust store."
+  description = "Absolute path to the combined CA trust bundle of the Bastion listener CA, the Bastion PKI chain, and the Downstream issuer."
   value       = abspath(local_file.trust_bundle.filename)
+}
+
+output "frontend_trust_anchors_path" {
+  description = "Absolute path to the name-constrained trust anchors of the GUI frontends, for SSL_CERT_DIR and for a browser import."
+  value       = abspath(local_file.frontend_trust_anchors.filename)
 }
 
 output "downstream_pki_issuer_cert_b64" {

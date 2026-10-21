@@ -69,3 +69,15 @@ resource "local_file" "trust_bundle" {
   file_permission      = "0644"
   directory_permission = "0755"
 }
+
+# Trust anchors of the GUI frontends for a workstation, in place of the bundle and its unconstrained roots.
+# The name constraints of pki-intermediate-vault-downstream and pki-leaf-platform bound the trust to the platform names.
+resource "local_file" "frontend_trust_anchors" {
+  content = join("\n", [
+    trimspace(local.bastion_pki_downstream_cert_pem),
+    chomp(local.bastion_pki_platform_cert_pem),
+  ])
+  filename             = "${path.module}/tls/anchors/frontend-trust-anchors.crt"
+  file_permission      = "0644"
+  directory_permission = "0755"
+}

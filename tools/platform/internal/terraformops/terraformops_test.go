@@ -70,7 +70,7 @@ func TestReportCleanupStatus_ReportsSuccessForSingleExistingLayer(t *testing.T) 
 	if err := ReportCleanupStatus(dir, "layer-a", nil, ui.New(&buf, &buf)); err != nil {
 		t.Errorf("ReportCleanupStatus(\"layer-a\") = %v, want nil", err)
 	}
-	if !strings.Contains(buf.String(), "Terraform artifact cleanup completed.") {
+	if !strings.Contains(buf.String(), "Terraform layer directories present: layer-a") {
 		t.Errorf("output missing success line, got: %s", buf.String())
 	}
 }
@@ -82,7 +82,7 @@ func TestReportCleanupStatus_RequiresExactCaseForAll(t *testing.T) {
 		if err := ReportCleanupStatus(dir, target, []string{"layer-a"}, ui.New(&buf, &buf)); err != nil {
 			t.Errorf("ReportCleanupStatus(%q) = %v, want nil", target, err)
 		}
-		if strings.Contains(buf.String(), "Preparing to clean all Terraform layers...") {
+		if strings.Contains(buf.String(), "Checking all configured Terraform layers...") {
 			t.Errorf("ReportCleanupStatus(%q) treated target as wildcard \"all\", want literal layer name", target)
 		}
 		if !strings.Contains(buf.String(), "Terraform layer directory not found, skipping") {
@@ -111,8 +111,8 @@ func TestReportCleanupStatus_MaintainsOutputOrderForSingleLayer(t *testing.T) {
 		t.Errorf("ReportCleanupStatus(\"layer-a\") = %v, want nil", err)
 	}
 
-	stepIdx := strings.Index(buf.String(), "Cleaning Terraform artifacts...")
-	okIdx := strings.Index(buf.String(), "Terraform artifact cleanup completed.")
+	stepIdx := strings.Index(buf.String(), "Checking Terraform layer directories...")
+	okIdx := strings.Index(buf.String(), "Terraform layer directories present: layer-a")
 	dividerIdx := strings.Index(buf.String(), strings.Repeat("-", 60))
 	if stepIdx == -1 || okIdx == -1 || dividerIdx == -1 {
 		t.Fatalf("missing expected output segment, got: %s", buf.String())

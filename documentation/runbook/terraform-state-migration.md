@@ -52,7 +52,7 @@ The chosen architecture migrates cross layer operational facts toward decoupled 
 
 The Helm provider OCI registry client cannot accept an inline certificate authority bundle parameter. The platform security baseline strictly prohibits configuring `insecure_skip_tls_verify = true` in any provider or configuration file.
 
-The platform enforces cryptographic trust at the host operating system level. The operator workstation MUST install the Downstream PKI certificate bundle into `/etc/pki/ca-trust/source/anchors/` and execute `update-ca-trust` prior to running Helm OCI operations. The operator workstation MUST also synchronize local `/etc/hosts` mappings with libvirt DNS records via `./platform hosts sync --apply` executed from the repository root. Every Downstream PKI rotation or network IP reassignment requires out of band workstation configuration updates before dependent Terraform layers can execute.
+The repository `.envrc` exports `SSL_CERT_DIR` as the `tls/anchors` directory of `security-vault-downstream-pki`. Every Go client, including each Terraform provider, adds the name-constrained frontend trust anchors of that directory to the system CA file, and a rotation of the anchors takes effect at the next run. The operator workstation MUST also synchronize local `/etc/hosts` mappings with libvirt DNS records via `./platform hosts sync --apply` executed from the repository root. Every Downstream PKI rotation or network IP reassignment requires out of band workstation configuration updates before dependent Terraform layers can execute.
 
 ### Item E. Ephemeral Secret Usage and State Security Considerations
 
@@ -71,7 +71,7 @@ The following matrix categorizes operational failure modes encountered during pl
 | **F1** | Vault HTTP 403 Forbidden during state refresh           | Terraform halts execution; plan cannot proceed                  | Operator JWT-SVID lacks authorization on legacy paths               | Evict legacy Vault resources using `terraform state rm`                |
 | **F2** | Remote state `Unsupported attribute` error              | Downstream plan crashes during expression evaluation            | Downstream state retains stale cached upstream schema               | Evict cached remote state data source via `terraform state rm`         |
 | **F3** | Network interface alias collision on multi-homed guests | Secondary network interfaces remain DOWN                        | 15 character Linux interface name limit caused truncation collision | Derive alias format via `helpers/interface-alias`                      |
-| **F4** | Helm OCI registry TLS verification failure              | Chart download halts; Kubernetes deployment aborts              | Workstation trust store lacks active Downstream PKI certificate     | Install Downstream PKI bundle into `/etc/pki/ca-trust/source/anchors/` |
+| **F4** | Helm OCI registry TLS verification failure              | Chart download halts; Kubernetes deployment aborts              | The shell lacks `SSL_CERT_DIR` of the repository `.envrc`           | Allow the repository `.envrc` with `direnv allow`                      |
 | **F5** | `terraform destroy` timeout on decommissioned nodes     | Destruction loops indefinitely attempting to reach offline APIs | API endpoints and virtual machines were terminated out of band      | Evict all managed resources from state using `terraform state rm`      |
 
 ## Section 4. Standard Operating Protocols
@@ -129,12 +129,7 @@ Operations dependent on local domain resolution and TLS authentication require s
     ./platform hosts sync --apply
     ```
 
-2. From the repository root, the operator MUST install the aggregated Downstream PKI trust bundle into the operating system trust store before running operations against Harbor OCI registries:
-
-    ```bash
-    sudo cp terraform/layers/security-vault-downstream-pki/tls/trust-bundle.crt /etc/pki/ca-trust/source/anchors/platform-foundation-trust-bundle.crt
-    sudo update-ca-trust
-    ```
+2. The operator MUST run layer commands from a shell which has loaded the repository `.envrc`, since `SSL_CERT_DIR` of the `.envrc` supplies the frontend trust anchors to Harbor OCI operations.
 
 ## Section 5. Layer State Remediation Catalog
 

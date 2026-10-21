@@ -1,16 +1,18 @@
-// Package terraformops provides Terraform layer artifact cleanup status reporting.
+// Package terraformops reports the presence of Terraform layer directories and removes the GitLab HTTP backend
+// states of the layers.
 package terraformops
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"platform/internal/ui"
 )
 
-// ReportCleanupStatus scans the specified Terraform layer, or all discovered layers, and
-// reports one summary of the artifact cleanup status across every layer.
+// ReportCleanupStatus reports which of the specified Terraform layers, or of all configured layers, have a directory.
+// The report deletes nothing, since every layer keeps its state in the GitLab HTTP backend.
 func ReportCleanupStatus(terraformDir, target string, allLayers []string, out *ui.Printer) error {
 	if target == "" {
 		return fmt.Errorf("terraformops: no layer specified")
@@ -18,22 +20,22 @@ func ReportCleanupStatus(terraformDir, target string, allLayers []string, out *u
 
 	layers := []string{target}
 	if target == "all" {
-		out.Print(ui.Step, "Preparing to clean all Terraform layers...")
+		out.Print(ui.Step, "Checking all configured Terraform layers...")
 		layers = allLayers
 	}
 
-	var cleaned, missing []string
+	var present, missing []string
 	for _, layer := range layers {
 		if _, err := os.Stat(filepath.Join(terraformDir, "layers", layer)); err != nil {
 			missing = append(missing, layer)
 			continue
 		}
-		cleaned = append(cleaned, layer)
+		present = append(present, layer)
 	}
 
-	if len(cleaned) > 0 {
-		out.Print(ui.Step, "Cleaning Terraform artifacts...")
-		out.Print(ui.OK, "Terraform artifact cleanup completed.")
+	if len(present) > 0 {
+		out.Print(ui.Step, "Checking Terraform layer directories...")
+		out.Print(ui.OK, "Terraform layer directories present: "+strings.Join(present, ", "))
 	}
 	for _, layer := range missing {
 		out.Print(ui.Warn, "Terraform layer directory not found, skipping: "+filepath.Join(terraformDir, "layers", layer))

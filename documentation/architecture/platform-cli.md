@@ -57,14 +57,18 @@
 2. For a layer whose Vault provider declares block `auth_login_jwt`, `platform terraform` MUST fetch the JWT-SVID of the layer operator through its wrapper under `/usr/local/bin` and MUST export the JWT-SVID as `TERRAFORM_VAULT_AUTH_JWT`.
 3. For every other layer, `platform terraform` MUST remove `TERRAFORM_VAULT_AUTH_JWT` from the environment of `terraform`.
 4. `platform terraform` MUST NOT bootstrap `.env`.
-5. `platform layer clean <layer|all>` MUST verify the existence of layer directories under `terraform/layers/` and report artifact cleanup status.
-6. `platform layer clean` MUST NOT delete state files because Terraform remote state is stored in the GitLab HTTP backend.
+5. `platform layer clean <layer|all>` MUST report which layer directories exist under `terraform/layers/`.
+6. `platform layer clean` MUST NOT delete a state, because Terraform remote state is stored in the GitLab HTTP backend.
+7. Menu option 9 MUST delete the GitLab HTTP backend state of every layer whose backend address a `.tf` file declares, except a layer whose name begins with `administration-`. An administration layer manages the GitLab project which hosts every state.
+8. Menu option 9 MUST list the states before deletion and MUST require a second confirmation. Menu option 9 MUST read the GitLab token from `TF_HTTP_PASSWORD` and MUST stop before any deletion when the variable is empty.
+9. Menu option 9 MUST resolve the state list before the first confirmation and MUST stop before any purge when the resolution fails, since the libvirt and SSH purges cannot be undone.
 
 ### Item F. Libvirt and KVM Operations (`libvirt`)
 
 1. `platform libvirt ensure-services` MUST verify that modular libvirt sockets (`virtqemud.socket`, `virtnetworkd.socket`, `virtstoraged.socket`) are active, starting inactive units via `sudo systemctl start`.
 2. `platform libvirt purge` MUST destroy and undefine all domains, storage pools, storage volumes, and virtual networks whose names begin with the `platform-` prefix.
 3. `platform libvirt purge` MUST require explicit user confirmation by typing `Y` or `y` prior to resource destruction.
+4. Menu option 9 MUST remove, after the libvirt purge, the identity key pair, the Host block file, and the known_hosts file of every cluster under `~/.ssh`, together with each `Include` directive of `~/.ssh/config` which names such a Host block file. A cluster file name carries the `<ProjectCode>-` prefix after `id_<algorithm>_`, `ssh_`, or `known_hosts_`. The shared guest key `id_<algorithm>_<ProjectCode>` MUST remain. `foundation-libvirt-resources` cannot recreate an identity key over an existing file.
 
 ### Item G. Strategy Configuration (`strategy`)
 
@@ -112,7 +116,7 @@ The interactive menu MUST present options in the following sequence:
 | 6      | `Verify Guest VM Connectivity via SSH`                     | Confirmation prompt, then `platform ssh verify`                 |
 | 7      | `Switch Environment Strategy`                              | `platform strategy switch`                                      |
 | 8      | `Purge All Packer Artifacts`                               | `platform packer purge-all`                                     |
-| 9      | `Purge All Infrastructure Resources (Libvirt + Terraform)` | `platform libvirt purge` followed by `platform layer clean all` |
+| 9      | `Purge All Infrastructure Resources (Libvirt + Terraform)` | `platform libvirt purge`, SSH material, and remote states       |
 | 10     | `Quit`                                                     | Terminates menu execution                                       |
 
 ### Item B. Packer Submenu Navigation

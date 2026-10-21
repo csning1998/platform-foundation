@@ -28,7 +28,7 @@ func (a *app) runMenu(ctx context.Context) error {
 		{"Verify Guest VM Connectivity via SSH", func(ctx context.Context) error { return a.sshVerifyMenu() }},
 		{"Switch Environment Strategy", func(ctx context.Context) error { return a.switchStrategy() }},
 		{"Purge All Packer Artifacts", func(ctx context.Context) error { return a.purgeAllPackerArtifacts() }},
-		{"Purge All Infrastructure Resources (Libvirt + Terraform)", func(ctx context.Context) error { return a.purgeAllInfrastructure() }},
+		{"Purge All Infrastructure Resources (Libvirt + Terraform)", func(ctx context.Context) error { return a.purgeAllInfrastructure(ctx) }},
 		{"Quit", nil},
 	}
 
