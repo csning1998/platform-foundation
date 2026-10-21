@@ -356,9 +356,10 @@ Location: `terraform/modules/kvm-provisioning/configure`.
 
 1. The module MUST drive Ansible execution via the `ansible/ansible` provider using `action "ansible_playbook_run"` blocks.
 2. The `local_file.inventory` resource MUST trigger playbook execution on `after_create` and `after_update` events. The inventory file SHALL append `jsonencode(var.status_trigger)` in comments to detect upstream virtual machine recreation.
-3. The inventory MUST carry the connection variables `ansible_pipelining`, `ansible_ssh_private_key_file`, and `ansible_ssh_common_args` in `all.vars`, and a caller value of the same name MUST take precedence. The module MUST NOT write an `ansible.cfg`, since several instances of the module in one layer share the working directory.
-4. Playbook runs MUST resolve the collection of this repository through `ansible/ansible.cfg`, which `ANSIBLE_CONFIG` of the repository `.envrc` names.
-5. The `extra_vars` variable MUST declare `sensitive = true` to protect credentials from terminal logging.
+3. The action trigger MUST declare `on_failure = taint`, which requires Terraform `1.16.0` or later. A failed playbook marks the inventory tainted, and the next apply replaces the inventory and reruns the playbook.
+4. The inventory MUST carry the connection variables `ansible_pipelining`, `ansible_ssh_private_key_file`, and `ansible_ssh_common_args` in `all.vars`, and a caller value of the same name MUST take precedence. The module MUST NOT write an `ansible.cfg`, since several instances of the module in one layer share the working directory.
+5. Playbook runs MUST resolve the collection of this repository through `ansible/ansible.cfg`, which `ANSIBLE_CONFIG` of the repository `.envrc` names.
+6. The `extra_vars` variable MUST declare `sensitive = true` to protect credentials from terminal logging.
 
 ### Item C. Module Classification
 

@@ -1,6 +1,6 @@
 
 terraform {
-  required_version = ">= 1.14.0"
+  required_version = ">= 1.16.0"
   required_providers {
     ansible = {
       source  = "ansible/ansible"
@@ -40,10 +40,12 @@ resource "local_file" "inventory" {
   file_permission      = "0644"
   directory_permission = "0755"
 
+  # A failed playbook taints the inventory, which replaces the inventory and reruns the playbook on the next apply.
   lifecycle {
     action_trigger {
-      events  = [after_create, after_update]
-      actions = [action.ansible_playbook_run.run_playbook]
+      events     = [after_create, after_update]
+      actions    = [action.ansible_playbook_run.run_playbook]
+      on_failure = taint
     }
   }
 }
