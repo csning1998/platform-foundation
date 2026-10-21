@@ -1,15 +1,74 @@
 package packerops
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	vaultapi "github.com/hashicorp/vault/api"
+
 	"platform/internal/ui"
 )
+
+// newGuestCredentialClient returns a Vault client of a fake KV v2 leaf at secret/<guestCredentialPath> holding data.
+func newGuestCredentialClient(t *testing.T, data map[string]any) *vaultapi.Client {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/secret/data/"+guestCredentialPath {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"data": data, "metadata": map[string]any{}}})
+	}))
+	t.Cleanup(srv.Close)
+	cfg := vaultapi.DefaultConfig()
+	cfg.Address = srv.URL
+	client, err := vaultapi.NewClient(cfg)
+	if err != nil {
+		t.Fatalf("vaultapi.NewClient: %v", err)
+	}
+	client.SetToken("test-token")
+	return client
+}
+
+func TestReadGuestCredentialEnv_ReturnsOneEntryPerField(t *testing.T) {
+	client := newGuestCredentialClient(t, map[string]any{
+		"ssh_username": "user", "ssh_password": "pass", "ssh_password_hash": "hash", "ssh_public_key_path": "/key.pub",
+	})
+
+	got, err := ReadGuestCredentialEnv(context.Background(), client)
+	if err != nil {
+		t.Fatalf("ReadGuestCredentialEnv: %v", err)
+	}
+	want := []string{
+		"PKR_VAR_ssh_username=user", "PKR_VAR_ssh_password=pass",
+		"PKR_VAR_ssh_password_hash=hash", "PKR_VAR_ssh_public_key_path=/key.pub",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("ReadGuestCredentialEnv = %q, want %q", got, want)
+	}
+}
+
+func TestReadGuestCredentialEnv_NamesTheMissingFieldWithoutValues(t *testing.T) {
+	client := newGuestCredentialClient(t, map[string]any{"ssh_username": "user", "ssh_password": "secret-value"})
+
+	_, err := ReadGuestCredentialEnv(context.Background(), client)
+	if !errors.Is(err, ErrGuestCredentialMissing) || !strings.Contains(err.Error(), "ssh_password_hash") {
+		t.Fatalf("ReadGuestCredentialEnv error = %v, want ErrGuestCredentialMissing naming ssh_password_hash", err)
+	}
+	if strings.Contains(err.Error(), "secret-value") {
+		t.Errorf("ReadGuestCredentialEnv error %q contains a credential value", err)
+	}
+}
 
 func TestResolveBaseCategoryDir_PrefersDistro(t *testing.T) {
 	dir := t.TempDir()
