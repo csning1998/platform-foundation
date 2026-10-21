@@ -178,11 +178,11 @@ func TestResolveBastionVaultAddr_FallsBackToEnvironmentVariable(t *testing.T) {
 	}
 }
 
-func TestResolveBastionVaultAddr_ReturnsEmptyWhenUnset(t *testing.T) {
+func TestResolveBastionVaultAddr_FallsBackToUpstreamDefaultWhenUnset(t *testing.T) {
 	a := &app{}
 
-	if got := a.resolveBastionVaultAddr(); got != "" {
-		t.Errorf("resolveBastionVaultAddr() = %q, want empty", got)
+	if got := a.resolveBastionVaultAddr(); got != config.DefaultBastionVaultAddr {
+		t.Errorf("resolveBastionVaultAddr() = %q, want %q", got, config.DefaultBastionVaultAddr)
 	}
 }
 

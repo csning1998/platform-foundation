@@ -10,43 +10,21 @@ func TestNewPaths_InitializesFieldsAndResolvesPaths(t *testing.T) {
 	if p.ProjectRoot != "/root" || p.AnsibleDir != "/ansible" || p.TerraformDir != "/tf" || p.Home != "/home/u" {
 		t.Errorf("NewPaths fields = %+v", p)
 	}
-	if got := p.resolveBastionAddr(); got != "https://bastion:8200" {
-		t.Errorf("resolveBastionAddr = %q, want https://bastion:8200", got)
-	}
-	if got := p.resolveCACertFile(); got != "/ca.pem" {
-		t.Errorf("resolveCACertFile = %q, want /ca.pem", got)
+	if p.bastionVaultAddr != "https://bastion:8200" || p.bastionVaultCACert != "/ca.pem" {
+		t.Errorf("NewPaths Bastion fields = %q, %q, want https://bastion:8200, /ca.pem", p.bastionVaultAddr, p.bastionVaultCACert)
 	}
 }
 
 func TestPaths_ResolvesHelperPaths(t *testing.T) {
 	p := Paths{
-		ProjectRoot:        "/root",
-		AnsibleDir:         "/ansible",
-		TerraformDir:       "/tf",
-		Home:               "/home/u",
-		bastionVaultCACert: "/custom/ca.pem",
+		ProjectRoot:  "/root",
+		AnsibleDir:   "/ansible",
+		TerraformDir: "/tf",
+		Home:         "/home/u",
 	}
 
-	cases := []struct {
-		name string
-		got  string
-		want string
-	}{
-		{"resolveTLSDir", p.resolveTLSDir(), "/root/vault/tls"},
-		{"resolveCACertFile", p.resolveCACertFile(), "/custom/ca.pem"},
-		{"resolveDownstreamLayerDir", p.resolveDownstreamLayerDir(), "/tf/layers/" + DownstreamLayer},
-	}
-	for _, c := range cases {
-		want := filepath.FromSlash(c.want)
-		if c.got != want {
-			t.Errorf("%s = %q, want %q", c.name, c.got, want)
-		}
-	}
-
-	pDefault := Paths{
-		ProjectRoot: "/root",
-	}
-	if got := pDefault.resolveCACertFile(); got != filepath.FromSlash("/root/vault/tls/ca.pem") {
-		t.Errorf("default resolveCACertFile = %q, want %q", got, "/root/vault/tls/ca.pem")
+	want := filepath.FromSlash("/tf/layers/" + DownstreamLayer)
+	if got := p.resolveDownstreamLayerDir(); got != want {
+		t.Errorf("resolveDownstreamLayerDir = %q, want %q", got, want)
 	}
 }
