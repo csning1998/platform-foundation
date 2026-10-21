@@ -1,13 +1,14 @@
 package vaultops
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/apenella/go-ansible/v2/pkg/playbook"
@@ -30,33 +31,45 @@ var (
 // proxyEnvironmentKeys lists the variables which the ambient login of utils_vault_operator_login and group_vars read.
 var proxyEnvironmentKeys = []string{"VAULT_ADDR", "VAULT_CACERT", "VAULT_TOKEN", "VAULT_CLIENT_CERT", "VAULT_CLIENT_KEY"}
 
-var inventoryLineRe = regexp.MustCompile(`(?m)^inventory\s*=\s*(\S+)\s*$`)
-
 // DownstreamInventory is the inventory and the unseal variables file which the Downstream layer rendered.
 type DownstreamInventory struct {
 	Inventory  string
 	UnsealVars string
 }
 
+// genericClusterOutput is the subset of the generic_cluster output of the Downstream layer which the unseal reads.
+type genericClusterOutput struct {
+	Enabled        bool   `json:"enabled"`
+	InventoryPath  string `json:"ansible_inventory_path"`
+	UnsealVarsPath string `json:"ansible_unseal_vars_path"`
+}
+
 func (p Paths) resolveDownstreamLayerDir() string {
 	return filepath.Join(p.TerraformDir, "layers", DownstreamLayer)
 }
 
-// ResolveDownstreamInventory reads the inventory path from the ansible.cfg which ansible-runner wrote into layerDir.
-func ResolveDownstreamInventory(layerDir string) (DownstreamInventory, error) {
-	data, err := os.ReadFile(filepath.Join(layerDir, "ansible.cfg"))
-	if errors.Is(err, fs.ErrNotExist) {
+// ReadDownstreamInventory runs terraform output -json generic_cluster in layerDir and decodes the result.
+func ReadDownstreamInventory(ctx context.Context, layerDir string) (DownstreamInventory, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, "terraform", "-chdir="+layerDir, "output", "-json", "generic_cluster")
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		return DownstreamInventory{}, fmt.Errorf("%w: terraform output of %s: %w: %s",
+			ErrDownstreamInventoryMissing, filepath.Base(layerDir), err, strings.TrimSpace(stderr.String()))
+	}
+	return DecodeDownstreamInventory(stdout.Bytes())
+}
+
+// DecodeDownstreamInventory returns the inventory and the unseal variables file which the generic_cluster output names.
+func DecodeDownstreamInventory(data []byte) (DownstreamInventory, error) {
+	var out genericClusterOutput
+	if err := json.Unmarshal(data, &out); err != nil {
+		return DownstreamInventory{}, fmt.Errorf("vaultops: decode the generic_cluster output: %w", err)
+	}
+	if !out.Enabled || out.InventoryPath == "" || out.UnsealVarsPath == "" {
 		return DownstreamInventory{}, ErrDownstreamInventoryMissing
 	}
-	if err != nil {
-		return DownstreamInventory{}, fmt.Errorf("vaultops: read the ansible.cfg of %s: %w", filepath.Base(layerDir), err)
-	}
-	match := inventoryLineRe.FindSubmatch(data)
-	if match == nil {
-		return DownstreamInventory{}, fmt.Errorf("%w: the ansible.cfg of %s declares no inventory", ErrDownstreamInventoryMissing, filepath.Base(layerDir))
-	}
-	inv := DownstreamInventory{Inventory: string(match[1])}
-	inv.UnsealVars = strings.TrimSuffix(inv.Inventory, filepath.Ext(inv.Inventory)) + "-unseal-vars.json"
+	inv := DownstreamInventory{Inventory: out.InventoryPath, UnsealVars: out.UnsealVarsPath}
 	for _, file := range []string{inv.Inventory, inv.UnsealVars} {
 		if _, err := os.Stat(file); err != nil {
 			return DownstreamInventory{}, fmt.Errorf("%w: %w", ErrDownstreamInventoryMissing, err)
@@ -73,8 +86,7 @@ func UnsealDownstream(ctx context.Context, p Paths, getenv func(string) string, 
 			return ErrProxyEnvironmentMissing
 		}
 	}
-	layerDir := p.resolveDownstreamLayerDir()
-	inv, err := ResolveDownstreamInventory(layerDir)
+	inv, err := ReadDownstreamInventory(ctx, p.resolveDownstreamLayerDir())
 	if err != nil {
 		return err
 	}
@@ -84,10 +96,8 @@ func UnsealDownstream(ctx context.Context, p Paths, getenv func(string) string, 
 		Tags:          "vault-unseal",
 		ExtraVarsFile: []string{"@" + inv.UnsealVars},
 	}
-	// The playbook of this repository resolves the collection of this repository, whatever the layer ansible.cfg holds.
-	env := map[string]string{"ANSIBLE_COLLECTIONS_PATH": filepath.Join(p.AnsibleDir, "collections")}
 	playbookFile := filepath.Join(p.AnsibleDir, "playbooks", "playbook_platform.yaml")
-	if err := ansibleops.RunPlaybookWithConfig(ctx, filepath.Join(layerDir, "ansible.cfg"), layerDir, playbookFile, opts, env); err != nil {
+	if err := ansibleops.RunPlaybook(ctx, p.AnsibleDir, p.AnsibleDir, playbookFile, opts); err != nil {
 		return fmt.Errorf("vaultops: Downstream Vault unseal playbook: %w", err)
 	}
 	out.Print(ui.OK, "[Downstream Vault] Unseal playbook execution completed.")
