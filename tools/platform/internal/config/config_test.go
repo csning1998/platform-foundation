@@ -89,6 +89,30 @@ func TestEnviron_ExpandsReferences(t *testing.T) {
 	}
 }
 
+func TestGetExpandedOrDefault_PrefersEnvAndExpandsFallback(t *testing.T) {
+	e := &Env{values: map[string]string{}}
+	e.Set("PROJECT_ROOT", "/repo")
+	e.Set("DECLARED", "${PROJECT_ROOT}/declared.pem")
+
+	cases := []struct {
+		name string
+		env  *Env
+		key  string
+		want string
+	}{
+		{"declared key wins", e, "DECLARED", "/repo/declared.pem"},
+		{"absent key expands fallback", e, "ABSENT", "/repo/fallback.pem"},
+		{"nil env returns fallback verbatim", nil, "ABSENT", "${PROJECT_ROOT}/fallback.pem"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := c.env.GetExpandedOrDefault(c.key, "${PROJECT_ROOT}/fallback.pem"); got != c.want {
+				t.Errorf("GetExpandedOrDefault(%q) = %q, want %q", c.key, got, c.want)
+			}
+		})
+	}
+}
+
 func splitKV(kv string) (key, value string, ok bool) {
 	for i := 0; i < len(kv); i++ {
 		if kv[i] == '=' {
