@@ -40,9 +40,9 @@ module "ansible_runner" {
   playbook_paths = local.ansible_playbook_paths
 
   ansible_config = {
-    # This value MUST remain unset because OpenSSH honors only the first -o occurrence in
-    # ansible.cfg ssh_args. A fixed value overrides the per-cluster Host block
-    # which MUST govern both the primary connection and any delegate_to on another node.
+    # This value MUST remain unset because OpenSSH honors only the first -o occurrence of an option,
+    # and a fixed value overrides the per-cluster Host block which MUST govern both the primary
+    # connection and any delegate_to on another node.
     known_hosts_path  = null
     identity_key_path = null
     root_path         = local.ansible.root_path

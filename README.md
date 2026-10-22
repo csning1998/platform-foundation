@@ -226,12 +226,11 @@ A plain `terraform` run in a JWT-SVID layer fails with `required fields are unse
 
 1. An apply MUST execute a plan which the operator reviewed.
 2. A plan which destroys or replaces a `libvirt_domain`, an operating system volume, a `tls_private_key`, or a Vault role MUST NOT be applied.
-3. A replacement of `local_file.ansible_cfg` is an expected change, since the content of the file is read from the template during the apply.
-4. The creation of `libvirt_cloudinit_disk` with an in place update of the cloud-init volume is an expected change after a host reboot.
-5. The libvirt provider stores the cloud-init ISO under `/tmp/terraform-provider-libvirt-cloudinit/`.
-6. A host reboot empties `/tmp`, since `/tmp` is mounted as tmpfs.
-7. A rename of a module call label or a resource label MUST be migrated with a one-time `terraform state mv` before the plan.
-8. A `moved` block MUST NOT be committed.
+3. The creation of `libvirt_cloudinit_disk` with an in place update of the cloud-init volume is an expected change after a host reboot.
+4. The libvirt provider stores the cloud-init ISO under `/tmp/terraform-provider-libvirt-cloudinit/`.
+5. A host reboot empties `/tmp`, since `/tmp` is mounted as tmpfs.
+6. A rename of a module call label or a resource label MUST be migrated with a one-time `terraform state mv` before the plan.
+7. A `moved` block MUST NOT be committed.
 
 ### Item D. Recovery
 

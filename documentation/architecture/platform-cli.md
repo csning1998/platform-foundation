@@ -26,8 +26,8 @@
 
 1. The lifecycle of the Bastion Vault, which covers TLS generation, initialization, unseal, and the root token, belongs to `./governance` of `parent-group-governance`.
 2. `platform vault status` MUST report the seal state of the Bastion Vault and of the Downstream Vault. The Downstream address and CA come from the outputs of `security-vault-downstream-tenants`.
-3. `platform vault unseal-downstream` MUST run `ansible/playbooks/playbook_platform.yaml` with tag `vault-unseal` under the `ansible.cfg` which `ansible-runner` rendered into `platform-vault-downstream-frontend`.
-4. `platform vault unseal-downstream` MUST read the inventory from that `ansible.cfg`, and MUST pass the sibling file `inventory-<cluster>-unseal-vars.json` as extra variables.
+3. `platform vault unseal-downstream` MUST run `ansible/playbooks/playbook_platform.yaml` with tag `vault-unseal` under `ansible/ansible.cfg`.
+4. `platform vault unseal-downstream` MUST read the inventory and the unseal variables file from the `generic_cluster` output of `platform-vault-downstream-frontend`, and MUST pass the unseal variables file as extra variables.
 5. `platform vault unseal-downstream` MUST refuse to run without `VAULT_ADDR`, `VAULT_CACERT`, `VAULT_TOKEN`, `VAULT_CLIENT_CERT`, and `VAULT_CLIENT_KEY` of the `platform-foundation` Vault Proxy, since the play reads the unseal keys from the Bastion Vault through that Proxy.
 6. The Talos runtime of the Downstream Vault unseals through transit, hence `platform vault unseal-downstream` serves the VM runtime alone.
 

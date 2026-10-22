@@ -78,9 +78,10 @@ locals {
         "${vault_mount.kv.path}/metadata/${local.component_kv_paths[key]}"   = { capabilities = ["list"] }
         "${vault_mount.kv.path}/metadata/${local.component_kv_paths[key]}/*" = { capabilities = ["create", "read", "update", "list", "delete"] }
 
+        # Vault 2.2.0 requires sudo on sys/mounts/auth/<path>/tune, which the Vault provider reads and writes.
         "sys/auth"                                   = { capabilities = ["read"] }
         "sys/auth/${operator.cluster_name}-*"        = { capabilities = ["create", "read", "update", "delete", "sudo"] }
-        "sys/mounts/auth/${operator.cluster_name}-*" = { capabilities = ["create", "read", "update"] }
+        "sys/mounts/auth/${operator.cluster_name}-*" = { capabilities = ["create", "read", "update", "sudo"] }
         "auth/${operator.cluster_name}-*" = {
           capabilities = ["create", "read", "update", "delete", "list"]
           allowed_parameters = {

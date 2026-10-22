@@ -55,9 +55,10 @@ locals {
     "auth/oidc/*"           = { capabilities = ["create", "read", "update", "delete", "list"] }
 
     # Kubernetes auth mounts of the clusters of the tenant. Every mount name starts with the project code.
+    # Vault 2.2.0 requires sudo on sys/mounts/auth/<path>/tune, which the Vault provider reads and writes.
     "sys/auth"                                           = { capabilities = ["read"] }
     "sys/auth/${local.foundation_project_code}-*"        = { capabilities = ["create", "read", "update", "delete", "sudo"] }
-    "sys/mounts/auth/${local.foundation_project_code}-*" = { capabilities = ["create", "read", "update"] }
+    "sys/mounts/auth/${local.foundation_project_code}-*" = { capabilities = ["create", "read", "update", "sudo"] }
     "auth/${local.foundation_project_code}-*"            = { capabilities = ["create", "read", "update", "delete", "list"] }
 
     "identity/group"            = { capabilities = ["create", "update"] }

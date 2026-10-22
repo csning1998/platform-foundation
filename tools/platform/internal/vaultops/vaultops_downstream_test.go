@@ -5,48 +5,48 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
 
-func TestResolveDownstreamInventory_RequiresTheLayerConfig(t *testing.T) {
-	if _, err := ResolveDownstreamInventory(t.TempDir()); !errors.Is(err, ErrDownstreamInventoryMissing) {
-		t.Errorf("ResolveDownstreamInventory error = %v, want ErrDownstreamInventoryMissing", err)
+func TestDecodeDownstreamInventory_RequiresTheGenericRuntime(t *testing.T) {
+	data := []byte(`{"enabled":false,"ansible_inventory_path":null,"ansible_unseal_vars_path":null}`)
+	if _, err := DecodeDownstreamInventory(data); !errors.Is(err, ErrDownstreamInventoryMissing) {
+		t.Errorf("DecodeDownstreamInventory error = %v, want ErrDownstreamInventoryMissing", err)
 	}
 }
 
-func TestResolveDownstreamInventory_RequiresAnInventoryLine(t *testing.T) {
-	layerDir := t.TempDir()
-	writeFile(t, filepath.Join(layerDir, "ansible.cfg"), "[defaults]\nroles_path = /roles\n")
-	if _, err := ResolveDownstreamInventory(layerDir); !errors.Is(err, ErrDownstreamInventoryMissing) {
-		t.Errorf("ResolveDownstreamInventory error = %v, want ErrDownstreamInventoryMissing", err)
-	}
-}
-
-func TestResolveDownstreamInventory_RequiresTheUnsealVariables(t *testing.T) {
-	layerDir, ansibleDir := t.TempDir(), t.TempDir()
+func TestDecodeDownstreamInventory_RequiresTheUnsealVariables(t *testing.T) {
+	ansibleDir := t.TempDir()
 	inventory := filepath.Join(ansibleDir, "inventory-example-vault-downstream-frontend.yaml")
+	unsealVars := filepath.Join(ansibleDir, "inventory-example-vault-downstream-frontend-unseal-vars.json")
 	writeFile(t, inventory, "---\n")
-	writeFile(t, filepath.Join(layerDir, "ansible.cfg"), "[defaults]\ninventory = "+inventory+"\n")
-	if _, err := ResolveDownstreamInventory(layerDir); !errors.Is(err, ErrDownstreamInventoryMissing) {
-		t.Errorf("ResolveDownstreamInventory error = %v, want ErrDownstreamInventoryMissing", err)
+	if _, err := DecodeDownstreamInventory(buildGenericClusterOutput(inventory, unsealVars)); !errors.Is(err, ErrDownstreamInventoryMissing) {
+		t.Errorf("DecodeDownstreamInventory error = %v, want ErrDownstreamInventoryMissing", err)
 	}
 }
 
-func TestResolveDownstreamInventory_DerivesTheUnsealVariables(t *testing.T) {
-	layerDir, ansibleDir := t.TempDir(), t.TempDir()
+func TestDecodeDownstreamInventory_ReturnsThePublishedPaths(t *testing.T) {
+	ansibleDir := t.TempDir()
 	inventory := filepath.Join(ansibleDir, "inventory-example-vault-downstream-frontend.yaml")
 	unsealVars := filepath.Join(ansibleDir, "inventory-example-vault-downstream-frontend-unseal-vars.json")
 	writeFile(t, inventory, "---\n")
 	writeFile(t, unsealVars, "{}")
-	writeFile(t, filepath.Join(layerDir, "ansible.cfg"), "[defaults]\nroles_path = /roles\ninventory = "+inventory+"\n")
 
-	got, err := ResolveDownstreamInventory(layerDir)
+	got, err := DecodeDownstreamInventory(buildGenericClusterOutput(inventory, unsealVars))
 	if err != nil {
-		t.Fatalf("ResolveDownstreamInventory: %v", err)
+		t.Fatalf("DecodeDownstreamInventory: %v", err)
 	}
 	if got.Inventory != inventory || got.UnsealVars != unsealVars {
-		t.Errorf("ResolveDownstreamInventory = %+v, want inventory %s and unseal variables %s", got, inventory, unsealVars)
+		t.Errorf("DecodeDownstreamInventory = %+v, want inventory %s and unseal variables %s", got, inventory, unsealVars)
+	}
+}
+
+func TestReadDownstreamInventory_RequiresTheLayerOutput(t *testing.T) {
+	installFakeTerraform(t, "", 1)
+	if _, err := ReadDownstreamInventory(context.Background(), t.TempDir()); !errors.Is(err, ErrDownstreamInventoryMissing) {
+		t.Errorf("ReadDownstreamInventory error = %v, want ErrDownstreamInventoryMissing", err)
 	}
 }
 
@@ -59,14 +59,13 @@ func TestUnsealDownstream_RequiresTheProxyEnvironment(t *testing.T) {
 	}
 }
 
-func TestUnsealDownstream_RunsTheUnsealTagUnderTheLayerConfig(t *testing.T) {
+func TestUnsealDownstream_RunsTheUnsealTagUnderTheRepositoryConfig(t *testing.T) {
 	p := Paths{AnsibleDir: t.TempDir(), TerraformDir: t.TempDir()}
-	layerDir := p.resolveDownstreamLayerDir()
 	inventory := filepath.Join(p.AnsibleDir, "inventory-example-vault-downstream-frontend.yaml")
 	unsealVars := filepath.Join(p.AnsibleDir, "inventory-example-vault-downstream-frontend-unseal-vars.json")
 	writeFile(t, inventory, "---\n")
 	writeFile(t, unsealVars, "{}")
-	writeFile(t, filepath.Join(layerDir, "ansible.cfg"), "[defaults]\ninventory = "+inventory+"\n")
+	installFakeTerraform(t, string(buildGenericClusterOutput(inventory, unsealVars)), 0)
 	record := installFakeAnsiblePlaybook(t)
 
 	if err := UnsealDownstream(context.Background(), p, mapGetenv(fullProxyEnvironment()), discardOut()); err != nil {
@@ -82,8 +81,7 @@ func TestUnsealDownstream_RunsTheUnsealTagUnderTheLayerConfig(t *testing.T) {
 		"--extra-vars=@" + unsealVars,
 		"--inventory=" + inventory,
 		filepath.Join(p.AnsibleDir, "playbooks", "playbook_platform.yaml"),
-		"ANSIBLE_CONFIG=" + filepath.Join(layerDir, "ansible.cfg"),
-		"ANSIBLE_COLLECTIONS_PATH=" + filepath.Join(p.AnsibleDir, "collections"),
+		"ANSIBLE_CONFIG=" + filepath.Join(p.AnsibleDir, "ansible.cfg"),
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("ansible-playbook record lacks %q:\n%s", want, got)
@@ -110,13 +108,29 @@ func installFakeAnsiblePlaybook(t *testing.T) string {
 	record := filepath.Join(t.TempDir(), "record")
 	script := "#!/bin/sh\n" +
 		"echo \"$*\" >> " + record + "\n" +
-		"echo \"ANSIBLE_CONFIG=$ANSIBLE_CONFIG\" >> " + record + "\n" +
-		"echo \"ANSIBLE_COLLECTIONS_PATH=$ANSIBLE_COLLECTIONS_PATH\" >> " + record + "\n"
+		"echo \"ANSIBLE_CONFIG=$ANSIBLE_CONFIG\" >> " + record + "\n"
 	if err := os.WriteFile(filepath.Join(bin, "ansible-playbook"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return record
+}
+
+// installFakeTerraform puts first on PATH a terraform which prints stdout and exits with code.
+func installFakeTerraform(t *testing.T, stdout string, code int) {
+	t.Helper()
+	bin := t.TempDir()
+	payload := filepath.Join(t.TempDir(), "stdout")
+	writeFile(t, payload, stdout)
+	script := "#!/bin/sh\ncat " + payload + "\nexit " + strconv.Itoa(code) + "\n"
+	if err := os.WriteFile(filepath.Join(bin, "terraform"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func buildGenericClusterOutput(inventory, unsealVars string) []byte {
+	return []byte(`{"enabled":true,"ansible_inventory_path":"` + inventory + `","ansible_unseal_vars_path":"` + unsealVars + `"}`)
 }
 
 func writeFile(t *testing.T, path, content string) {

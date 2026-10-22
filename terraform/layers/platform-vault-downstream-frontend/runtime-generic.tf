@@ -54,7 +54,6 @@ resource "vault_pki_secret_backend_role" "vm_listener" {
   ou = local.state.foundation_libvirt_resources.foundation_pki.map[module.terraform_layer_context.primary_context.pki_key].ou
 }
 
-# Matches the cluster inventory naming to allow automated pairing of unseal variables in the platform CLI.
 resource "local_file" "unseal_vars" {
   count = local.is_runtime_talos ? 0 : 1
 
