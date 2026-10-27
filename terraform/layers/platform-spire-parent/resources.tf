@@ -21,8 +21,8 @@ resource "vault_approle_auth_backend_role" "spire_parent_upstream_authority" {
 
   lifecycle {
     precondition {
-      condition     = contains(local.registry_spire_trust_domains, local.spiffe_trust_domain)
-      error_message = "The SPIRE trust domain ${local.spiffe_trust_domain} is absent from spire_trust_domains of registry/platform/trust, and pki-intermediate-spire would reject every SPIRE CA of the trust domain."
+      condition     = contains(local.stage_domains, local.spiffe_trust_domain)
+      error_message = "The SPIRE trust domain ${local.spiffe_trust_domain} is absent from stage_domains of registry/platform/network/allocation, and pki-intermediate-spire would reject every SPIRE CA of the trust domain."
     }
   }
 }

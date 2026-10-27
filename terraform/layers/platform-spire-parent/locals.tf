@@ -16,7 +16,7 @@ locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)
   }
-  registry_spire_trust_domains = jsondecode(nonsensitive(data.vault_generic_secret.registry_platform_trust.data["spire_trust_domains"]))
+  stage_domains = jsondecode(nonsensitive(data.vault_generic_secret.registry_platform_network_allocation.data["stage_domains"]))
 
   bastion_pki_spire    = local.registry_bastion.pki.constrained_intermediates["pki-intermediate-spire"]
   bastion_pki_platform = local.registry_bastion.pki.constrained_intermediates["pki-leaf-platform"]
