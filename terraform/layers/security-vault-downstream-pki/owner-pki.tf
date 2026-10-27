@@ -3,7 +3,7 @@
 locals {
   owners             = local.state.security_vault_downstream_tenants.downstream_vault_owners
   node_pki_mount     = local.state.security_vault_downstream_tenants.spire_node_pki.mount_path
-  stage_domains      = jsondecode(nonsensitive(data.vault_generic_secret.registry_platform_trust.data["spire_trust_domains"]))
+  stage_domains      = jsondecode(nonsensitive(data.vault_generic_secret.registry_platform_network_allocation.data["stage_domains"]))
   platform_dns_names = distinct(flatten([for item in local.state.foundation_libvirt_resources.foundation_pki.map : item.dns_san]))
 
   owner_service_names = {

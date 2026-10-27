@@ -9,6 +9,6 @@ data "vault_generic_secret" "registry_bastion" {
   path = "registry/${local.foundation_project_code}/bastion"
 }
 
-data "vault_generic_secret" "registry_platform_trust" {
-  path = "registry/platform/trust"
+data "vault_generic_secret" "registry_platform_network_allocation" {
+  path = "registry/platform/network/allocation"
 }

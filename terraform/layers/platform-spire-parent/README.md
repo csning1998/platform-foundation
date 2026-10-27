@@ -6,9 +6,9 @@ The layer MUST run in the environment of the platform-foundation Vault Proxy, wh
 
 The environment exports `VAULT_ADDR`, `VAULT_CACERT`, `VAULT_CLIENT_CERT`, `VAULT_CLIENT_KEY`, and the placeholder `VAULT_TOKEN`, and the `vault` provider of the layer reads these variables alone.
 
-The layer reads the Bastion facts from `registry/platform-foundation/bastion` and `registry/platform/trust`.
+The layer reads the Bastion facts from `registry/platform-foundation/bastion` and `registry/platform/network/allocation`.
 
-The plan stops when the SPIRE trust domain is absent from `spire_trust_domains` of `registry/platform/trust`.
+The plan stops when the SPIRE trust domain is absent from `stage_domains` of `registry/platform/network/allocation`.
 
 ## Section 1. Runbook: recovery after a state loss
 
@@ -186,12 +186,12 @@ The direction from the nodes to SPIRE Parent needs a temporary pod in the cluste
 
 ### Task H. Read the result
 
-| Symptom                                                       | Cause                                                                                | Action                                                                                                                                 |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Symptom                                                       | Cause                                                                                | Action                                                                                                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Task C prints a count other than `2`                          | The Bastion Vault answered with an error, or the listener CA is wrong                | Check `VAULT_CACERT` of the Proxy environment and the mount names `pki-root` and `pki-platform` in `registry/platform-foundation/bastion` |
-| Task D fails with `unable to get local issuer certificate`    | The trust anchor lacks the intermediate, or the PEM files lack the newline separator | Rebuild the chain file with Task C                                                                                                     |
-| Task D shows no key                                           | The OIDC discovery provider runs without a JWT key                                   | Check `systemctl status spire-oidc-discovery-provider` on SPIRE Parent                                                                 |
-| Task E prints no JWT                                          | The agent of the workstation holds no valid identity for the current SPIRE Parent    | Replace the inventory file of `provision-spire-parent`, as `README.md` Section 3 Item D.1 describes                                    |
-| Task E login answers `permission denied` or an audience error | The mount or the role is missing, or the audience differs from `vault`               | Apply `provision-spire-parent` and then `security-vault-downstream-tenants`                                                            |
-| Task F lists no agent                                         | The workstation agent never attested to this SPIRE Parent                            | Replace the inventory file of `provision-spire-parent`, as `README.md` Section 3 Item D.1 describes                                    |
-| Task G reports `CLOSED` for every node                        | The addresses come from the wrong source, or the route between the segments is down  | Use the `INTERNAL-IP` column and check the route `172.16.0.0/16` on SPIRE Parent                                                       |
+| Task D fails with `unable to get local issuer certificate`    | The trust anchor lacks the intermediate, or the PEM files lack the newline separator | Rebuild the chain file with Task C                                                                                                        |
+| Task D shows no key                                           | The OIDC discovery provider runs without a JWT key                                   | Check `systemctl status spire-oidc-discovery-provider` on SPIRE Parent                                                                    |
+| Task E prints no JWT                                          | The agent of the workstation holds no valid identity for the current SPIRE Parent    | Replace the inventory file of `provision-spire-parent`, as `README.md` Section 3 Item D.1 describes                                       |
+| Task E login answers `permission denied` or an audience error | The mount or the role is missing, or the audience differs from `vault`               | Apply `provision-spire-parent` and then `security-vault-downstream-tenants`                                                               |
+| Task F lists no agent                                         | The workstation agent never attested to this SPIRE Parent                            | Replace the inventory file of `provision-spire-parent`, as `README.md` Section 3 Item D.1 describes                                       |
+| Task G reports `CLOSED` for every node                        | The addresses come from the wrong source, or the route between the segments is down  | Use the `INTERNAL-IP` column and check the route `172.16.0.0/16` on SPIRE Parent                                                          |
