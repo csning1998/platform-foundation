@@ -1,9 +1,13 @@
 
 # An external owner registers its own operators and workloads, bounded by its owner prefix, its services, and its cidr_index range.
 locals {
-  _external_owners = {
-    "opgitlab" = { services = ["gitlab", "harbor"], cidr_index = { first = 140, last = 153 } }
+  _external_owners_platform_engineering_lab = {
+    "opgitlab" = {
+      services   = ["gitlab", "harbor"],
+      cidr_index = { first = 140, last = 153 }
+    }
   }
+  _external_owners = merge(local._external_owners_platform_engineering_lab, local._external_owners_personal)
 }
 
 locals {
@@ -30,7 +34,12 @@ locals {
 
 # The owner policies key on the owner code as a path prefix, hence the checks below keep codes, services, and networks exclusive.
 locals {
-  owner_codes = concat([local.foundation_project_code], keys(local._external_owners))
+  # merge drops a duplicate code across the owner files, hence the codes come from each file separately.
+  owner_codes = concat(
+    [local.foundation_project_code],
+    keys(local._external_owners_platform_engineering_lab),
+    keys(local._external_owners_personal),
+  )
   # spire holds the agent and server IDs, and ns holds the Kubernetes workload IDs of the SPIRE Child.
   reserved_owner_codes = concat(["spire", "ns"], keys(local.state.foundation_libvirt_resources.foundation_topology.identity))
   owner_code_conflicts = concat(
