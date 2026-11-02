@@ -115,7 +115,7 @@ The steps in Item B require neither a Talos client credential nor a kubeconfig.
 ### Item C. Credential Recovery
 
 1. Vault Path Absence. The Vault KV leaf `cilium/hubble/cluster-config` remains empty during a health gate failure. Module `credential_cilium_hubble` depends on `kubeconfig_raw`, which depends on `data.talos_cluster_health.this`.
-2. State Extraction. Command `terraform state pull` reads `talos_machine_secrets.client_configuration` from the GitLab HTTP backend. Variables `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD` MUST come from the Vault KV path `secret/parent-group-governance/terraform/state-backend`. The derived talosconfig and the state copy MUST reside outside the repository working tree. The derived talosconfig and the state copy MUST be deleted after the diagnosis.
+2. State Extraction. Command `terraform state pull` reads `talos_machine_secrets.client_configuration` from the GitLab HTTP backend. Variables `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD` MUST come from the Vault KV path `secret/platform-foundation/terraform/state-backend`. The derived talosconfig and the state copy MUST reside outside the repository working tree. The derived talosconfig and the state copy MUST be deleted after the diagnosis.
 
 ### Item D. Guest Layer
 
