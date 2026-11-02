@@ -15,7 +15,7 @@
 ### Item B. Build and Execution Constraints
 
 1. The binary MUST be built with `build-platform.sh`, which runs the tests, builds `tools/platform` into `platform-foundation/platform`, and runs the SonarQube scan.
-2. `build-platform.sh` MUST read the SonarQube analysis token through the governance Vault Proxy of `parent-group-governance` inside a subshell, and MUST hold the repository values as `readonly` constants.
+2. `build-platform.sh` MUST read the SonarQube analysis token through the Vault Proxy identity `credential-distributor-platform-foundation` inside a subshell, and MUST hold the repository values as `readonly` constants.
 3. The executable MUST be invoked with the working directory inside the `platform-foundation` repository. `platform terraform` MUST be invoked with the working directory set to a layer directory under `terraform/layers/`.
 4. Automatic environment initialization MUST determine `PROJECT_ROOT` from the current working directory.
 5. The compiled `platform` binary MUST NOT be tracked in version control and MUST be excluded by `.gitignore`.
@@ -68,7 +68,7 @@
 1. `platform libvirt ensure-services` MUST verify that modular libvirt sockets (`virtqemud.socket`, `virtnetworkd.socket`, `virtstoraged.socket`) are active, starting inactive units via `sudo systemctl start`.
 2. `platform libvirt purge` MUST destroy and undefine all domains, storage pools, storage volumes, and virtual networks whose names begin with the `platform-` prefix.
 3. `platform libvirt purge` MUST require explicit user confirmation by typing `Y` or `y` prior to resource destruction.
-4. Menu option 9 MUST remove, after the libvirt purge, the identity key pair, the Host block file, and the known_hosts file of every cluster under `~/.ssh`, together with each `Include` directive of `~/.ssh/config` which names such a Host block file. A cluster file name carries the `<ProjectCode>-` prefix after `id_<algorithm>_`, `ssh_`, or `known_hosts_`. The shared guest key `id_<algorithm>_<ProjectCode>` MUST remain. `foundation-libvirt-resources` cannot recreate an identity key over an existing file.
+4. Menu option 9 MUST remove, after the libvirt purge, the identity key pair, the Host block file, and the `known_hosts` file of every cluster under `~/.ssh`, together with each `Include` directive of `~/.ssh/config` which names such a Host block file. A cluster file name carries the `<ProjectCode>-` prefix after `id_<algorithm>_`, `ssh_`, or `known_hosts_`. The shared guest key `id_<algorithm>_<ProjectCode>` MUST remain. `foundation-libvirt-resources` cannot recreate an identity key over an existing file.
 
 ### Item G. Strategy Configuration (`strategy`)
 
@@ -106,18 +106,18 @@
 
 The interactive menu MUST present options in the following sequence:
 
-| Number | Menu Option Label                                          | Target Command                                                  |
-| ------ | ---------------------------------------------------------- | --------------------------------------------------------------- |
-| 1      | `[Downstream] Unseal Downstream Vault via Ansible`         | `platform vault unseal-downstream`                              |
-| 2      | `Generate SSH Key`                                         | Interactive prompt for key name, then `platform ssh keygen`     |
-| 3      | `Verify IaC Environment`                                   | `platform env verify`                                           |
-| 4      | `Execute Hypervisor Configuration via Ansible`             | `playbook_hypervisor.yaml` against a temporary local inventory  |
-| 5      | `Build Packer Base Image`                                  | Packer category submenu                                         |
-| 6      | `Verify Guest VM Connectivity via SSH`                     | Confirmation prompt, then `platform ssh verify`                 |
-| 7      | `Switch Environment Strategy`                              | `platform strategy switch`                                      |
-| 8      | `Purge All Packer Artifacts`                               | `platform packer purge-all`                                     |
-| 9      | `Purge All Infrastructure Resources (Libvirt + Terraform)` | `platform libvirt purge`, SSH material, and remote states       |
-| 10     | `Quit`                                                     | Terminates menu execution                                       |
+| Number | Menu Option Label                                          | Target Command                                                 |
+| ------ | ---------------------------------------------------------- | -------------------------------------------------------------- |
+| 1      | `[Downstream] Unseal Downstream Vault via Ansible`         | `platform vault unseal-downstream`                             |
+| 2      | `Generate SSH Key`                                         | Interactive prompt for key name, then `platform ssh keygen`    |
+| 3      | `Verify IaC Environment`                                   | `platform env verify`                                          |
+| 4      | `Execute Hypervisor Configuration via Ansible`             | `playbook_hypervisor.yaml` against a temporary local inventory |
+| 5      | `Build Packer Base Image`                                  | Packer category submenu                                        |
+| 6      | `Verify Guest VM Connectivity via SSH`                     | Confirmation prompt, then `platform ssh verify`                |
+| 7      | `Switch Environment Strategy`                              | `platform strategy switch`                                     |
+| 8      | `Purge All Packer Artifacts`                               | `platform packer purge-all`                                    |
+| 9      | `Purge All Infrastructure Resources (Libvirt + Terraform)` | `platform libvirt purge`, SSH material, and remote states      |
+| 10     | `Quit`                                                     | Terminates menu execution                                      |
 
 ### Item B. Packer Submenu Navigation
 
