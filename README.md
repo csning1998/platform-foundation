@@ -192,10 +192,10 @@ Omission of an explicit `restorecon` execution upon removing dynamic relabel fla
 
 1. The host MUST run the Vault Proxies of `parent-group-governance`, which the first menu item `[Host] Apply All Workstation Prerequisites` of `./governance` installs.
 2. The file `.envrc` at the repository root MUST load the environment of the identity `platform-foundation` through `vault-proxy-env`.
-3. The environment routes `VAULT_ADDR` to the Proxy of the identity, presents the client certificate of the identity, and exports `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD`, which the governance Proxy reads from the Bastion Vault.
+3. `vault-proxy-env` points `VAULT_ADDR` at the Proxy of the identity and supplies the client certificate of the identity. Through that Proxy, `vault-proxy-env` reads the state backend token of the identity from the Bastion Vault and exports the token as `TF_HTTP_PASSWORD`. The GitLab HTTP backend of every layer authenticates with that password and `TF_HTTP_USERNAME`.
 4. `parent-group-governance/workstation-topology.yaml` declares the port of each Proxy and the path of the state backend token.
 5. Each `.envrc` MUST be approved once with `direnv allow`, and direnv loads the environment on every later entry into the directory.
-6. The layer `meta-gitlab-project` holds its own `.envrc`, which loads the identity `governance`, since direnv loads the nearest `.envrc` alone.
+6. The `.envrc` of the layer `administration-gitlab-project` loads the identity `credential-distributor-platform-foundation`. Direnv reads only the nearest `.envrc` and therefore ignores the root `.envrc` inside the layer.
 7. The operator shell MUST export `ANSIBLE_BECOME_PASS` through `read -s`, because a value typed on the command line enters the shell history.
 8. Every command of this section MUST NOT print a token or a password.
 
@@ -215,7 +215,7 @@ Every layer of the deployment chain runs correctly inside the Proxy environment 
 | Layer                                                                                                                                                                                            | Login                                  | Command, run in the layer directory |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- | ----------------------------------- |
 | `foundation-libvirt-resources`                                                                                                                                                                   | State backend only                     | `terraform`                         |
-| `meta-gitlab-project`                                                                                                                                                                            | Governance Proxy                       | `terraform`                         |
+| `administration-gitlab-project`                                                                                                                                                                  | credential-distributor Proxy           | `terraform`                         |
 | `platform-spire-parent`, `provision-spire-parent`, `platform-haproxy-frontend`, `platform-vault-downstream-frontend`, `provision-vault-downstream-frontend`, `security-vault-downstream-tenants` | platform-foundation Proxy              | `terraform`                         |
 | `security-vault-downstream-pki`                                                                                                                                                                  | platform-foundation Proxy and JWT-SVID | `../../../platform terraform`       |
 | Every other layer of the deployment chain                                                                                                                                                        | JWT-SVID                               | `../../../platform terraform`       |
