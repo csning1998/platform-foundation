@@ -109,6 +109,9 @@ func TestPurge_FailsWhenTheConfigIsUnreadable(t *testing.T) {
 }
 
 func TestPurge_FailsWhenTheSSHDirectoryIsUnlistable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("skipping unreadable directory test when running as root")
+	}
 	home := t.TempDir()
 	sshDir := writeSSHFixture(t, home, map[string]string{"config": "Host example\n"})
 	if err := os.Chmod(sshDir, 0o300); err != nil {
@@ -121,6 +124,9 @@ func TestPurge_FailsWhenTheSSHDirectoryIsUnlistable(t *testing.T) {
 }
 
 func TestPurge_FailsWhenAClusterFileCannotBeRemoved(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("skipping read-only directory test when running as root")
+	}
 	home := t.TempDir()
 	sshDir := writeSSHFixture(t, home, map[string]string{"ssh_" + config.ProjectCode + "-example": "Host example\n"})
 	if err := os.Chmod(sshDir, 0o500); err != nil {
