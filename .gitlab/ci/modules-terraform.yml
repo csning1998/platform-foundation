@@ -1,7 +1,7 @@
 ---
 # Isolates module publication pipelines by module_name to prevent job name collisions across shared CI components.
 include:
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.6.3
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.8.0
     inputs:
       # Scopes publishing path to the module directory to isolate module artifacts
       # from repository-level governance configurations.
@@ -9,37 +9,37 @@ include:
       module_name: "project-baseline"
       module_system: "gitlab"
       tag_prefix: "project-baseline-"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.6.3
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.8.0
     inputs:
       module_dir: "${CI_PROJECT_DIR}/terraform/modules/service-catalog"
       module_name: "service-catalog"
       module_system: "gitlab"
       tag_prefix: "service-catalog-"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.6.3
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.8.0
     inputs:
       module_dir: "${CI_PROJECT_DIR}/terraform/modules/kvm-provisioning"
       module_name: "kvm-provisioning"
       module_system: "gitlab"
       tag_prefix: "kvm-provisioning-"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.6.3
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.8.0
     inputs:
       module_dir: "${CI_PROJECT_DIR}/terraform/modules/kvm-foundation-resources"
       module_name: "kvm-foundation-resources"
       module_system: "gitlab"
       tag_prefix: "kvm-foundation-resources-"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.6.3
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.8.0
     inputs:
       module_dir: "${CI_PROJECT_DIR}/terraform/modules/vault-provisioning/vault-credential"
       module_name: "vault-credential"
       module_system: "gitlab"
       tag_prefix: "vault-credential-"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.6.3
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.8.0
     inputs:
       module_dir: "${CI_PROJECT_DIR}/terraform/modules/vault-provisioning/vault-workload-identity"
       module_name: "vault-workload-identity"
       module_system: "gitlab"
       tag_prefix: "vault-workload-identity-"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.6.3
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform-module@1.8.0
     inputs:
       module_dir: "${CI_PROJECT_DIR}/terraform/modules/vault-provisioning/vault-pki-setup"
       module_name: "vault-pki-setup"
