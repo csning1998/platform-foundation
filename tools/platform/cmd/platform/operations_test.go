@@ -6,9 +6,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"platform/internal/config"
@@ -417,5 +420,43 @@ func TestPrintEnvValue_RefusesSecretKey(t *testing.T) {
 	err := a.printEnvValue("VAULT_TOKEN")
 	if !errors.Is(err, config.ErrSecretKey) || out.Len() != 0 {
 		t.Errorf("printEnvValue(VAULT_TOKEN) = %q, %v, want no output and ErrSecretKey", out.String(), err)
+	}
+}
+
+func TestPurgeRemoteStates_ConfirmedDeletesEveryState(t *testing.T) {
+	var deletes atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.Header.Get("PRIVATE-TOKEN") != "token" {
+			t.Errorf("request = %s with token %q, want DELETE with the state token", r.Method, r.Header.Get("PRIVATE-TOKEN"))
+		}
+		deletes.Add(1)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	a, _ := newOperationsApp(t, "y\n")
+	states := []terraformops.RemoteState{
+		{Layer: "layer-a", Address: srv.URL + "/a"},
+		{Layer: "layer-b", Address: srv.URL + "/b"},
+	}
+	if err := a.purgeRemoteStates(context.Background(), "token", states); err != nil {
+		t.Fatalf("purgeRemoteStates() error = %v, want nil", err)
+	}
+	if got := deletes.Load(); got != 2 {
+		t.Errorf("DELETE requests = %d, want 2", got)
+	}
+}
+
+func TestPurgeRemoteStates_RejectedDeleteFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+
+	a, _ := newOperationsApp(t, "y\n")
+	states := []terraformops.RemoteState{{Layer: "layer-a", Address: srv.URL + "/a"}}
+	err := a.purgeRemoteStates(context.Background(), "token", states)
+	if err == nil || !strings.Contains(err.Error(), "HTTP 403") {
+		t.Errorf("purgeRemoteStates() error = %v, want an HTTP 403 failure", err)
 	}
 }

@@ -87,3 +87,45 @@ func TestDeleteRemoteState_ReportsTheStatusWithoutTheToken(t *testing.T) {
 		t.Errorf("DeleteRemoteState error %q contains the token", err)
 	}
 }
+
+func TestListPurgeableStates_FailsWithoutTheLayersDirectory(t *testing.T) {
+	if _, err := ListPurgeableStates(t.TempDir()); err == nil {
+		t.Error("ListPurgeableStates() error = nil, want the failure to read a missing layers directory")
+	}
+}
+
+func TestListPurgeableStates_FailsOnAnUnreadableTerraformFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "layers", "platform-a", "broken.tf"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if _, err := ListPurgeableStates(dir); err == nil {
+		t.Error("ListPurgeableStates() error = nil, want the failure to read a .tf path which is a directory")
+	}
+}
+
+func TestListPurgeableStates_FailsOnALayerNameWhichBreaksTheGlob(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "layers", "platform-["), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if _, err := ListPurgeableStates(dir); err == nil {
+		t.Error("ListPurgeableStates() error = nil, want the glob failure of a layer name with an unclosed bracket")
+	}
+}
+
+func TestDeleteRemoteState_FailsOnAnInvalidAddress(t *testing.T) {
+	state := RemoteState{Layer: "layer-a", Address: "http://\x7f"}
+	if err := DeleteRemoteState(context.Background(), http.DefaultClient, "token", state); err == nil {
+		t.Error("DeleteRemoteState() error = nil, want the failure to build a request for an invalid address")
+	}
+}
+
+func TestDeleteRemoteState_FailsWhenTheBackendIsUnreachable(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	address := srv.URL
+	srv.Close()
+	if err := DeleteRemoteState(context.Background(), http.DefaultClient, "token", RemoteState{Layer: "layer-a", Address: address}); err == nil {
+		t.Error("DeleteRemoteState() error = nil, want the failure to reach a closed backend")
+	}
+}
