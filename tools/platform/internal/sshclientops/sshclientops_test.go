@@ -96,3 +96,44 @@ func TestPurge_SucceedsWithoutSSHDirectory(t *testing.T) {
 		t.Errorf("Purge: %v", err)
 	}
 }
+
+func TestPurge_FailsWhenTheConfigIsUnreadable(t *testing.T) {
+	home := t.TempDir()
+	sshDir := writeSSHFixture(t, home, nil)
+	if err := os.Mkdir(filepath.Join(sshDir, "config"), 0o700); err != nil {
+		t.Fatalf("mkdir config: %v", err)
+	}
+	if err := Purge(home, ui.New(io.Discard, io.Discard)); err == nil {
+		t.Error("Purge() error = nil, want the failure to read a config which is a directory")
+	}
+}
+
+func TestPurge_FailsWhenTheSSHDirectoryIsUnlistable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("skipping unreadable directory test when running as root")
+	}
+	home := t.TempDir()
+	sshDir := writeSSHFixture(t, home, map[string]string{"config": "Host example\n"})
+	if err := os.Chmod(sshDir, 0o300); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(sshDir, 0o700) })
+	if err := Purge(home, ui.New(io.Discard, io.Discard)); err == nil {
+		t.Error("Purge() error = nil, want the failure to list an unreadable .ssh directory")
+	}
+}
+
+func TestPurge_FailsWhenAClusterFileCannotBeRemoved(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("skipping read-only directory test when running as root")
+	}
+	home := t.TempDir()
+	sshDir := writeSSHFixture(t, home, map[string]string{"ssh_" + config.ProjectCode + "-example": "Host example\n"})
+	if err := os.Chmod(sshDir, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(sshDir, 0o700) })
+	if err := Purge(home, ui.New(io.Discard, io.Discard)); err == nil {
+		t.Error("Purge() error = nil, want the failure to remove a file in a read-only .ssh directory")
+	}
+}
