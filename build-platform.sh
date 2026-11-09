@@ -45,10 +45,10 @@ trap 'remove_scanner; exit 130' INT TERM
 scanner=$(SONAR_TOKEN="${sonar_token}" podman create --network host \
     -e SONAR_HOST_URL="${sonar_host_url}" \
     -e SONAR_TOKEN \
-    -e SONAR_SCANNER_OPTS="-Dsonar.projectKey=${sonar_project_key} -Dsonar.projectBaseDir=/usr/src -Dsonar.qualitygate.wait=true -Dsonar.sources=tools,terraform,ansible,packer,selinux -Dsonar.exclusions=**/testdata/**,**/.terraform/**,**/*_test.go -Dsonar.tests=tools -Dsonar.test.inclusions=**/*_test.go -Dsonar.go.coverage.reportPaths=tools/${cli_module}/coverage.out" \
+    -e SONAR_SCANNER_OPTS="-Dsonar.projectKey=${sonar_project_key} -Dsonar.projectBaseDir=/usr/src -Dsonar.qualitygate.wait=true" \
     "${scanner_image}")
 {
-    git ls-files -z --cached --others --exclude-standard -- tools terraform ansible packer selinux .gitignore
+    git ls-files -z --cached --others --exclude-standard -- tools terraform ansible packer selinux sonar-project.properties .gitignore
     printf '%s\0' .git
     for report in tools/${cli_module}/coverage.out; do
         if [ -e "${report}" ]; then printf '%s\0' "${report}"; fi
