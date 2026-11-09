@@ -1,23 +1,27 @@
 ---
 include:
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/core@1.8.0
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/core@1.8.2
     inputs:
-      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.0
+      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.2
       review_models:
         - "claude-sonnet-5.5"
         - "claude-opus-5.5"
+        - "gemini-4-argon"
         - "gemini-3.8-flash"
         - "azure-gpt-5.4-mini"
       enable_sonarqube: true
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform@1.8.0
+      # The group runner carries the tag and reaches SonarQube on the host network sonarqube-ci-net.
+      sonar_scanner_tags: ["sonarqube-network"]
+      sonar_go_coverage_path: "tools/platform/coverage.out"
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform@1.8.2
     inputs:
       # CKV_GLB_1, CKV_GLB_3, CKV_GLB_4: require GitLab Premium/Ultimate merge request approval and push rules.
       # CKV_TF_1: enforces commit-pinned Git URLs; modules use immutable semantic versions from GitLab Terraform Registry.
       checkov_skip: "CKV_GLB_1,CKV_GLB_3,CKV_GLB_4,CKV_TF_1"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-ansible@1.8.0
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-ansible@1.8.2
     inputs:
       ansible_globs: ["ansible/**/*", "ansible.cfg"]
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/lang-go@1.8.0
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/lang-go@1.8.2
     inputs:
       go_dir: "tools/platform"
       go_fmt_path: "./tools/platform"
@@ -27,9 +31,9 @@ include:
           "tools/platform/go.mod",
           "tools/platform/go.sum",
         ]
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/auto-tag@1.8.0
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/auto-tag@1.8.2
     inputs:
-      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.0
+      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.2
       # Module publishing paused until terraform/modules/ gains an external consumer repository;
       # currently, layers reference modules by relative path.
       # - local: ".gitlab/ci/modules-terraform.yml"
@@ -54,6 +58,9 @@ build:go:
     - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
 
 test:go:
+  # SonarQube Community Build keeps one branch, and an analysis without the Go coverage report resets coverage to 0%.
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   variables:
     CGO_ENABLED: "1"
     GOPRIVATE: "gitlab.com/csning1998-lab/*"
