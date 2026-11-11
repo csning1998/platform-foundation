@@ -1,11 +1,12 @@
 ---
 include:
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/core@1.8.2
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/core@1.8.3
     inputs:
-      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.2
+      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.3
       review_models:
         - "claude-sonnet-5.5"
         - "claude-opus-5.5"
+        - "gemini-4-carbon"
         - "gemini-4-argon"
         - "gemini-3.8-flash"
         - "azure-gpt-5.4-mini"
@@ -13,15 +14,15 @@ include:
       # The group runner carries the tag and reaches SonarQube on the host network sonarqube-ci-net.
       sonar_scanner_tags: ["sonarqube-network"]
       sonar_go_coverage_path: "tools/platform/coverage.out"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform@1.8.2
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform@1.8.3
     inputs:
       # CKV_GLB_1, CKV_GLB_3, CKV_GLB_4: require GitLab Premium/Ultimate merge request approval and push rules.
       # CKV_TF_1: enforces commit-pinned Git URLs; modules use immutable semantic versions from GitLab Terraform Registry.
       checkov_skip: "CKV_GLB_1,CKV_GLB_3,CKV_GLB_4,CKV_TF_1"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-ansible@1.8.2
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-ansible@1.8.3
     inputs:
       ansible_globs: ["ansible/**/*", "ansible.cfg"]
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/lang-go@1.8.2
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/lang-go@1.8.3
     inputs:
       go_dir: "tools/platform"
       go_fmt_path: "./tools/platform"
@@ -31,9 +32,9 @@ include:
           "tools/platform/go.mod",
           "tools/platform/go.sum",
         ]
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/auto-tag@1.8.2
+  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/auto-tag@1.8.3
     inputs:
-      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.2
+      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.3
       # Module publishing paused until terraform/modules/ gains an external consumer repository;
       # currently, layers reference modules by relative path.
       # - local: ".gitlab/ci/modules-terraform.yml"
