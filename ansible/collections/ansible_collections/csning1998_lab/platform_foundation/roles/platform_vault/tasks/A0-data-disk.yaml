@@ -1,6 +1,6 @@
 ---
 # The raft data outlives the OS disk on the data disk which the catalog declares, mounted at the raft path.
-# A held filesystem stays, hence an OS disk rebuild keeps the raft data.
+# An existing filesystem is preserved, hence an OS disk rebuild retains the raft data.
 - name: "Block A3: Mount the Raft Data Disk"
   become: true
   when: platform_vault_data_device | length > 0
@@ -15,7 +15,7 @@
     - name: "A3b. Initialize and mount the data disk"
       when: _platform_vault_disk_mounted.rc != 0
       block:
-        - name: "A3b-i. Check whether the data disk holds a filesystem"
+        - name: "A3b-i. Check whether the data disk contains a filesystem"
           ansible.builtin.command:
             cmd: "blkid {{ platform_vault_data_device }}"
           register: _platform_vault_disk_blkid
@@ -54,4 +54,4 @@
   rescue:
     - name: "Block A3: Mount the Raft Data Disk failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

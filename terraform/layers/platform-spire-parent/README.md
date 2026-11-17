@@ -22,7 +22,7 @@ The secret ID of the upstream authority and the OIDC listener certificate reside
 
 The play of the layer keeps a secret ID which the Bastion Vault still knows under the current role, and the play issues a new secret ID otherwise.
 
-The play keeps a listener certificate which chains to the current `pki-platform` and stays valid beyond 30 days, and the play issues a new certificate otherwise.
+The play keeps a listener certificate which chains to the current `pki-platform` and remains valid beyond 30 days, and the play issues a new certificate otherwise.
 
 ```bash
 # The .envrc at the repository root loads the platform-foundation Vault Proxy environment.
@@ -78,11 +78,11 @@ done
 
 The certificate of the OIDC discovery provider is issued by the `pki-platform` mount of the Bastion Vault.
 
-The certificate file served by the OIDC discovery provider holds the leaf certificate and the `pki-platform` certificate.
+The certificate file served by the OIDC discovery provider contains the leaf certificate and the `pki-platform` certificate.
 
-A client MUST hold both the root and the intermediate certificate to verify the leaf certificate.
+A client MUST have both the root and the intermediate certificate to verify the leaf certificate.
 
-The file `tls/bastion-ca.pem` holds the listener CA of the Bastion Vault and MUST NOT serve as the trust anchor of this test.
+The file `tls/bastion-ca.pem` contains the listener CA of the Bastion Vault and MUST NOT serve as the trust anchor of this test.
 
 The two CA endpoints of the Bastion Vault need no token.
 
@@ -102,9 +102,9 @@ The count MUST be `2`.
 
 ### Task D. Verify the OIDC discovery provider
 
-The discovery document MUST carry the issuer `https://<PARENT>:8443`.
+The discovery document MUST contain the issuer `https://<PARENT>:8443`.
 
-The key set MUST hold at least one key.
+The key set MUST contain at least one key.
 
 The Downstream Vault fetches both documents with the chain of Task C through the setting `oidc_discovery_ca_pem`.
 
@@ -142,7 +142,7 @@ unset JWT
 
 The server MUST report `Server is healthy`.
 
-The list MUST hold at least the agent of the operator workstation.
+The list MUST contain at least the agent of the operator workstation.
 
 ```bash
 ssh platform-foundation-spire-parent-node-00 'sudo spire-server healthcheck -socketPath /opt/spire/server/data/private/api.sock'
@@ -155,7 +155,7 @@ The node addresses MUST come from `kubectl get nodes -o wide`, column `INTERNAL-
 
 The range `ip_range` of the service catalog is not the node address.
 
-The kubeconfig lives in the Downstream Vault at `platform-foundation/cilium/hubble/cluster-config`, field `content_b64`.
+The kubeconfig resides in the Downstream Vault at `platform-foundation/cilium/hubble/cluster-config`, field `content_b64`.
 
 The Cilium operator reads the kubeconfig with the token of the login of Task E.
 
@@ -191,7 +191,7 @@ The direction from the nodes to SPIRE Parent needs a temporary pod in the cluste
 | Task C prints a count other than `2`                          | The Bastion Vault answered with an error, or the listener CA is wrong                | Check `VAULT_CACERT` of the Proxy environment and the mount names `pki-root` and `pki-platform` in `registry/platform-foundation/bastion` |
 | Task D fails with `unable to get local issuer certificate`    | The trust anchor lacks the intermediate, or the PEM files lack the newline separator | Rebuild the chain file with Task C                                                                                                        |
 | Task D shows no key                                           | The OIDC discovery provider runs without a JWT key                                   | Check `systemctl status spire-oidc-discovery-provider` on SPIRE Parent                                                                    |
-| Task E prints no JWT                                          | The agent of the workstation holds no valid identity for the current SPIRE Parent    | Replace the inventory file of `provision-spire-parent`, as `README.md` Section 3 Item D.1 describes                                       |
+| Task E prints no JWT                                          | The agent of the workstation lacks a valid identity for the current SPIRE Parent     | Replace the inventory file of `provision-spire-parent`, as `README.md` Section 3 Item D.1 describes                                       |
 | Task E login answers `permission denied` or an audience error | The mount or the role is missing, or the audience differs from `vault`               | Apply `provision-spire-parent` and then `security-vault-downstream-tenants`                                                               |
 | Task F lists no agent                                         | The workstation agent never attested to this SPIRE Parent                            | Replace the inventory file of `provision-spire-parent`, as `README.md` Section 3 Item D.1 describes                                       |
 | Task G reports `CLOSED` for every node                        | The addresses come from the wrong source, or the route between the segments is down  | Use the `INTERNAL-IP` column and check the route `172.16.0.0/16` on SPIRE Parent                                                          |

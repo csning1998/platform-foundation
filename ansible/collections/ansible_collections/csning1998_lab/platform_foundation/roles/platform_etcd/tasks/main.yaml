@@ -35,7 +35,7 @@
   rescue:
     - name: "Section A: Prepare etcd User and Directories failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Section B: Configure etcd Service"
   block:
@@ -74,7 +74,7 @@
   rescue:
     - name: "Section B: Configure etcd Service failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Section C: Start and Enable etcd Service"
   block:
@@ -91,4 +91,4 @@
   rescue:
     - name: "Section C: Start and Enable etcd Service failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

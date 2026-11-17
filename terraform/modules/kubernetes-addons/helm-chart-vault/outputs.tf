@@ -1,7 +1,7 @@
 
 # The names derive from the inputs alone, hence the listener certificate reads the output before the release exists.
 output "listener_names" {
-  description = "DNS names which the listener certificate MUST carry: the Service, the active Service, the headless Service, and every raft peer under the cluster domain."
+  description = "DNS names which the listener certificate MUST contain: the Service, the active Service, the headless Service, and every raft peer under the cluster domain."
   value = {
     service_domain = local.service_domain
     dns_names = concat(

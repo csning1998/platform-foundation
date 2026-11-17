@@ -1,6 +1,6 @@
 ---
 # Runs one spire-server command on the selected SPIRE server.
-# The outcome stays in the fact utils_spire_server_command_result.
+# The outcome is stored in the fact utils_spire_server_command_result.
 - name: "Step 0. Assert the selected kind is supported"
   ansible.builtin.assert:
     that:
@@ -23,7 +23,7 @@
       failed_when: false
       ignore_unreachable: true
       # Ansible expands delegate_to before the condition of the block.
-      # The value MUST therefore stay non empty for kind child.
+      # The value MUST therefore remain non empty for kind child.
       delegate_to: >-
         {{ utils_spire_server_command_parent_ssh_host if utils_spire_server_command_kind == 'parent' else 'localhost' }}
       become: true

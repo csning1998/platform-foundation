@@ -26,7 +26,7 @@
   rescue:
     - name: "Block A1: Dynamically discover the Host-only network interface for Kubeadm failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block A2: Establish Certificate Trust for Containerd & OS"
   become: true
@@ -54,7 +54,7 @@
   rescue:
     - name: "Block A2: Establish Certificate Trust for Containerd & OS failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block A3: Configure Containerd Registry endpoint"
   become: true
@@ -86,4 +86,4 @@
   rescue:
     - name: "Block A3: Configure Containerd Registry endpoint failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

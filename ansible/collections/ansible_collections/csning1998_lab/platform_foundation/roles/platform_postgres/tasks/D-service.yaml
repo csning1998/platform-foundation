@@ -108,4 +108,4 @@
   rescue:
     - name: "Block C1: Start and Enable Patroni Service failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

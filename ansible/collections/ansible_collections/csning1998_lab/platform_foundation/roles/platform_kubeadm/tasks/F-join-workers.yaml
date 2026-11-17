@@ -21,7 +21,7 @@
   rescue:
     - name: "F2. Prepare worker node for joining failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "F3. Join this worker node to the cluster"
   when: not platform_kubeadm_kubelet_conf_stat.stat.exists
@@ -50,7 +50,7 @@
   rescue:
     - name: "F3. Join this worker node to the cluster failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "F4. Upgrade local kubelet configuration from cluster ConfigMap"
   ansible.builtin.command: >-

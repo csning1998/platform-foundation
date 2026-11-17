@@ -155,7 +155,7 @@ variable "inline_manifests" {
 
   validation {
     condition     = contains(keys(var.inline_manifests), "cilium")
-    error_message = "inline_manifests MUST carry the cilium entry."
+    error_message = "inline_manifests MUST contain the cilium entry."
   }
 }
 

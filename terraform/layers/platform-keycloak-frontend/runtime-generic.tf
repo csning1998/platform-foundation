@@ -1,5 +1,5 @@
 
-# Declarations of the VM runtime alone. Each resource and module carries count = local.is_runtime_talos ? 0 : 1.
+# Declarations of the VM runtime alone. Each resource and module declares count = local.is_runtime_talos ? 0 : 1.
 locals {
   # Configures VM Vault Agent workload authentication using SPIRE Child JWT-SVID credentials.
   tenant_login = local.state.security_vault_downstream_tenants.downstream_tenants.tenant_login[module.terraform_layer_context.cluster_identity.cluster_name]

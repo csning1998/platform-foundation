@@ -15,7 +15,7 @@
   rescue:
     - name: "Block A: Install Golang failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Install MinIO via Go"
   become: true
@@ -60,7 +60,7 @@
   rescue:
     - name: "Block B: Install MinIO via Go failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block C: System Configuration"
   become: true
@@ -112,4 +112,4 @@
   rescue:
     - name: "Block C: System Configuration failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

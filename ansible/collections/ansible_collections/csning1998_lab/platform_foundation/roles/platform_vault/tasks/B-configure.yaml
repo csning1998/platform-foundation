@@ -20,7 +20,7 @@
   rescue:
     - name: "Block B1: Configure and Start failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "B2. Flush Handlers (Restart Vault Service)"
   ansible.builtin.meta: flush_handlers

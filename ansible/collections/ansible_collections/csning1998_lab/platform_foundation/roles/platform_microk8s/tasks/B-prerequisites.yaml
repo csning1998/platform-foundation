@@ -40,7 +40,7 @@
   rescue:
     - name: "Block B1: Establish Certificate Trust for Containerd & OS failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B2: Configure Containerd Registry endpoint (MicroK8s Snap)"
   become: true
@@ -72,4 +72,4 @@
   rescue:
     - name: "Block B2: Configure Containerd Registry endpoint (MicroK8s Snap) failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

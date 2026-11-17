@@ -1,5 +1,5 @@
 ---
-# The main routing table holds one route per destination prefix, insufficient when two VIPs on two interfaces
+# The main routing table contains one route per destination prefix, insufficient when two VIPs on two interfaces
 # reply to the same external client range. One table per VIP keeps each reply on the interface of the VIP.
 # systemd-networkd owns these rules, which therefore survive a restart of systemd-networkd.
 network:

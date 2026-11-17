@@ -61,11 +61,11 @@ func resolveProjectRoot(start string) (string, error) {
 // annotationSkipBootstrap marks a command which runs inside a layer directory and leaves .env untouched.
 const annotationSkipBootstrap = "platform/skip-bootstrap"
 
-// annotationStdoutPayload marks a command whose standard output carries a value which a caller captures.
+// annotationStdoutPayload marks a command whose standard output contains a value which a caller captures.
 const annotationStdoutPayload = "platform/stdout-payload"
 
 // resolveBootstrapPrinter returns the printer of the .env bootstrap of cmd, which writes to the error stream when
-// the standard output of cmd carries a payload.
+// the standard output of cmd contains a payload.
 func resolveBootstrapPrinter(cmd *cobra.Command, out *ui.Printer) *ui.Printer {
 	if cmd.Annotations[annotationStdoutPayload] == "true" {
 		return out.Diagnostic()

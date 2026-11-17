@@ -1,5 +1,5 @@
 
-# Declarations which both runtimes share. runtime-vm.tf and runtime-talos.tf hold the declarations of one runtime each.
+# Declarations which both runtimes share. runtime-vm.tf and runtime-talos.tf contain the declarations of one runtime each.
 module "terraform_layer_context" {
   source = "../../modules/kvm-provisioning/helpers/terraform-layer-context"
 

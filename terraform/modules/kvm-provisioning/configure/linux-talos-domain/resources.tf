@@ -104,7 +104,7 @@ resource "libvirt_domain" "nodes" {
   os  = { type = "hvm", arch = "x86_64" }
   cpu = { mode = "host-passthrough" }
 
-  # Per-cluster pinning cannot see the cores of other clusters, hence the caller assigns host CPUs explicitly.
+  # Per-cluster pinning cannot detect the cores of other clusters, hence the caller assigns host CPUs explicitly.
   cpu_tune = each.value.cpu_pin == null ? null : {
     vcpu_pin = [for i, cpu in each.value.cpu_pin : { vcpu = i, cpu_set = tostring(cpu) }]
   }

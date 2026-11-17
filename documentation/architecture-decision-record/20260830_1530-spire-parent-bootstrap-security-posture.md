@@ -19,7 +19,7 @@
 
 ### Item C. Root CA Trust State
 
-Vault's `upstreamauthority/vault` plugin, once configured, signs SPIRE's Intermediate CA against Bastion Vault's `pki_inter` mount, replacing the self-signed root as the trust anchor. SPIRE's SVID rotation semantics carry existing workload identities across this transition without forcing re-attestation since the bundle rotation propagates through the existing trust bundle distribution mechanism. The self-signed interim state is bounded in scope. It signs SVIDs for the SPIRE Parent's own bootstrap workloads only, none of which are yet registered.
+Vault's `upstreamauthority/vault` plugin, once configured, signs SPIRE's Intermediate CA against Bastion Vault's `pki_inter` mount, replacing the self-signed root as the trust anchor. SPIRE's SVID rotation semantics preserve existing workload identities across this transition without forcing re-attestation since the bundle rotation propagates through the existing trust bundle distribution mechanism. The self-signed interim state is bounded in scope. It signs SVIDs for the SPIRE Parent's own bootstrap workloads only, none of which are yet registered.
 
 ### Item D. Bastion Vault JWT Mount Naming
 

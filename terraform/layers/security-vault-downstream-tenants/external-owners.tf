@@ -40,7 +40,7 @@ locals {
     keys(local._external_owners_platform_engineering_lab),
     keys(local._external_owners_personal),
   )
-  # spire holds the agent and server IDs, and ns holds the Kubernetes workload IDs of the SPIRE Child.
+  # spire contains the agent and server IDs, and ns contains the Kubernetes workload IDs of the SPIRE Child.
   reserved_owner_codes = concat(["spire", "ns"], keys(local.state.foundation_libvirt_resources.foundation_topology.identity))
   owner_code_conflicts = concat(
     [for code in distinct(local.owner_codes) : code if length([for c in local.owner_codes : c if c == code]) > 1],

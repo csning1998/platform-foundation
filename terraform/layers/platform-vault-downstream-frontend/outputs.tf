@@ -19,7 +19,7 @@ output "vault_endpoint" {
 }
 
 output "listener_identity" {
-  description = "Names and addresses which the Vault listener certificate carries on both runtimes: the common name, the DNS names, and the IP addresses. The Talos runtime adds the Service names of the chart."
+  description = "Names and addresses which the Vault listener certificate contains on both runtimes: the common name, the DNS names, and the IP addresses. The Talos runtime adds the Service names of the chart."
   value = {
     common_name  = module.terraform_layer_context.cluster_fqdn
     dns_names    = local.vault_listener_dns_names
@@ -28,7 +28,7 @@ output "listener_identity" {
 }
 
 output "pki_identity" {
-  description = "Identity of the intermediate CA which the Downstream Vault holds, for the layers which create the PKI engine and its policies."
+  description = "Identity of the intermediate CA which the Downstream Vault hosts, for the layers which create the PKI engine and its policies."
   value       = var.pki_identity
 }
 
@@ -55,7 +55,7 @@ output "talos_cluster" {
 }
 
 output "generic_cluster" {
-  description = "Facts of the VM runtime, with null fields on the Talos runtime: whether the runtime applies, the node addresses, the Node Exporter scrape targets, the KV path of the init leaf which holds the Shamir keys, and the Ansible inventory and unseal variables file which the platform CLI reads."
+  description = "Facts of the VM runtime, with null fields on the Talos runtime: whether the runtime applies, the node addresses, the Node Exporter scrape targets, the KV path of the init leaf which stores the Shamir keys, and the Ansible inventory and unseal variables file which the platform CLI reads."
   value = {
     enabled                  = !local.is_runtime_talos
     node_ips                 = local.is_runtime_talos ? null : module.terraform_layer_context.cluster_network.node_ips

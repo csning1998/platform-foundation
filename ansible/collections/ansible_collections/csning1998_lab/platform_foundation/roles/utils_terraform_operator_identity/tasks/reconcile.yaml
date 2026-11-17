@@ -6,7 +6,7 @@
     that:
       - utils_terraform_operator_identity_reconcile_identities | length > 0
     fail_msg: >-
-      utils_terraform_operator_identity_reconcile_identities MUST list every identity which stays registered.
+      utils_terraform_operator_identity_reconcile_identities MUST list every identity which remains registered.
       An empty map would remove every operator identity of this agent instance.
 
 - name: "Block R1: Remove Undeclared Operator Entries from the SPIRE Server"
@@ -21,7 +21,7 @@
       ansible.builtin.include_role:
         name: csning1998_lab.platform_foundation.utils_spire_server_command
       vars:
-        # The anchor holds the coordinates shared by every call, and each call adds its own arguments.
+        # The anchor contains the coordinates shared by every call, and each call adds its own arguments.
         <<: &server_command_vars
           utils_spire_server_command_kind: "{{ utils_terraform_operator_identity_spire_server_kind }}"
           utils_spire_server_command_parent_ssh_host: "{{ spire_parent_ssh_host | default('') }}"
@@ -42,7 +42,7 @@
         fail_msg: "The SPIRE server returned no entry list."
       when: not ansible_check_mode
 
-    # The agent of this instance is the parent of every declared entry. Entries of other agents stay untouched.
+    # The agent of this instance is the parent of every declared entry. Entries of other agents remain untouched.
     - name: "Step R1d. Select the undeclared operator entries of this agent"
       vars:
         _entries: "{{ (utils_spire_server_command_result.stdout | from_json).entries | default([]) }}"
@@ -80,7 +80,7 @@
   rescue:
     - name: "Block R1: Remove Undeclared Operator Entries failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block R2: Remove Undeclared Operator Wrappers from This Host"
   become: true
@@ -137,4 +137,4 @@
   rescue:
     - name: "Block R2: Remove Undeclared Operator Wrappers failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

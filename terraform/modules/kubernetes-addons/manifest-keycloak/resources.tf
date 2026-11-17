@@ -1,5 +1,5 @@
 
-# Plain Kubernetes manifests of Keycloak and of the PostgreSQL which holds its database, with neither a Helm chart
+# Plain Kubernetes manifests of Keycloak and of the PostgreSQL which stores its database, with neither a Helm chart
 # nor the Keycloak Operator. Upstream publishes no chart of the server, and the chart of the Operator is experimental.
 locals {
   database_name   = "keycloak"
@@ -152,7 +152,7 @@ resource "kubernetes_deployment_v1" "keycloak" {
       }
 
       spec {
-        # The root filesystem of every container is read-only, hence the Keycloak home lives in an emptyDir.
+        # The root filesystem of every container is read-only, hence the Keycloak home resides in an emptyDir.
         # The first init container copies the home of the image into the emptyDir.
         # The copy omits -a, because the non-root user cannot change the times of the emptyDir root, which root owns.
         init_container {

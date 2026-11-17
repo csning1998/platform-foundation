@@ -119,7 +119,7 @@
       no_log: true
 
     # The JWT payload is base64url without padding, and the filter takes standard base64 with padding.
-    - name: "Step V2. Assert that each JWT-SVID carries the issuer which the Downstream Vault binds"
+    - name: "Step V2. Assert that each JWT-SVID contains the issuer which the Downstream Vault binds"
       vars:
         _payload: "{{ (item.stdout | from_json).jwt.split('.')[1] | replace('-', '+') | replace('_', '/') }}"
         _claims: "{{ (_payload ~ ('=' * ((4 - (_payload | length) % 4) % 4))) | b64decode | from_json }}"

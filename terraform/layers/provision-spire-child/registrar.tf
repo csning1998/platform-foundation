@@ -60,7 +60,7 @@ resource "kubernetes_secret_v1" "registrar_token" {
   wait_for_service_account_token = true
 }
 
-# The kubeconfig lives in the Downstream KV. The operators of the downstream components read the path with their own policy.
+# The kubeconfig resides in the Downstream KV. The operators of the downstream components read the path with their own policy.
 resource "vault_kv_secret_v2" "registrar" {
   provider = vault.downstream
 

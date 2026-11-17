@@ -10,7 +10,7 @@ import (
 	"platform/internal/operatorops"
 )
 
-// runLayerTerraform replaces the process with terraform, which keeps the JWT-SVID out of every child but terraform.
+// runLayerTerraform replaces the process with terraform, which withholds the JWT-SVID from every child but terraform.
 func (a *app) runLayerTerraform(ctx context.Context, args []string) error {
 	layerDir, err := os.Getwd()
 	if err != nil {

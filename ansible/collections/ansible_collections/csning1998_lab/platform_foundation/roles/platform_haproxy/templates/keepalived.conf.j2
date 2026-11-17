@@ -38,7 +38,7 @@ vrrp_instance VI_{{ segment.name | upper | replace('-', '_') }} {
 
     {# Ansible fact keys replace non-alphanumeric characters with underscores. #}
     {% set fact_key = segment.interface_alias | replace('-', '_') | replace('.', '_') %}
-    {# The interface already carries a static address assigned by cloud-init, read from OS facts. #}
+    {# The interface already has a static address assigned by cloud-init, read from OS facts. #}
     unicast_src_ip {{ ansible_facts[fact_key]['ipv4']['address'] }}
     unicast_peer {
 {% for host in groups['haproxy'] %}

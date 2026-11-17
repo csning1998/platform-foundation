@@ -148,7 +148,7 @@ resource "kubernetes_manifest" "owner_registration_policy" {
         },
         {
           expression = "request.operation == 'DELETE' || object.spec.spiffeID.matches(variables.ownerID)"
-          message    = "spiffeID MUST stay below the owner prefix"
+          message    = "spiffeID MUST remain below the owner prefix"
         },
         {
           expression = "request.operation == 'CREATE' || oldObject.spec.spiffeID.matches(variables.ownerID)"

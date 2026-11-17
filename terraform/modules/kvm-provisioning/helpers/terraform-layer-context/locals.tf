@@ -53,7 +53,7 @@ locals {
 locals {
   downstream_vault_endpoint = var.downstream_vault_service_vip != null ? "https://${var.downstream_vault_service_vip}:443" : null
 
-  # A cluster without SSH, such as a Talos cluster, does not carry a guest username.
+  # A cluster without SSH, such as a Talos cluster, lacks a guest username.
   security_vm_credentials = {
     username = lookup(var.guest_usernames, local.cluster_identity.cluster_name, null)
   }

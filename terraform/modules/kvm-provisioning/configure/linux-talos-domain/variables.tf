@@ -52,7 +52,7 @@ variable "talos_cluster_vm_config" {
       for node in values(var.talos_cluster_vm_config.nodes) :
       length(node.interfaces) >= 2 && length(node.interfaces[1].addresses) >= 1
     ])
-    error_message = "Every node requires at least two interfaces, with interfaces[1] (the HostOnly interface) carrying at least one static address."
+    error_message = "Every node requires at least two interfaces, with interfaces[1] (the HostOnly interface) having at least one static address."
   }
 }
 

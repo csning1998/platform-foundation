@@ -1,6 +1,6 @@
 
 # A KV mount and path are coordinates of the secret. nonsensitive() strips the blanket mark
-# the module puts on the whole secret object.
+# which the module applies to the whole secret object.
 output "credential_paths" {
   description = "Downstream Vault KV mount and path of every generated credential, keyed by service name."
   value = {

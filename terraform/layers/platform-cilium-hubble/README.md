@@ -14,7 +14,7 @@ The Kubernetes auth mount is the resource `module.vault_auth_cilium_hubble.vault
 
 The path of the Kubernetes auth mount is `<cluster_name>-service-account-token-provider`, which resolves to `platform-foundation-cilium-hubble-service-account-token-provider`.
 
-Terraform fails with `path is already in use` when the Downstream Vault holds the mount and the state does not.
+Terraform fails with `path is already in use` when the Downstream Vault contains the mount and the state does not.
 
 The mount MUST be imported into the state before the first apply.
 

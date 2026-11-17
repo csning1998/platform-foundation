@@ -1,5 +1,5 @@
 ---
-# Read Keycloak credentials from Downstream Vault to keep secrets out of Terraform state.
+# Read Keycloak credentials from Downstream Vault to exclude secrets from Terraform state.
 - name: "Section 0. Read the Keycloak credentials from the Downstream Vault"
   ansible.builtin.include_role:
     name: csning1998_lab.platform_foundation.utils_vault_kv2_read

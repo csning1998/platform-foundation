@@ -63,4 +63,4 @@
   rescue:
     - name: "Block D1: Join this node to the MicroK8s HA cluster failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

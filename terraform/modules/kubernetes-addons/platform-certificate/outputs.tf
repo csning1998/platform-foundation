@@ -1,6 +1,6 @@
 
 output "secret_name" {
-  description = "Name of the Secret which holds tls.crt, tls.key, and ca.crt."
+  description = "Name of the Secret which contains tls.crt, tls.key, and ca.crt."
   value       = kubernetes_manifest.certificate.manifest.spec.secretName
 }
 

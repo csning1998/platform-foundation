@@ -26,7 +26,7 @@ utils_terraform_operator_identity_spire_agent_bin: "/usr/local/bin/spire-agent"
 # selector isolation, each consumer MUST execute under a dedicated system account selected via unix:uid.
 utils_terraform_operator_identity_service_user: "svc-{{ utils_terraform_operator_identity_name }}"
 
-# tasks/reconcile.yaml input: every identity which stays registered through the agent instance of this host,
+# tasks/reconcile.yaml input: every identity which remains registered through the agent instance of this host,
 # mapping the identity name to its SPIFFE path. The caller passes the complete declared set.
 utils_terraform_operator_identity_reconcile_identities: {}
 

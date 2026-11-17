@@ -14,7 +14,7 @@ utils_spire_server_command_no_log: true
 utils_spire_server_command_parent_ssh_host: ""
 utils_spire_server_command_parent_socket_path: ""
 
-# Kind child. The kubeconfig of the Child cluster lives in the KV of the operator Vault.
+# Kind child. The kubeconfig of the Child cluster resides in the KV of the operator Vault.
 # The role reads the kubeconfig with the JWT-SVID of the Terraform operator.
 utils_spire_server_command_child_kubeconfig_kv_path: ""
 utils_spire_server_command_child_namespace: "spire-server"

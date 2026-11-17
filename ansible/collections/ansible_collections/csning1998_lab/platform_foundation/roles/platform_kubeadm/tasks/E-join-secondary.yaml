@@ -20,7 +20,7 @@
   rescue:
     - name: "E2. Prepare secondary master node for joining failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "E3. Join this node to the control plane"
   when: not platform_kubeadm_kubelet_conf_stat.stat.exists
@@ -59,7 +59,7 @@
   rescue:
     - name: "E3. Join this node to the control plane failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "E4. Set up kubeconfig on this secondary master"
   block:
@@ -96,7 +96,7 @@
   rescue:
     - name: "E4. Set up kubeconfig on this secondary master failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "E5. Upgrade local kubelet configuration from cluster ConfigMap"
   ansible.builtin.command: >-

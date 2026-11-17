@@ -20,7 +20,7 @@
 
     # A certificate from a rebuilt pki-leaf-platform fails the chain check.
     # A certificate inside the renewal window fails checkend.
-    - name: "D1c. Verify the held listener certificate against the CA chain"
+    - name: "D1c. Verify the existing listener certificate against the CA chain"
       ansible.builtin.command:
         argv:
           - openssl
@@ -32,7 +32,7 @@
       changed_when: false
       failed_when: false
 
-    - name: "D1d. Check that the held listener certificate outlives the renewal window"
+    - name: "D1d. Check that the existing listener certificate outlives the renewal window"
       ansible.builtin.command:
         argv:
           - openssl
@@ -120,7 +120,7 @@
   rescue:
     - name: "Block D1: OIDC Discovery Provider Directory, Certificate & Service Configuration failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block D2: Start OIDC Discovery Provider Service"
   become: true
@@ -138,4 +138,4 @@
   rescue:
     - name: "Block D2: Start OIDC Discovery Provider Service failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

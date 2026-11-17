@@ -9,7 +9,7 @@ variable "helm_config" {
   })
 }
 
-# The raft settings stay apart from vault_config, since the listener certificate reads listener_names before the TLS Secret exists.
+# The raft settings are separated from vault_config because the listener certificate reads listener_names before the TLS Secret exists.
 variable "raft_config" {
   description = "Raft cluster settings: the number of servers, which form one raft cluster, and the cluster domain under which the peers join."
   type = object({
@@ -24,7 +24,7 @@ variable "raft_config" {
 }
 
 variable "vault_config" {
-  description = "Vault server settings. The init container of the transit seal runs the server image, hence one image_tag pins both. The TLS Secret holds tls.crt, tls.key, and ca.crt, and its certificate MUST carry the dns_names of the output listener_names for the CLI inside each server and the raft join."
+  description = "Vault server settings. The init container of the transit seal runs the server image, hence one image_tag pins both. The TLS Secret contains tls.crt, tls.key, and ca.crt, and its certificate MUST contain the dns_names of the output listener_names for the CLI inside each server and the raft join."
   type = object({
     tls_secret_name = string
     storage_class   = string
@@ -35,7 +35,7 @@ variable "vault_config" {
 }
 
 variable "service_config" {
-  description = "Service which publishes the active Vault server on an address which a node already holds, for example the Talos control plane VIP. Cilium kube-proxy replacement serves the externalIPs of a Service."
+  description = "Service which publishes the active Vault server on an address which is already assigned to a node, for example the Talos control plane VIP. Cilium kube-proxy replacement serves the externalIPs of a Service."
   type = object({
     external_ip = string
     port        = optional(number, 443)

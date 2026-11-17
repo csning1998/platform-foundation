@@ -15,7 +15,7 @@
   rescue:
     - name: "Block A: Install Dependencies failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Install Vault Binary"
   become: true
@@ -70,7 +70,7 @@
   rescue:
     - name: "Block B: Install Vault Binary failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block C: Disable Swap"
   become: true
@@ -95,4 +95,4 @@
   rescue:
     - name: "Block C: Disable Swap failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

@@ -16,7 +16,7 @@ const (
 	talosconfigName = "talosconfig"
 )
 
-// Workstation holds the facts of the operator workstation which a cluster session reads.
+// Workstation contains the facts of the operator workstation which a cluster session reads.
 type Workstation struct {
 	// TenantsLayerDir is the directory of layer security-vault-downstream-tenants.
 	TenantsLayerDir string
@@ -55,7 +55,7 @@ func (w Workstation) OpenSession(ctx context.Context, arg string) (Session, erro
 }
 
 // ReadTargetCredential reads the cluster-config of target from the Vault which the coordinates name. The Downstream
-// token stays inside this process, and the session receives the files alone.
+// token remains inside this process, and the session receives the files alone.
 func (w Workstation) ReadTargetCredential(ctx context.Context, coordinates Coordinates, target operatorops.OperatorSubject) (Credential, error) {
 	op, err := coordinates.ResolveOperator(target)
 	if err != nil {
@@ -68,7 +68,7 @@ func (w Workstation) ReadTargetCredential(ctx context.Context, coordinates Coord
 	return ReadCredential(ctx, client, op.ClusterConfig)
 }
 
-// loginClusterVault returns a client of the Vault which holds the cluster-config of target.
+// loginClusterVault returns a client of the Vault which stores the cluster-config of target.
 func (w Workstation) loginClusterVault(ctx context.Context, coordinates Coordinates, target operatorops.OperatorSubject, op Operator) (*vaultapi.Client, error) {
 	if op.ClusterConfig.Vault == "bastion" {
 		return NewBastionClient(w.Getenv)

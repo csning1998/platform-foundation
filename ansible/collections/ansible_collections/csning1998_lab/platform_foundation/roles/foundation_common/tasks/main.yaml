@@ -5,5 +5,5 @@
 - name: "Observability: Install and enable Node Exporter"
   ansible.builtin.include_tasks: node-exporter.yaml
 
-- name: "Observability: Install Grafana Alloy log-shipping agent"
+- name: "Observability: Install Grafana Alloy log-forwarding agent"
   ansible.builtin.include_tasks: alloy-agent.yaml

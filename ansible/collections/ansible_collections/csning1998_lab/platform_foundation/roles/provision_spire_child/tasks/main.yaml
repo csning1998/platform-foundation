@@ -57,7 +57,7 @@
   rescue:
     - name: "Deliver k8s_psat kubeconfig failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Register node alias and downstream entry"
   become: true
@@ -157,4 +157,4 @@
   rescue:
     - name: "Register node alias and downstream entry failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

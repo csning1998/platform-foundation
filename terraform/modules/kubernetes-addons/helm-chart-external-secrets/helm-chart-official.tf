@@ -1,6 +1,6 @@
 
 # The chart renders to a manifest, since Talos applies the manifest at bootstrap before the API server exists.
-# The platform consumes ExternalSecret and ClusterSecretStore alone. The CRDs of the other kinds stay out of the machine configuration.
+# The platform consumes ExternalSecret and ClusterSecretStore alone. The machine configuration excludes the CRDs of the other kinds.
 data "helm_template" "external_secrets" {
   name         = "external-secrets"
   namespace    = var.helm_config.namespace

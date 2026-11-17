@@ -102,7 +102,7 @@
   rescue:
     - name: "Block A: Install SPIRE Server Binary failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 # Documentation: documentation/architecture/platform-spire-parent-frontend.md Section 4 Item A.
 - name: "Block B: Install SPIRE OIDC Discovery Provider Binary"
@@ -184,4 +184,4 @@
   rescue:
     - name: "Block B: Install SPIRE OIDC Discovery Provider Binary failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

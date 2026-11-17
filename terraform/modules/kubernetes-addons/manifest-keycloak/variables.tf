@@ -1,6 +1,6 @@
 
 variable "keycloak_config" {
-  description = "Keycloak server. The hostname is the public FQDN which the issued tokens carry. The TLS Secret holds tls.crt and tls.key, and Keycloak serves HTTPS on https_port and the management interface on management_port. The resources apply to the server and to both init containers, and each map MUST set cpu and memory."
+  description = "Keycloak server. The hostname is the public FQDN which the issued tokens contain. The TLS Secret contains tls.crt and tls.key, and Keycloak serves HTTPS on https_port and the management interface on management_port. The resources apply to the server and to both init containers, and each map MUST set cpu and memory."
   type = object({
     namespace       = string
     image           = string
@@ -24,7 +24,7 @@ variable "keycloak_config" {
 }
 
 variable "database_config" {
-  description = "In-cluster PostgreSQL which holds the Keycloak database. The volume claim binds to storage_class_name."
+  description = "In-cluster PostgreSQL which stores the Keycloak database. The volume claim binds to storage_class_name."
   type = object({
     image              = string
     storage_class_name = string
@@ -33,7 +33,7 @@ variable "database_config" {
 }
 
 variable "credential_secret" {
-  description = "Secret in the Keycloak namespace which holds the bootstrap administrator and the database credentials, with the key name of each field."
+  description = "Secret in the Keycloak namespace which contains the bootstrap administrator and the database credentials, with the key name of each field."
   type = object({
     name               = string
     admin_user_key     = string
@@ -44,7 +44,7 @@ variable "credential_secret" {
 }
 
 variable "service_config" {
-  description = "Service which publishes Keycloak on an address which a node already holds, for example the Talos control plane VIP. Cilium kube-proxy replacement serves the externalIPs of a Service."
+  description = "Service which publishes Keycloak on an address which is already assigned to a node, for example the Talos control plane VIP. Cilium kube-proxy replacement serves the externalIPs of a Service."
   type = object({
     external_ip = string
     port        = optional(number, 443)

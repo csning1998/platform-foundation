@@ -18,7 +18,7 @@ import (
 	"platform/internal/ui"
 )
 
-// newGuestCredentialClient returns a Vault client of a fake KV v2 leaf at secret/<guestCredentialPath> holding data.
+// newGuestCredentialClient returns a Vault client of a fake KV v2 leaf at secret/<guestCredentialPath> containing data.
 func newGuestCredentialClient(t *testing.T, data map[string]any) *vaultapi.Client {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

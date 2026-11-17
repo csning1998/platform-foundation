@@ -21,7 +21,7 @@ variable "audience" {
 }
 
 variable "token_policies" {
-  description = "Names of the existing policies which the token carries besides default. The caller does not write the policies through this module."
+  description = "Names of the existing policies which are attached to the token besides default. The caller does not write the policies through this module."
   type        = list(string)
 
   validation {

@@ -26,7 +26,7 @@ variable "gateway_config" {
 }
 
 variable "oauth2_proxy_config" {
-  description = "oauth2-proxy container parameters. The image MUST carry a digest."
+  description = "oauth2-proxy container parameters. The image reference MUST include a digest."
   type = object({
     image = string
     port  = number

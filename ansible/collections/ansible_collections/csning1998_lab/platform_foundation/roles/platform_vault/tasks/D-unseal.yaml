@@ -59,7 +59,7 @@
   rescue:
     - name: "Block D1: Unseal Primary Node failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block D2: Raft Join and Unseal Replica Nodes"
   become: true
@@ -127,7 +127,7 @@
   rescue:
     - name: "Block D2: Raft Join and Unseal Replica Nodes failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block D3: Verify Vault Cluster Availability"
   become: true
@@ -168,7 +168,7 @@
   rescue:
     - name: "Block D3: Verify Vault Cluster Availability failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
   always:
     - name: "D3b. Clean up temporary Vault CA file"

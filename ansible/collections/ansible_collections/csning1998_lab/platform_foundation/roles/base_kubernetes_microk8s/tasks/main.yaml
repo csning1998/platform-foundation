@@ -38,7 +38,7 @@
   rescue:
     - name: "Block Pre: Revive Snapd (Required for MicroK8s) failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block A: Ensure Snapd service is ready"
   become: true
@@ -59,7 +59,7 @@
   rescue:
     - name: "Block A: Ensure Snapd service is ready failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Install MicroK8s and create aliases"
   become: true
@@ -91,7 +91,7 @@
   rescue:
     - name: "Block B: Install MicroK8s and create aliases failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block C: Add SSH user to the 'microk8s' group for basic access"
   become: true
@@ -105,7 +105,7 @@
   rescue:
     - name: "Block C: Add SSH user to the 'microk8s' group for basic access failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block D: Reset MicroK8s state for golden image"
   become: true
@@ -133,4 +133,4 @@
   rescue:
     - name: "Block D: Reset MicroK8s state for golden image failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

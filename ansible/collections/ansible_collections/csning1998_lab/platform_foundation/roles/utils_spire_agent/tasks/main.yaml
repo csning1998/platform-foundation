@@ -120,7 +120,7 @@
   rescue:
     - name: "Block A: Install SPIRE Agent Binary failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Directory Layout"
   become: true
@@ -144,7 +144,7 @@
   rescue:
     - name: "Block B: Directory Layout failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block C: SELinux Labeling for the Workload API Socket Directory"
   become: true
@@ -165,7 +165,7 @@
   rescue:
     - name: "Block C: SELinux Labeling failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block D: Determine Bootstrap State"
   become: true
@@ -196,7 +196,7 @@
           ansible.builtin.include_role:
             name: csning1998_lab.platform_foundation.utils_spire_server_command
           vars:
-            # The anchor holds the coordinates shared by every call, and each call adds its own arguments.
+            # The anchor contains the coordinates shared by every call, and each call adds its own arguments.
             <<: &server_command_vars
               utils_spire_server_command_kind: "{{ utils_spire_agent_server_kind }}"
               utils_spire_server_command_parent_ssh_host: "{{ spire_parent_ssh_host | default('') }}"
@@ -258,7 +258,7 @@
   rescue:
     - name: "Block D: Determine Bootstrap State failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block E: Provision join_token"
   when: not utils_spire_agent_already_attested
@@ -322,7 +322,7 @@
           Unable to generate a join_token via `spire-server token generate`
           on the {{ utils_spire_agent_server_kind }} SPIRE server,
           or unable to persist the token to {{ utils_spire_agent_join_token_vault_path }} in the operator Vault.
-          Reason: {{ ansible_failed_result.msg | default('see task output above') }}
+          Reason: {{ ansible_failed_result.msg | default('refer to the task output above') }}
 
 - name: "Block F: Fetch Trust Bundle from the SPIRE server"
   become: true
@@ -335,11 +335,11 @@
         utils_spire_server_command_arguments: "bundle show"
         utils_spire_server_command_tolerate_failure: false
 
-    - name: "Step F1a. Assert that the bundle holds a certificate"
+    - name: "Step F1a. Assert that the bundle contains a certificate"
       ansible.builtin.assert:
         that:
           - "'BEGIN CERTIFICATE' in utils_spire_server_command_result.stdout"
-        fail_msg: "The trust bundle of the {{ utils_spire_agent_server_kind }} SPIRE server holds no certificate."
+        fail_msg: "The trust bundle of the {{ utils_spire_agent_server_kind }} SPIRE server lacks a certificate."
 
     - name: "Step F2. Deploy the trust bundle locally"
       ansible.builtin.copy:
@@ -352,7 +352,7 @@
   rescue:
     - name: "Block F: Fetch Trust Bundle failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block G: System & Service Configuration"
   become: true
@@ -379,7 +379,7 @@
   rescue:
     - name: "Block G: System & Service Configuration failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block H: Start SPIRE Agent Service"
   become: true
@@ -402,7 +402,7 @@
   rescue:
     - name: "Block H: Start SPIRE Agent Service failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block I: Validate SPIRE Agent Instance"
   become: true
@@ -419,4 +419,4 @@
   rescue:
     - name: "Block I: Validate SPIRE Agent Instance failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

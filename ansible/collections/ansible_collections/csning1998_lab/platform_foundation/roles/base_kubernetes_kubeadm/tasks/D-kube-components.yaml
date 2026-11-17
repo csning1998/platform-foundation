@@ -31,7 +31,7 @@
         name: "{{ _base_kubernetes_kubeadm_k8s_versioned_packages }}"
         state: present
 
-    - name: "Step 5. Hold Kubernetes package versions"
+    - name: "Step 5. Pin Kubernetes package versions"
       ansible.builtin.dpkg_selections:
         name: "{{ item }}"
         selection: hold
@@ -59,4 +59,4 @@
   rescue:
     - name: "Block D. Install Kubernetes components failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

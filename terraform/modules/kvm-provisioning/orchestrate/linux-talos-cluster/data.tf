@@ -35,7 +35,7 @@ data "talos_machine_configuration" "this" {
             image = "ghcr.io/siderolabs/installer:${var.talos_config.talos_version}"
           }
           # A node with network documents runs DHCP on declared interfaces alone, and the apply reaches the node on the
-          # NAT lease. The hostonly interface lives in the documents below, and service segments carry static addresses.
+          # NAT lease. The hostonly interface is declared in the documents below, and service segments use static addresses.
           network = {
             interfaces = concat(
               [{
@@ -70,7 +70,7 @@ data "talos_machine_configuration" "this" {
           inlineManifests = local.config_inline_manifests
         }
       }),
-      # The dnsmasq of the hostonly gateway holds the platform names, which the Talos default public resolvers lack.
+      # The dnsmasq of the hostonly gateway resolves the platform names, which the Talos default public resolvers lack.
       yamlencode({
         apiVersion  = "v1alpha1"
         kind        = "ResolverConfig"

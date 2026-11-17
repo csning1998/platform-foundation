@@ -31,7 +31,7 @@ resource "vault_pki_secret_backend_role" "cluster_issuer" {
   ou = var.pki_config.role_ou
 }
 
-# The suffix keeps the policy name apart from tenant policies which carry the plain cluster name.
+# The suffix keeps the policy name apart from tenant policies which use the plain cluster name.
 resource "vault_policy" "cluster_issuer" {
   count = var.pki_config.issuer_policy_name == null ? 1 : 0
 
@@ -82,10 +82,10 @@ resource "vault_kubernetes_auth_backend_role" "external_secrets" {
   token_max_ttl                    = 60 * 60
 }
 
-# The issuer signs at <mount>/<issue path>/<role>, and the role of the Kubernetes auth mount carries the same name as the PKI role.
+# The issuer signs at <mount>/<issue path>/<role>, and the role of the Kubernetes auth mount has the same name as the PKI role.
 check "issuer_role_matches_pki_role" {
   assert {
     condition     = local.pki_role_name == local.auth_role_cluster_issuer
-    error_message = "The PKI role MUST carry the name of the cluster, which is the role name of the ClusterIssuer."
+    error_message = "The PKI role MUST use the name of the cluster, which is the role name of the ClusterIssuer."
   }
 }
