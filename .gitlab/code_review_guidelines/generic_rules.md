@@ -6,8 +6,8 @@ Perform automated code review on the provided merge request diff.
 
 - Annotated diff of modified files follows below.
 - File boundaries are marked by: `=== File: <path> ===`
-- Added lines carry line numbers formatted as `[L   N]`.
-- Deleted lines carry empty line markers `[     ]`.
+- Added lines are prefixed with line numbers formatted as `[L   N]`.
+- Deleted lines are prefixed with empty line markers `[     ]`.
 
 ## Merge Request Intent
 

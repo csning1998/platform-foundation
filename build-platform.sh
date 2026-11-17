@@ -36,8 +36,8 @@ unset proxy_env
 
 # The scanner receives copies of the unignored files, the git history, and the coverage reports through podman cp,
 # which bind-mounts no host path and skips ignored trees such as .terraform, node_modules, and Packer output.
-# The copies carry the labels of the container and leave the host files out of reach of the analyzer.
-# The traps remove the scanner, whose stored configuration holds SONAR_TOKEN, on every exit path.
+# The copies receive the labels of the container and leave the host files out of reach of the analyzer.
+# The traps remove the scanner, whose stored configuration contains SONAR_TOKEN, on every exit path.
 scanner=""
 remove_scanner() { if [ -n "${scanner}" ]; then podman rm -f "${scanner}" >/dev/null 2>&1 || true; scanner=""; fi; }
 trap 'remove_scanner' EXIT
