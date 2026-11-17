@@ -14,7 +14,7 @@ import (
 
 const hostsNetworkXML = `<network><dns><host ip='172.16.125.250'><hostname>example-platform-spire-parent.dev</hostname></host></dns></network>`
 
-// hostsSyncConfig returns a sync configuration of a temporary hosts file which holds current.
+// hostsSyncConfig returns a sync configuration of a temporary hosts file which contains current.
 func hostsSyncConfig(t *testing.T, current string, listErr error) hostsops.SyncConfig {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "hosts")

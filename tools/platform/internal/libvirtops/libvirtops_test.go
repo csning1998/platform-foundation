@@ -14,7 +14,7 @@ type prefixCase struct {
 	want bool
 }
 
-// prefixCases derives every case from ProjectCode and therefore holds for any valid project code.
+// prefixCases derives every case from ProjectCode and therefore applies to any valid project code.
 func prefixCases() []prefixCase {
 	prefix := ProjectCode + "-"
 	cases := []prefixCase{

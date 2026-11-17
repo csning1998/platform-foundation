@@ -26,10 +26,10 @@ func (a *app) newWorkstation() clusterops.Workstation {
 	}
 }
 
-// reportSession prints the nodes of session, and warns when the talosconfig carries no endpoints.
+// reportSession prints the nodes of session, and warns when the talosconfig lacks endpoints.
 func (a *app) reportSession(session clusterops.Session) {
 	if session.NodesErr != nil {
-		a.out.Print(ui.Warn, "The talosconfig carries no endpoints, pass talosctl --endpoints: "+session.NodesErr.Error())
+		a.out.Print(ui.Warn, "The talosconfig lacks endpoints, pass talosctl --endpoints: "+session.NodesErr.Error())
 	}
 	a.out.Print(ui.Info, fmt.Sprintf("Cluster %s/%s, nodes: %s", session.Target.Service, session.Target.Component,
 		cmp.Or(strings.Join(session.Nodes, " "), "unresolved")))

@@ -84,7 +84,7 @@ func TestPurge_RemovesIncludeDirectivesOfClustersEvenWithoutTheHostBlockFile(t *
 		t.Fatalf("read config: %v", err)
 	}
 	if strings.Contains(string(data), clusterInclude) {
-		t.Errorf("config still holds %q", clusterInclude)
+		t.Errorf("config still contains %q", clusterInclude)
 	}
 	if !strings.Contains(string(data), foreignInclude) || !strings.Contains(string(data), "Host example") {
 		t.Errorf("config lost content outside the clusters of this repository:\n%s", data)

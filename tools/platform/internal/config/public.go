@@ -7,7 +7,7 @@ import (
 
 var (
 	// ErrSecretKey reports a key whose value MUST NOT leave the process, for example a Vault token.
-	ErrSecretKey = errors.New("config: the key holds a secret")
+	ErrSecretKey = errors.New("config: the key contains a secret")
 	// ErrKeyUndefined reports a key which the .env file does not declare.
 	ErrKeyUndefined = errors.New("config: the key is undefined")
 )

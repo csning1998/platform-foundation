@@ -253,7 +253,7 @@ func TestDiffHosts_RejectsMissingFile(t *testing.T) {
 	}
 }
 
-// TestApplyHosts_PreservesInodeAndCreatesBackup covers the inode of /etc/hosts, which carries the SELinux label of the file.
+// TestApplyHosts_PreservesInodeAndCreatesBackup covers the inode of /etc/hosts, which has the SELinux label of the file.
 func TestApplyHosts_PreservesInodeAndCreatesBackup(t *testing.T) {
 	original := "127.0.0.1 localhost\n"
 	candidate := original + "\n" + testBlock
@@ -333,7 +333,7 @@ func syncConfig(path string, documents []string, listErr error) SyncConfig {
 	}
 }
 
-// currentHostsFile returns a hosts file whose managed block already holds the records of networkXML.
+// currentHostsFile returns a hosts file whose managed block already contains the records of networkXML.
 func currentHostsFile(t *testing.T) string {
 	t.Helper()
 	records, err := ParseDNSRecords(networkXML, prefix)
@@ -370,7 +370,7 @@ func TestSync_RewritesManagedBlock(t *testing.T) {
 	}
 }
 
-// assertSyncOutcome fails unless the hosts file at path matches wantWritten and a change carries the stale line in its diff.
+// assertSyncOutcome fails unless the hosts file at path matches wantWritten and a change contains the stale line in its diff.
 func assertSyncOutcome(t *testing.T, path, current string, got SyncResult, wantWritten bool) {
 	t.Helper()
 	content, err := os.ReadFile(path)

@@ -137,7 +137,7 @@ func readOperatorTargets(t *testing.T) map[OperatorSubject]bool {
 		}
 		matches := operatorTargetRe.FindAllStringSubmatch(string(content)[start:start+end], -1)
 		if len(matches) == 0 {
-			t.Fatalf("%s of %s holds no target", list.local, list.layer)
+			t.Fatalf("%s of %s lacks a target", list.local, list.layer)
 		}
 		for _, m := range matches {
 			subject := OperatorSubject{Service: m[1], Component: m[2]}
@@ -150,7 +150,7 @@ func readOperatorTargets(t *testing.T) map[OperatorSubject]bool {
 	return targets
 }
 
-// layerFacts holds what the drift rules inspect of one layer of the repository.
+// layerFacts contains what the drift rules inspect of one layer of the repository.
 type layerFacts struct {
 	name    string
 	source  string
@@ -286,8 +286,8 @@ func TestFetchJWT_RejectsOutputWithoutJWT(t *testing.T) {
 	}
 }
 
-// TestFetchJWT_KeepsOutputOutOfErrorMessage covers output which fails to parse and MAY still hold a token.
-func TestFetchJWT_KeepsOutputOutOfErrorMessage(t *testing.T) {
+// TestFetchJWT_ExcludesOutputFromErrorMessage covers output which fails to parse and MAY still contain a token.
+func TestFetchJWT_ExcludesOutputFromErrorMessage(t *testing.T) {
 	for _, c := range []struct{ name, body string }{
 		{"truncated object", `printf '{"jwt":"eyJsecret.payload.sig"'`},
 		{"non-string jwt", `printf '{"jwt":["eyJsecret.payload.sig"]}'`},
@@ -371,7 +371,7 @@ func TestBuildTerraformEnv_InjectsJWTToken(t *testing.T) {
 	}
 }
 
-// prepareFixture holds a layer directory, a wrapper directory, and a PATH with a fake terraform.
+// prepareFixture contains a layer directory, a wrapper directory, and a PATH with a fake terraform.
 type prepareFixture struct {
 	cfg       Config
 	layerDir  string
@@ -379,7 +379,7 @@ type prepareFixture struct {
 	marker    string
 }
 
-// keycloakSubjectLocals declares the operator of keycloak/frontend in a layer whose name carries neither field.
+// keycloakSubjectLocals declares the operator of keycloak/frontend in a layer whose name contains neither field.
 const keycloakSubjectLocals = "locals {\n  terraform_operator_subject = { service = \"keycloak\", component = \"frontend\" }\n}\n"
 
 func newPrepareFixture(t *testing.T, locals string) prepareFixture {

@@ -95,7 +95,7 @@ func EnsureServices(out *ui.Printer) error {
 }
 
 // ListActiveNetworkXML returns the XML document of every active network on qemu:///system. The XML of an
-// inactive network carries no DNS record which dnsmasq serves.
+// inactive network lacks a DNS record which dnsmasq serves.
 func ListActiveNetworkXML() ([]string, error) {
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
