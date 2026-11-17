@@ -1,6 +1,6 @@
 
-# Declarations of the Talos runtime alone. Each data source, ephemeral resource, resource, and module carries
-# count = local.is_runtime_talos ? 1 : 0, and every local below stays null on the VM runtime.
+# Declarations of the Talos runtime alone. Each data source, ephemeral resource, resource, and module declares
+# count = local.is_runtime_talos ? 1 : 0, and every local below remains null on the VM runtime.
 locals {
   vault_downstream_talos_cluster = local.state.platform_vault_downstream_frontend.talos_cluster
 
@@ -10,7 +10,7 @@ locals {
     vault                  = "https://helm.releases.hashicorp.com"
   }
 
-  # Each registry field holds one category in JSON. The facts are not secret, while the provider marks every KV value as sensitive.
+  # Each registry field stores one category in JSON. The facts are not secret, while the provider marks every KV value as sensitive.
   registry_bastion = local.is_runtime_talos ? {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion[0].data) : field => jsondecode(value)
   } : null
@@ -152,7 +152,7 @@ module "platform_cluster_issuer" {
   issuer_config = local.vault_downstream_talos_cluster.cluster_issuer
 }
 
-# The raft data stays on the Talos user volume of each node, which outlives the pods.
+# The raft data resides on the Talos user volume of each node, which outlives the pods.
 module "local_path_provisioner" {
   count      = local.is_runtime_talos ? 1 : 0
   source     = "../../modules/kubernetes-addons/local-path-provisioner"
@@ -182,7 +182,7 @@ resource "kubernetes_namespace_v1" "vault" {
   }
 }
 
-# pki-leaf-platform rejects a loopback and a bare name, hence the certificate carries the cluster domain names of the chart.
+# pki-leaf-platform rejects a loopback and a bare name, hence the certificate contains the cluster domain names of the chart.
 module "vault_listener_certificate" {
   count  = local.is_runtime_talos ? 1 : 0
   source = "../../modules/kubernetes-addons/platform-certificate"

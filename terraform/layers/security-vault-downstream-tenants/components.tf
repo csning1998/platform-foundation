@@ -32,7 +32,7 @@ locals {
 
   child_tenants = { for name, t in local.tenants : name => t if t.issuer == "child" }
 
-  # The JWT mount of the SPIRE Child carries the cluster name of the Child, which the owned auth scope of the Child operator covers.
+  # The JWT mount of the SPIRE Child uses the cluster name of the Child, which the owned auth scope of the Child operator covers.
   spire_child_jwt_auth = {
     mount_path = "${local.state.foundation_libvirt_resources.foundation_topology.identity["spire"]["child"].cluster_name}-jwt-svid-provider"
     audience   = local.state.foundation_libvirt_resources.foundation_topology.identity["vault-downstream"]["frontend"].cluster_name
@@ -68,7 +68,7 @@ locals {
     }
   }
 
-  # The join tokens stay below the cluster of the component on both SPIRE servers, and the Child operator also records the workstation agent.
+  # The join tokens remain below the cluster of the component on both SPIRE servers, and the Child operator also records the workstation agent.
   component_operator_paths = {
     for key, operator in local.component_operators : key => merge(
       {

@@ -14,7 +14,7 @@ resource "harbor_config_auth" "main" {
   oidc_user_claim               = "preferred_username"
   oidc_groups_claim             = "roles"
 
-  # The roles claim carries the client roles of Harbor, and the client role admin grants system administrator privileges.
+  # The roles claim contains the client roles of Harbor, and the client role admin grants system administrator privileges.
   oidc_admin_group = "admin"
 }
 

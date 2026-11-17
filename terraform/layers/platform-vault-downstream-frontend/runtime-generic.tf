@@ -1,5 +1,5 @@
 
-# Declarations of the VM runtime alone. Each resource and module carries count = local.is_runtime_talos ? 0 : 1.
+# Declarations of the VM runtime alone. Each resource and module declares count = local.is_runtime_talos ? 0 : 1.
 # Ansible issues the listener certificate through the Vault Proxy, and initializes and unseals the raft cluster with the
 # Shamir keys of the init leaf. Neither the private key nor the init secrets enter a Terraform state.
 locals {

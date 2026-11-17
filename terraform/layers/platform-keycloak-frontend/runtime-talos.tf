@@ -1,5 +1,5 @@
 
-# Declarations of the Talos runtime alone. Each resource and module carries count = local.is_runtime_talos ? 1 : 0.
+# Declarations of the Talos runtime alone. Each resource and module declares count = local.is_runtime_talos ? 1 : 0.
 resource "terraform_data" "talos_inputs_validation" {
   count = local.is_runtime_talos ? 1 : 0
   input = local.keycloak_cluster_runtime

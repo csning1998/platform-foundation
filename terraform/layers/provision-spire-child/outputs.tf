@@ -20,6 +20,6 @@ output "spire_child_agent_endpoint" {
 }
 
 output "spire_child_registrar_kv_path" {
-  description = "Downstream KV path of the kubeconfig which the registrar of the Child holds, for the roles that run spire-server in the pod of the Child server."
+  description = "Downstream KV path of the kubeconfig of the registrar of the Child, for the roles that run spire-server in the pod of the Child server."
   value       = local.spire_child_kv_paths.registrar
 }

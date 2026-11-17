@@ -1,5 +1,5 @@
 
-# Declarations of the Talos runtime alone. Each resource and module carries count = local.is_runtime_talos ? 1 : 0.
+# Declarations of the Talos runtime alone. Each resource and module declares count = local.is_runtime_talos ? 1 : 0.
 locals {
   # The Downstream Vault precedes Harbor Origin, hence the charts come from the upstream registries.
   vault_downstream_chart_repository = {
@@ -59,7 +59,7 @@ module "helm_chart_cilium" {
 }
 
 # cert-manager issues the Vault listener certificate from pki-leaf-platform, since the Downstream Vault cannot sign its own listener.
-# The Kubernetes auth mount lives in the owned scope of the tenant, which admits the issuer policy of pki-leaf-platform.
+# The Kubernetes auth mount resides in the owned scope of the tenant, which admits the issuer policy of pki-leaf-platform.
 module "vault_kubernetes_auth_talos" {
   count     = local.is_runtime_talos ? 1 : 0
   source    = "../../modules/vault-provisioning/vault-kubernetes-auth"

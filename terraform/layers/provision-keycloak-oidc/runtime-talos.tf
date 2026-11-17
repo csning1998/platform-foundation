@@ -1,5 +1,5 @@
 # Keycloak workload of the Talos runtime. On the VM runtime the platform layer deploys Keycloak through Ansible,
-# hence every declaration below carries count = local.is_runtime_talos ? 1 : 0.
+# hence every declaration below declares count = local.is_runtime_talos ? 1 : 0.
 locals {
   keycloak_workload = {
     namespace         = "keycloak"
@@ -38,7 +38,7 @@ module "local_path_provisioner" {
   }
 }
 
-# The PKI role of keycloak-frontend admits the names of the component and IP SANs, hence the certificate also carries the VIP.
+# The PKI role of keycloak-frontend admits the names of the component and IP SANs, hence the certificate also contains the VIP.
 module "keycloak_listener_certificate" {
   count  = local.is_runtime_talos ? 1 : 0
   source = "../../modules/kubernetes-addons/platform-certificate"

@@ -7,7 +7,7 @@ resource "vault_mount" "kv" {
 }
 
 # The SPIRE Parent precedes the Downstream Vault, hence every workstation operator logs in through this mount.
-# The JWT-SVIDs of the SPIRE Parent carry the issuer which the server configuration of the SPIRE Parent sets.
+# The JWT-SVIDs of the SPIRE Parent contain the issuer which the server configuration of the SPIRE Parent sets.
 resource "vault_jwt_auth_backend" "spire_parent" {
   provider = vault.downstream
 

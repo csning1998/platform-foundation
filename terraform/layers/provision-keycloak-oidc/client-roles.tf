@@ -1,5 +1,5 @@
 # Each OIDC client owns its roles, and organization groups only receive grants of those roles. A reorganization
-# changes the grant table alone, and the token of a client carries the roles of that client and of no other client.
+# changes the grant table alone, and the token of a client contains the roles of the client alone.
 locals {
   keycloak_client_roles = merge([
     for client_key, roles in var.client_role_grants : {

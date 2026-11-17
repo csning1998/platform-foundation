@@ -17,7 +17,7 @@ resource "vault_jwt_auth_backend" "keycloak" {
 }
 
 # Authenticates every Keycloak user and delegates authorization to Identity Group mappings evaluated from the roles claim,
-# which carries the client roles of vault-infra granted to organization groups in provision-keycloak-oidc.
+# which contains the client roles of vault-infra granted to organization groups in provision-keycloak-oidc.
 resource "vault_jwt_auth_backend_role" "keycloak_user" {
   provider             = vault.downstream
   backend              = vault_jwt_auth_backend.keycloak.path
