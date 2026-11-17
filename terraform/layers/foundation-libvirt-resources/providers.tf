@@ -11,9 +11,6 @@ terraform {
     }
   }
   backend "http" {
-    address        = "https://gitlab.com/api/v4/projects/84608830/terraform/state/foundation-libvirt-resources"
-    lock_address   = "https://gitlab.com/api/v4/projects/84608830/terraform/state/foundation-libvirt-resources/lock"
-    unlock_address = "https://gitlab.com/api/v4/projects/84608830/terraform/state/foundation-libvirt-resources/lock"
     lock_method    = "POST"
     unlock_method  = "DELETE"
     retry_wait_min = 5

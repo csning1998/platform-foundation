@@ -17,7 +17,7 @@
 */
 
 /** Downstream OIDC Clients:
- * Declared on the owning component's `oidc_client` field in service_catalog
+ * Declared on the `oidc_client` field of the owning component in service_catalog
  * (foundation-libvirt-resources/terraform.tfvars), not in this layer. This layer
  * derives its client list from global_pki_map, so onboarding a new downstream
  * consumer requires no change here.

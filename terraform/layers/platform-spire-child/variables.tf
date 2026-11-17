@@ -1,4 +1,14 @@
 
+variable "gitlab_terraform_state_base" {
+  description = "Specifies the GitLab Terraform state API URL of the project hosting every state of this repository, without a trailing slash."
+  type        = string
+
+  validation {
+    condition     = can(regex("^https://[^/]+/.+/projects/[0-9]+/terraform/state$", var.gitlab_terraform_state_base))
+    error_message = "gitlab_terraform_state_base must match https://<host>/<api path>/projects/<project ID>/terraform/state."
+  }
+}
+
 variable "node_config" {
   description = "Hardware resources and IP offsets for Talos control plane nodes matching service catalog allocations."
   type = map(object({

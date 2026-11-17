@@ -265,16 +265,15 @@ The health check MUST print `Agent is healthy.`.
 9. The downloaded files MUST be deleted after the push.
 
 ```bash
-NAME=<state name>; PROJECT=84608830
 S=$(terraform state pull | jq -r .serial)
 for v in $(seq "$S" -1 1); do
   n=$(curl -s -H "Authorization: Bearer $TF_HTTP_PASSWORD" \
-    "https://gitlab.com/api/v4/projects/$PROJECT/terraform/state/$NAME/versions/$v" | jq -r '(.resources // []) | length')
+    "$TF_HTTP_ADDRESS/versions/$v" | jq -r '(.resources // []) | length')
   echo "serial=$v resources=$n"
 done
 umask 077; T=$(mktemp -d)
 curl -s -H "Authorization: Bearer $TF_HTTP_PASSWORD" \
-  "https://gitlab.com/api/v4/projects/$PROJECT/terraform/state/$NAME/versions/<serial>" -o "$T/restore.json"
+  "$TF_HTTP_ADDRESS/versions/<serial>" -o "$T/restore.json"
 jq -r '.lineage' "$T/restore.json"
 jq -r '.resources[] | select(.type == "libvirt_domain") | .instances[].attributes.uuid' "$T/restore.json"
 jq --argjson s "$((S + 1))" '.serial = $s' "$T/restore.json" > "$T/push.json"

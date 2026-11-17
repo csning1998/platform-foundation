@@ -1,22 +1,22 @@
 
 data "terraform_remote_state" "platform_spire_child" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/platform-spire-child" }
+  config  = { address = "${local._state_base}/platform-spire-child" }
 }
 
 data "terraform_remote_state" "security_vault_downstream_tenants" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-vault-downstream-tenants" }
+  config  = { address = "${local._state_base}/security-vault-downstream-tenants" }
 }
 
 data "terraform_remote_state" "platform_spire_parent" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/platform-spire-parent-frontend" }
+  config  = { address = "${local._state_base}/platform-spire-parent" }
 }
 
 data "terraform_remote_state" "security_vault_downstream_pki" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-pki" }
+  config  = { address = "${local._state_base}/security-vault-downstream-pki" }
 }
 
 ephemeral "vault_kv_secret_v2" "spire_child" {
@@ -27,7 +27,7 @@ ephemeral "vault_kv_secret_v2" "spire_child" {
 }
 
 # Cluster readiness checks MUST re-validate quorum convergence during apply operations
-# because concurrent disk I/O from sibling layers destabilizes etcd consensus.
+# because concurrent disk writes from sibling layers destabilize etcd consensus.
 ephemeral "talos_cluster_health" "this" {
   client_configuration = {
     ca_certificate     = ephemeral.vault_kv_secret_v2.spire_child.data["talos_ca_certificate_b64"]

@@ -1,8 +1,6 @@
 
-# GitLab HTTP backend base URL. Authentication credentials must be supplied via
-# `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD` environment variables.
 locals {
-  _state_base_platform_foundation = "https://gitlab.com/api/v4/projects/84608830/terraform/state"
+  _state_base = var.gitlab_terraform_state_base
 }
 
 locals {
@@ -88,7 +86,7 @@ locals {
 
   management_identities = toset(["oidc-admin", "oidc-auditor", "oidc-developer"])
 
-  # Extra ACL rules merged into each workload identity's generated policy, beyond the
+  # Extra ACL rules merged into the generated policy of each workload identity, beyond the
   # baseline PKI issue capability.
   workload_identity_extra_rules = {
     "oidc-admin" = {

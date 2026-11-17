@@ -449,7 +449,7 @@ Location: `ansible/collections/ansible_collections/csning1998_lab/platform_found
 
 ### Item D. Consuming Layer Requirements
 
-1. A consuming layer `data.tf` MUST declare a remote state data source targeting the state address `platform-spire-parent-frontend`, which layer `platform-spire-parent` keeps after its directory rename. The layer SHALL inject `spire_parent_node_ip`, `spire_trust_domain`, and `spire_server_port` into `ansible_extra_vars`.
+1. A consuming layer `data.tf` MUST declare a remote state data source targeting the state address `platform-spire-parent`. The layer SHALL inject `spire_parent_node_ip`, `spire_trust_domain`, and `spire_server_port` into `ansible_extra_vars`.
 2. The consuming layer `terraform apply` MUST execute after the completion of `platform-spire-parent` apply.
 3. Consuming Ansible plays MUST gate `utils_spire_agent` execution on the presence of required SPIRE connection variables under the `registered` tag.
 

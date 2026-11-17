@@ -1,8 +1,6 @@
 
-# GitLab HTTP backend base URL. Authentication credentials must be supplied via
-# `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD` environment variables.
 locals {
-  _state_base_platform_foundation = "https://gitlab.com/api/v4/projects/84608830/terraform/state"
+  _state_base = var.gitlab_terraform_state_base
 }
 
 locals {
@@ -28,7 +26,7 @@ locals {
 }
 
 # segments_map is reused from platform-haproxy-frontend.
-# The service catalog owns segments_map, not HAProxy or Cilium.
+# The service catalog owns segments_map. HAProxy and Cilium only consume segments_map.
 locals {
   network_segments_map = merge([
     for s_name, components in local.state.foundation_libvirt_resources.foundation_topology.identity : {
@@ -50,7 +48,7 @@ locals {
   cilium_hubble_cluster_identity = local.cilium_hubble_cluster_context.identity
   cilium_hubble_cluster_pki      = local.state.foundation_libvirt_resources.foundation_pki.map["${local.cilium_hubble_cluster_context.s_name}-${local.cilium_hubble_cluster_context.c_name}"]
 
-  # network_service_segments excludes the CLB cluster, which has no SSoT reservation.
+  # network_service_segments excludes the CLB cluster, which lacks an SSoT reservation.
   # The same defect exists on platform-haproxy-frontend and remains open.
   network_service_segments = [
     for name, seg in local.state.foundation_libvirt_resources.foundation_topology.segments : seg

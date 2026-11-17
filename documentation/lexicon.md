@@ -29,7 +29,7 @@ The call label of module `terraform-layer-context` is `terraform_layer_context`.
 3. The qualifier `downstream_` MUST mark a value which describes the Downstream Vault, for example `downstream_kv_paths` and `downstream_vault_endpoint`.
 4. A local which holds a value owned by the layer itself MUST NOT begin with the subject of the layer, since the subject is implied by the layer namespace.
 5. A runtime selection boolean MUST use the form `is_runtime_<runtime>`, for example `is_runtime_talos`.
-6. The base address of the GitLab Terraform state backend of a project MUST be held in a local of the form `_state_base_<project>`, for example `_state_base_platform_foundation`.
+6. The local `_state_base` MUST contain the base address of the GitLab Terraform state backend. The local `_state_base` MUST read the variable `gitlab_terraform_state_base`.
 7. A SPIFFE trust domain MUST be spelled `spiffe_trust_domain` in a Terraform identifier.
 8. A workload SPIFFE ID MUST be spelled `spiffe_workload_id` in a Terraform identifier.
 9. The Vault Agent identity MUST be spelled `security_vault_agent_identity` in a Terraform identifier.

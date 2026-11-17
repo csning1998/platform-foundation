@@ -24,7 +24,7 @@ The naming standard enforces strict alignment between repository names and owner
 
 ### Item C. State Management and Migration Principles
 
-The GitLab HTTP state backend maintains layer state snapshots under project identifier `84608830`. State snapshots SHOULD NOT store static plaintext credentials or permanent tokens whenever ephemeral mechanisms are supported.
+The GitLab HTTP state backend maintains layer state snapshots under the project whose state API URL `vault-proxy-env` exports as `GITLAB_TERRAFORM_STATE_BASE`. The state object name of a layer equals the layer directory name. The `.envrc` of each layer exports `TF_HTTP_ADDRESS` as the state base followed by the layer directory name. State snapshots SHOULD NOT store static plaintext credentials or permanent tokens whenever ephemeral mechanisms are supported.
 
 Renaming a module call label or a resource label MUST be migrated with a one time `terraform state mv` prior to plan review. Compute instances, virtual machines, and Talos Kubernetes clusters operate under the disposable cattle principle. When compute entities are decommissioned or replaced out of band, obsolete infrastructure state records MUST be evicted via `terraform state rm`.
 
@@ -135,8 +135,6 @@ Operations dependent on local domain resolution and TLS authentication require s
 
 The following catalog lists state addresses for out of band decommission and for a stale remote state schema. An address which the current configuration still declares returns in the next plan after `terraform state rm`. An address which the current configuration does not declare MUST be removed only when `terraform state list` still prints the address.
 
-Four layers keep a GitLab state object name which differs from the layer directory name. `security-vault-downstream-pki` uses `security-pki`. `platform-vault-downstream-frontend` uses `platform-vault-frontend`. `platform-spire-parent` uses `platform-spire-parent-frontend`. `provision-spire-parent` uses `provision-spire-parent-frontend`. The data source `security_vault_downstream_pki` reads the object `security-pki`.
-
 ### Item A. Core Governance and Security Layers
 
 #### Item A.1. Layer meta-gitlab-project
@@ -177,7 +175,7 @@ cd terraform/layers/platform-spire-child
 
 State object name in GitLab backend: `platform-keycloak-frontend`.
 
-Current Talos, Helm, and remote state addresses. Remove an address for out of band decommission, or remove a remote state address when the cached upstream schema is stale. The data source `security_vault_downstream_pki` reads the GitLab object `security-pki`:
+Current Talos, Helm, and remote state addresses. Remove an address for out of band decommission, or remove a remote state address when the cached upstream schema is stale:
 
 ```bash
 cd terraform/layers/platform-keycloak-frontend
@@ -197,7 +195,7 @@ cd terraform/layers/platform-keycloak-frontend
 
 State object name in GitLab backend: `platform-cilium-hubble`.
 
-Current Talos, Helm, and remote state addresses. The data source `security_vault_downstream_pki` reads the GitLab object `security-pki`:
+Current Talos, Helm, and remote state addresses:
 
 ```bash
 cd terraform/layers/platform-cilium-hubble
@@ -219,7 +217,7 @@ cd terraform/layers/platform-cilium-hubble
 
 State object name in GitLab backend: `provision-spire-child`.
 
-Current PKI, KV, JWT, and remote state addresses. The data source `security_vault_downstream_pki` reads the GitLab object `security-pki`:
+Current PKI, KV, JWT, and remote state addresses:
 
 ```bash
 cd terraform/layers/provision-spire-child
@@ -264,7 +262,7 @@ Harbor provider addresses in the current configuration. Remove the addresses for
 
 State object name in GitLab backend: `provision-keycloak-oidc`.
 
-Current Keycloak, Kubernetes, and remote state addresses. The data source `security_vault_downstream_pki` reads the GitLab object `security-pki`:
+Current Keycloak, Kubernetes, and remote state addresses:
 
 ```bash
 cd terraform/layers/provision-keycloak-oidc

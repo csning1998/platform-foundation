@@ -19,7 +19,9 @@ module "provisioner_gitlab_project" {
 
 module "workload_identity_federation" {
   source  = "gitlab.com/csning1998-lab/provisioner-workload-identity-federation/gitlab"
-  version = "0.5.0"
+  version = "0.7.0"
+
+  gitlab_url = var.gitlab_url
 
   gitlab_project = {
     id   = module.provisioner_gitlab_project.project_id
@@ -51,13 +53,13 @@ module "workload_identity_federation" {
   }
 }
 
-module "code_reviewer" {
-  source    = "gitlab.com/csning1998-lab/provisioner-code-reviewer/gitlab"
-  version   = "~> 1.7.1"
-  providers = { vault = vault.bastion }
+# ./governance of parent-group-governance writes the reviewer CI variables. Terraform forgets the variables without deletion.
+removed {
+  from = module.code_reviewer
 
-  gitlab_project_id    = module.provisioner_gitlab_project.project_id
-  legacy_alias_enabled = true
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "github_mirror" {
