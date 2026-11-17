@@ -90,7 +90,7 @@ flowchart TD
 ### Item D. Module Versus Layer Boundary
 
 1. Every component defined from Stage 2 through Stage 6 in Item A MUST function as a repeatable Terraform module. A module SHALL NOT own an independent Terraform state backend.
-2. The `platform-spire-parent` component MUST function as an independent layer. The layer SHALL maintain a dedicated backend state address declared in `providers.tf`.
+2. The `platform-spire-parent` component MUST function as an independent layer. The layer SHALL maintain a dedicated backend state address exported as `TF_HTTP_ADDRESS` by the layer `.envrc` from `GITLAB_TERRAFORM_STATE_BASE` and the layer directory name.
 3. The `foundation-libvirt-resources` component MUST function as an independent foundation layer. The layer state SHALL contain every shared `libvirt_network`, `libvirt_pool`, and `libvirt_volume` resource. Consuming service layers MUST NOT declare competing resources for these foundation objects.
 
 ### Item E. Ownership Boundary of `service_catalog`
