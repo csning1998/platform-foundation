@@ -47,7 +47,7 @@
   rescue:
     - name: "A2. Initialize vdb failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "A3. Enforce ownership on vdb mount root"
   ansible.builtin.file:
@@ -92,4 +92,4 @@
   rescue:
     - name: "A4. Reinitialize the SPIRE trust domain failed"
       ansible.builtin.fail:
-        msg: "Greenfield reinitialization failed: {{ ansible_failed_result | default('see task output above') }}"
+        msg: "Greenfield reinitialization failed: {{ ansible_failed_result | default('refer to the task output above') }}"

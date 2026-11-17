@@ -45,7 +45,7 @@
   rescue:
     - name: "Block A: Resolve inventory_hostname's Current Agent SPIFFE ID failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Register Workload Entry"
   become: false
@@ -127,4 +127,4 @@
   rescue:
     - name: "Block B: Register Workload Entry failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

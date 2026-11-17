@@ -99,7 +99,7 @@
   rescue:
     - name: "Block B1: Deploy SSL Certificates failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Task B1. Build platform_haproxy_lb_keepalived_segments filtered to interfaces present in OS"
   ansible.builtin.set_fact:
@@ -160,7 +160,7 @@
   rescue:
     - name: "Block B2: Configure Keepalived and HAProxy failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B3: Service Lifecycle"
   block:
@@ -181,7 +181,7 @@
   rescue:
     - name: "Block B3: Service Lifecycle failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B4: Policy-Based Routing for symmetric VIP return traffic"
   block:
@@ -237,4 +237,4 @@
   rescue:
     - name: "Block B4: Policy-Based Routing for symmetric VIP return traffic failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

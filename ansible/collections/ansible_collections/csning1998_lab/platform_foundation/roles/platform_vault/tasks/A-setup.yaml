@@ -40,7 +40,7 @@
   rescue:
     - name: "Block A1: System & Service Configuration failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 # The workstation issues the certificate through the Vault Proxy, and the private key never enters a Terraform state.
 # A certificate from a rebuilt pki-leaf-platform fails the chain check,
@@ -157,4 +157,4 @@
   rescue:
     - name: "Block A2: Issue the Listener Certificate failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

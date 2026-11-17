@@ -10,7 +10,7 @@
   rescue:
     - name: "Block A: Install jq failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Assert Required Variables"
   ansible.builtin.assert:
@@ -42,7 +42,7 @@
   rescue:
     - name: "Block C: Create Dedicated Service User failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block D: Deploy Sudoers Drop-in"
   become: true
@@ -61,7 +61,7 @@
   rescue:
     - name: "Block D: Deploy Sudoers Drop-in failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block E: Deploy JWT-SVID Fetch Wrapper"
   become: true
@@ -77,7 +77,7 @@
   rescue:
     - name: "Block E: Deploy JWT-SVID Fetch Wrapper failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 # Documentation: documentation/architecture/platform-spire-parent-frontend.md Section 8.
 - name: "Block F: Register Workload Entry"
@@ -109,4 +109,4 @@
   rescue:
     - name: "Block F: Register Workload Entry failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

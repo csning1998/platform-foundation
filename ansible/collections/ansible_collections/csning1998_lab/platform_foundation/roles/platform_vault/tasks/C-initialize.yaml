@@ -72,5 +72,5 @@
           Bastion Vault through the {{ project_code }} Vault Proxy, then delete that file.
       ansible.builtin.fail:
         msg: >-
-          {{ ansible_failed_result.msg | default('see task output above') }}
+          {{ ansible_failed_result.msg | default('refer to the task output above') }}
           {{ _c1_emergency_note if (platform_vault_init_result is defined and platform_vault_init_result.rc == 0) else '' }}

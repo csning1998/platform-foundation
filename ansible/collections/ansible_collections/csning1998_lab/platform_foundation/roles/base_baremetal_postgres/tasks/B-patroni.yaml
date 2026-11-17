@@ -10,4 +10,4 @@
   rescue:
     - name: "Block B: Install Patroni Runtime Dependencies failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

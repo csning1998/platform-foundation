@@ -49,7 +49,7 @@
   rescue:
     - name: "Block B1: System & Service Configuration failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 # The workstation issues the secret ID through the Vault Proxy, and the secret ID never enters a Terraform state.
 # An existing secret ID is reused while the operator Vault still knows the secret ID under the current role.
@@ -135,7 +135,7 @@
   rescue:
     - name: "Block B2: Upstream Authority Secret ID failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B3: Start SPIRE Server Service"
   become: true
@@ -153,4 +153,4 @@
   rescue:
     - name: "Block B3: Start SPIRE Server Service failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

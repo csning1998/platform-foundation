@@ -56,7 +56,7 @@
   rescue:
     - name: "Block A: Fetch Authentication Material failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Vault Agent Certificate Renewal Setup"
   become: true
@@ -135,4 +135,4 @@
   rescue:
     - name: "Block B: Vault Agent Certificate Renewal Setup failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

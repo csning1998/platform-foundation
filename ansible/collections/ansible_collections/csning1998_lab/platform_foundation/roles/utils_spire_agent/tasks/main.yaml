@@ -120,7 +120,7 @@
   rescue:
     - name: "Block A: Install SPIRE Agent Binary failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block B: Directory Layout"
   become: true
@@ -144,7 +144,7 @@
   rescue:
     - name: "Block B: Directory Layout failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block C: SELinux Labeling for the Workload API Socket Directory"
   become: true
@@ -165,7 +165,7 @@
   rescue:
     - name: "Block C: SELinux Labeling failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block D: Determine Bootstrap State"
   become: true
@@ -258,7 +258,7 @@
   rescue:
     - name: "Block D: Determine Bootstrap State failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block E: Provision join_token"
   when: not utils_spire_agent_already_attested
@@ -322,7 +322,7 @@
           Unable to generate a join_token via `spire-server token generate`
           on the {{ utils_spire_agent_server_kind }} SPIRE server,
           or unable to persist the token to {{ utils_spire_agent_join_token_vault_path }} in the operator Vault.
-          Reason: {{ ansible_failed_result.msg | default('see task output above') }}
+          Reason: {{ ansible_failed_result.msg | default('refer to the task output above') }}
 
 - name: "Block F: Fetch Trust Bundle from the SPIRE server"
   become: true
@@ -352,7 +352,7 @@
   rescue:
     - name: "Block F: Fetch Trust Bundle failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block G: System & Service Configuration"
   become: true
@@ -379,7 +379,7 @@
   rescue:
     - name: "Block G: System & Service Configuration failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block H: Start SPIRE Agent Service"
   become: true
@@ -402,7 +402,7 @@
   rescue:
     - name: "Block H: Start SPIRE Agent Service failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block I: Validate SPIRE Agent Instance"
   become: true
@@ -419,4 +419,4 @@
   rescue:
     - name: "Block I: Validate SPIRE Agent Instance failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"

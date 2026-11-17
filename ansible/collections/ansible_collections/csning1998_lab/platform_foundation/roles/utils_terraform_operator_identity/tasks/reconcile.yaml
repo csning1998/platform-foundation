@@ -80,7 +80,7 @@
   rescue:
     - name: "Block R1: Remove Undeclared Operator Entries failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
 
 - name: "Block R2: Remove Undeclared Operator Wrappers from This Host"
   become: true
@@ -137,4 +137,4 @@
   rescue:
     - name: "Block R2: Remove Undeclared Operator Wrappers failed"
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
+        msg: "{{ ansible_failed_result.msg | default('refer to the task output above') }}"
