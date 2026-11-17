@@ -72,6 +72,7 @@ func newWorkstationFixture(t *testing.T, kubectlBody string) *workstationFixture
 	writeExecutable(t, bin, "kubectl", kubectlBody)
 	writeExecutable(t, wrappers, keycloakWrapper, `printf '{"jwt":"eyJ.keycloak.sig"}'`)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
 
 	certFile, keyFile := writeClientCertificate(t, "operator-platform-foundation")
 	f.env = map[string]string{

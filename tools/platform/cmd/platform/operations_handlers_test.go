@@ -262,6 +262,7 @@ func TestVaultUnsealDownstreamCommand_RequiresTheLayerInventory(t *testing.T) {
 	for _, key := range []string{"VAULT_ADDR", "VAULT_CACERT", "VAULT_TOKEN", "VAULT_CLIENT_CERT", "VAULT_CLIENT_KEY"} {
 		t.Setenv(key, "example")
 	}
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
 	cmd := a.vaultCmd()
 	cmd.SetArgs([]string{"unseal-downstream"})
 	cmd.SetOut(io.Discard)

@@ -78,6 +78,8 @@ func writeClientCertificate(t *testing.T, dir string) (certFile, keyFile string)
 	return certFile, keyFile
 }
 
+const testStateBase = "https://gitlab.example/api/v4/projects/7/terraform/state"
+
 // newClusterEnvironment starts a Bastion Vault double which holds the leaf of vault-downstream/frontend alone, and
 // points terraform, kubectl, the Vault Proxy environment, and XDG_RUNTIME_DIR of the process at test doubles.
 func newClusterEnvironment(t *testing.T) string {
@@ -125,6 +127,7 @@ func newClusterEnvironment(t *testing.T) string {
 	writeFakeBin(t, bin, "terraform", `cat "`+outputFile+`"`)
 	writeFakeBin(t, bin, "kubectl", `case "$*" in *jsonpath*) printf '172.16.127.10 ' ;; *) echo "kubectl $*" ;; esac`)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
 	t.Setenv("VAULT_ADDR", server.URL)
 	t.Setenv("VAULT_TOKEN", "s.tenant")
 	t.Setenv("VAULT_CACERT", caFile)

@@ -22,6 +22,7 @@ import (
 
 	"platform/internal/config"
 	"platform/internal/operatorops"
+	"platform/internal/terraformops"
 )
 
 var (
@@ -169,10 +170,15 @@ func convertOperator(target string, op operatorOutput) (Operator, error) {
 
 // ReadCoordinates runs terraform output -json in tenantsLayerDir and returns the coordinates of the output.
 func ReadCoordinates(ctx context.Context, tenantsLayerDir string) (Coordinates, error) {
+	backendEnv, err := terraformops.BuildLayerBackendEnv(os.Getenv(terraformops.StateBaseEnvKey), tenantsLayerDir)
+	if err != nil {
+		return Coordinates{}, err
+	}
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "terraform", "-chdir="+tenantsLayerDir, "output", "-json")
+	cmd.Env = append(os.Environ(), backendEnv...)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return Coordinates{}, fmt.Errorf("clusterops: terraform output of %s: %w: %s",
 			filepath.Base(tenantsLayerDir), err, strings.TrimSpace(stderr.String()))

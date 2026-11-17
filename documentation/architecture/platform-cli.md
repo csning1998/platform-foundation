@@ -59,9 +59,11 @@
 4. `platform terraform` MUST NOT bootstrap `.env`.
 5. `platform layer clean <layer|all>` MUST report which layer directories exist under `terraform/layers/`.
 6. `platform layer clean` MUST NOT delete a state, because Terraform remote state is stored in the GitLab HTTP backend.
-7. Menu option 9 MUST delete the GitLab HTTP backend state of every layer whose backend address a `.tf` file declares, except a layer whose name begins with `administration-`. An administration layer manages the GitLab project which hosts every state.
-8. Menu option 9 MUST list the states before deletion and MUST require a second confirmation. Menu option 9 MUST read the GitLab token from `TF_HTTP_PASSWORD` and MUST stop before any deletion when the variable is empty.
-9. Menu option 9 MUST resolve the state list before the first confirmation and MUST stop before any purge when the resolution fails, since the libvirt and SSH purges cannot be undone.
+7. Menu option 9 MUST delete the GitLab HTTP backend state of every layer whose `.tf` file declares an HTTP backend block, except a layer whose name begins with `administration-`. An administration layer manages the GitLab project which hosts every state.
+8. The state address of a layer MUST be `GITLAB_TERRAFORM_STATE_BASE` followed by the layer directory name. Menu option 9 MUST stop before the first confirmation when `GITLAB_TERRAFORM_STATE_BASE` is empty.
+9. A command which runs `terraform -chdir=<layer>` outside the layer `.envrc` MUST pass `TF_HTTP_ADDRESS`, `TF_HTTP_LOCK_ADDRESS`, and `TF_HTTP_UNLOCK_ADDRESS` of that layer to `terraform`.
+10. Menu option 9 MUST list the states before deletion and MUST require a second confirmation. Menu option 9 MUST read the GitLab token from `TF_HTTP_PASSWORD` and MUST stop before any deletion when the variable is empty.
+11. Menu option 9 MUST resolve the state list before the first confirmation and MUST stop before any purge when the resolution fails, since the libvirt and SSH purges cannot be undone.
 
 ### Item F. Libvirt and KVM Operations (`libvirt`)
 

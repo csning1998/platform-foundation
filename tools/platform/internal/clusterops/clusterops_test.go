@@ -25,7 +25,10 @@ import (
 	"time"
 
 	"platform/internal/operatorops"
+	"platform/internal/terraformops"
 )
+
+const testStateBase = "https://gitlab.example/api/v4/projects/7/terraform/state"
 
 func TestParseTarget_ExtractsServiceAndComponent(t *testing.T) {
 	cases := []struct {
@@ -200,8 +203,12 @@ func TestReadCoordinates_ParsesTerraformOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("write output fixture: %v", err)
 	}
-	writeExecutable(t, bin, "terraform", `echo "$@" > "`+argsFile+`"; cat "`+outputFile+`"`)
+	backendFile := filepath.Join(bin, "backend")
+	writeExecutable(t, bin, "terraform", `echo "$@" > "`+argsFile+`"; `+
+		`printf '%s\n%s\n%s\n' "$TF_HTTP_ADDRESS" "$TF_HTTP_LOCK_ADDRESS" "$TF_HTTP_UNLOCK_ADDRESS" > "`+backendFile+`"; `+
+		`cat "`+outputFile+`"`)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
 
 	got, err := ReadCoordinates(context.Background(), "/repo/terraform/layers/security-vault-downstream-tenants")
 	if err != nil || got.Address != "https://172.16.127.250:443" {
@@ -215,12 +222,30 @@ func TestReadCoordinates_ParsesTerraformOutput(t *testing.T) {
 	if string(args) != want {
 		t.Errorf("terraform arguments = %q, want %q", args, want)
 	}
+	backend, err := os.ReadFile(backendFile)
+	if err != nil {
+		t.Fatalf("read terraform backend environment: %v", err)
+	}
+	state := testStateBase + "/security-vault-downstream-tenants"
+	wantBackend := state + "\n" + state + "/lock\n" + state + "/lock\n"
+	if string(backend) != wantBackend {
+		t.Errorf("terraform backend environment = %q, want %q", backend, wantBackend)
+	}
+}
+
+func TestReadCoordinates_RequiresTheStateBase(t *testing.T) {
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", "")
+	_, err := ReadCoordinates(context.Background(), "/repo/terraform/layers/security-vault-downstream-tenants")
+	if !errors.Is(err, terraformops.ErrStateBaseMissing) {
+		t.Errorf("ReadCoordinates error = %v, want ErrStateBaseMissing", err)
+	}
 }
 
 func TestReadCoordinates_ReportsTerraformFailure(t *testing.T) {
 	bin := t.TempDir()
 	writeExecutable(t, bin, "terraform", `echo "Error: HTTP remote state endpoint requires auth" >&2; exit 1`)
 	t.Setenv("PATH", bin)
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
 
 	_, err := ReadCoordinates(context.Background(), "/repo/terraform/layers/security-vault-downstream-tenants")
 	if err == nil || !strings.Contains(err.Error(), "requires auth") {
@@ -244,7 +269,7 @@ func (f *vaultFixture) presented() []string {
 	return slices.Clone(f.clientCNs)
 }
 
-// recorded returns the requests which the double received so far.
+// recorded returns every request which the double has received.
 func (f *vaultFixture) recorded() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()

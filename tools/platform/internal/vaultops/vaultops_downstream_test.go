@@ -8,7 +8,11 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"platform/internal/terraformops"
 )
+
+const testStateBase = "https://gitlab.example/api/v4/projects/7/terraform/state"
 
 func TestDecodeDownstreamInventory_RequiresTheGenericRuntime(t *testing.T) {
 	data := []byte(`{"enabled":false,"ansible_inventory_path":null,"ansible_unseal_vars_path":null}`)
@@ -45,8 +49,40 @@ func TestDecodeDownstreamInventory_ReturnsThePublishedPaths(t *testing.T) {
 
 func TestReadDownstreamInventory_RequiresTheLayerOutput(t *testing.T) {
 	installFakeTerraform(t, "", 1)
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
 	if _, err := ReadDownstreamInventory(context.Background(), t.TempDir()); !errors.Is(err, ErrDownstreamInventoryMissing) {
 		t.Errorf("ReadDownstreamInventory error = %v, want ErrDownstreamInventoryMissing", err)
+	}
+}
+
+func TestReadDownstreamInventory_PassesTheBackendAddressOfTheLayer(t *testing.T) {
+	bin := t.TempDir()
+	backendFile := filepath.Join(bin, "backend")
+	script := "#!/bin/sh\nprintf '%s\\n%s\\n%s\\n' \"$TF_HTTP_ADDRESS\" \"$TF_HTTP_LOCK_ADDRESS\" \"$TF_HTTP_UNLOCK_ADDRESS\" > " +
+		backendFile + "\nexit 1\n"
+	if err := os.WriteFile(filepath.Join(bin, "terraform"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
+
+	_, _ = ReadDownstreamInventory(context.Background(), "/repo/terraform/layers/"+DownstreamLayer)
+	backend, err := os.ReadFile(backendFile)
+	if err != nil {
+		t.Fatalf("read terraform backend environment: %v", err)
+	}
+	state := testStateBase + "/" + DownstreamLayer
+	want := state + "\n" + state + "/lock\n" + state + "/lock\n"
+	if string(backend) != want {
+		t.Errorf("terraform backend environment = %q, want %q", backend, want)
+	}
+}
+
+func TestReadDownstreamInventory_RequiresTheStateBase(t *testing.T) {
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", "")
+	_, err := ReadDownstreamInventory(context.Background(), "/repo/terraform/layers/"+DownstreamLayer)
+	if !errors.Is(err, terraformops.ErrStateBaseMissing) {
+		t.Errorf("ReadDownstreamInventory error = %v, want ErrStateBaseMissing", err)
 	}
 }
 
@@ -127,6 +163,7 @@ func installFakeTerraform(t *testing.T, stdout string, code int) {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", testStateBase)
 }
 
 func buildGenericClusterOutput(inventory, unsealVars string) []byte {
