@@ -1,8 +1,8 @@
 ---
 include:
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/core@1.8.4
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/core@1.8.4
     inputs:
-      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.4
+      reviewer_image: $CI_REGISTRY/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/reviewer:1.8.4
       review_models:
         - "claude-sonnet-5.5"
         - "claude-opus-5.5"
@@ -15,15 +15,15 @@ include:
       # The group runner carries the tag and reaches SonarQube on the host network sonarqube-ci-net.
       sonar_scanner_tags: ["sonarqube-network"]
       sonar_go_coverage_path: "tools/platform/coverage.out"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-terraform@1.8.4
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/iac-terraform@1.8.4
     inputs:
       # CKV_GLB_1, CKV_GLB_3, CKV_GLB_4: require GitLab Premium/Ultimate merge request approval and push rules.
       # CKV_TF_1: enforces commit-pinned Git URLs; modules use immutable semantic versions from GitLab Terraform Registry.
       checkov_skip: "CKV_GLB_1,CKV_GLB_3,CKV_GLB_4,CKV_TF_1"
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/iac-ansible@1.8.4
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/iac-ansible@1.8.4
     inputs:
       ansible_globs: ["ansible/**/*", "ansible.cfg"]
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/lang-go@1.8.4
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/lang-go@1.8.4
     inputs:
       go_dir: "tools/platform"
       go_fmt_path: "./tools/platform"
@@ -33,9 +33,9 @@ include:
           "tools/platform/go.mod",
           "tools/platform/go.sum",
         ]
-  - component: $CI_SERVER_FQDN/csning1998-lab/gitlab-ci-with-code-reviewer/auto-tag@1.8.4
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/auto-tag@1.8.4
     inputs:
-      reviewer_image: $CI_REGISTRY/csning1998-lab/gitlab-ci-with-code-reviewer/reviewer:1.8.4
+      reviewer_image: $CI_REGISTRY/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/reviewer:1.8.4
       # Module publishing paused until terraform/modules/ gains an external consumer repository;
       # currently, layers reference modules by relative path.
       # - local: ".gitlab/ci/modules-terraform.yml"
@@ -52,12 +52,14 @@ lint:ansible:
 build:go:
   variables:
     CGO_ENABLED: "1"
-    GOPRIVATE: "gitlab.com/csning1998-lab/*"
+    GOPRIVATE: "${CI_SERVER_HOST}/${CI_PROJECT_ROOT_NAMESPACE}/*"
   before_script:
     - apk add --no-cache git gcc musl-dev pkgconf libvirt-dev
-    - 'printf "machine gitlab.com\nlogin gitlab-ci-token\npassword %s\n" "${CI_JOB_TOKEN}" > ~/.netrc'
+    - 'printf "machine %s\nlogin gitlab-ci-token\npassword %s\n" "${CI_SERVER_HOST}" "${CI_JOB_TOKEN}" > ~/.netrc'
     - chmod 600 ~/.netrc
-    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
+    - >-
+      git config --global
+      url."https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/".insteadOf "https://${CI_SERVER_HOST}/"
 
 test:go:
   # SonarQube Community Build keeps one branch, and an analysis without the Go coverage report resets coverage to 0%.
@@ -65,21 +67,25 @@ test:go:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   variables:
     CGO_ENABLED: "1"
-    GOPRIVATE: "gitlab.com/csning1998-lab/*"
+    GOPRIVATE: "${CI_SERVER_HOST}/${CI_PROJECT_ROOT_NAMESPACE}/*"
   # The list replaces the before_script of the component, and the component installs gotestsum in the script.
   before_script:
     - apk add --no-cache git gcc musl-dev pkgconf libvirt-dev
-    - 'printf "machine gitlab.com\nlogin gitlab-ci-token\npassword %s\n" "${CI_JOB_TOKEN}" > ~/.netrc'
+    - 'printf "machine %s\nlogin gitlab-ci-token\npassword %s\n" "${CI_SERVER_HOST}" "${CI_JOB_TOKEN}" > ~/.netrc'
     - chmod 600 ~/.netrc
-    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
+    - >-
+      git config --global
+      url."https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/".insteadOf "https://${CI_SERVER_HOST}/"
     - go install gotest.tools/gotestsum@v1.13.0
 
 lint:go:
   variables:
     CGO_ENABLED: "1"
-    GOPRIVATE: "gitlab.com/csning1998-lab/*"
+    GOPRIVATE: "${CI_SERVER_HOST}/${CI_PROJECT_ROOT_NAMESPACE}/*"
   before_script:
     - apk add --no-cache git gcc musl-dev pkgconf libvirt-dev
-    - 'printf "machine gitlab.com\nlogin gitlab-ci-token\npassword %s\n" "${CI_JOB_TOKEN}" > ~/.netrc'
+    - 'printf "machine %s\nlogin gitlab-ci-token\npassword %s\n" "${CI_SERVER_HOST}" "${CI_JOB_TOKEN}" > ~/.netrc'
     - chmod 600 ~/.netrc
-    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
+    - >-
+      git config --global
+      url."https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/".insteadOf "https://${CI_SERVER_HOST}/"
