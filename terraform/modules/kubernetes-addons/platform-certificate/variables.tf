@@ -1,6 +1,6 @@
 
 variable "certificate_config" {
-  description = "cert-manager Certificate. The Secret carries the name of the Certificate. The usages default to a server certificate which also authenticates as a client."
+  description = "cert-manager Certificate. The Secret has the same name as the Certificate. The usages default to a server certificate which also authenticates as a client."
   type = object({
     name         = string
     namespace    = string

@@ -5,7 +5,7 @@ variable "vault_endpoint" {
 }
 
 variable "pki_settings" {
-  description = "Certificate parameters of the downstream intermediate CA: the common name, and the DNS names which the signing request carries. A signer with permitted DNS Name Constraints rejects a CA certificate without a DNS name inside the permitted subtree."
+  description = "Certificate parameters of the downstream intermediate CA: the common name, and the DNS names which the signing request contains. A signer with permitted DNS Name Constraints rejects a CA certificate without a DNS name inside the permitted subtree."
   type = object({
     intermediate_ca_common_name = string
     intermediate_dns_names      = list(string)

@@ -3,7 +3,7 @@ locals {
   release_name = "vault"
   tls_dir      = "/vault/userconfig/${var.vault_config.tls_secret_name}"
 
-  # The listener certificate carries names under the cluster domain alone, since pki-platform rejects a bare name or a loopback.
+  # The listener certificate contains names under the cluster domain alone because pki-platform rejects a bare name or a loopback.
   service_domain = "${var.helm_config.namespace}.svc.${var.raft_config.cluster_domain}"
   peer_names     = [for ordinal in range(var.raft_config.replicas) : "${local.release_name}-${ordinal}.${local.release_name}-internal.${local.service_domain}"]
 
@@ -117,8 +117,8 @@ resource "kubernetes_config_map_v1" "transit_seal_ca" {
   }
 }
 
-# The chart renders no secret. The listener key stays in the Secret which cert-manager writes, and the transit token
-# stays in the memory volume of each pod.
+# The chart renders no secret. The listener key resides in the Secret which cert-manager writes, and the transit token
+# resides in the memory volume of each pod.
 resource "helm_release" "vault" {
   name       = local.release_name
   repository = var.helm_config.chart_repository
@@ -127,7 +127,7 @@ resource "helm_release" "vault" {
   namespace  = var.helm_config.namespace
   timeout    = var.helm_config.timeout
 
-  # A sealed server reports unready, and each server stays sealed until the transit seal or the operator unseals the server.
+  # A sealed server reports unready, and each server remains sealed until the transit seal or the operator unseals the server.
   wait = false
 
   values = [yamlencode({

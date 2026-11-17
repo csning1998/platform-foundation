@@ -26,7 +26,7 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "pki_issuer_csr" {
   key_bits    = 256
 
   # Force key regeneration on mount recreation because provider state lacks a Read implementation for this resource.
-  # The name carries the key type, since Vault rejects a new key type under an existing key name.
+  # The name includes the key type because Vault rejects a new key type under an existing key name.
   key_name = "issuer-ec256-${vault_mount.pki_issuer.accessor}"
 }
 

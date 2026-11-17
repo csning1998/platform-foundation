@@ -1,6 +1,6 @@
 
 variable "helm_config" {
-  description = "Helm release parameters. The chart_repository is the OCI repository which holds the chart, for example oci://ghcr.io/rancher/local-path-provisioner/charts."
+  description = "Helm release parameters. The chart_repository is the OCI repository which stores the chart, for example oci://ghcr.io/rancher/local-path-provisioner/charts."
   type = object({
     chart_repository = string
     version          = string

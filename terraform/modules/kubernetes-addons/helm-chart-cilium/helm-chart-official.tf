@@ -2,11 +2,11 @@
 locals {
   gateway_api_enabled = var.cilium_config.gateway_api != null
 
-  # The Hubble server and relay gRPC endpoints carry these names in their mTLS certificates.
+  # The mTLS certificates of the Hubble server and relay gRPC endpoints contain these names.
   hubble_tls_domains = ["hubble-grpc.cilium.io", "hubble-relay.cilium.io"]
 
   # The chart renders a second privateKey key after hubble.tls.auto.privateKey, which drops the ECDSA algorithm.
-  # The caller therefore issues the Secrets which the chart mounts. The server name carries the cluster.name default.
+  # The caller therefore issues the Secrets which the chart mounts. The server name includes the cluster.name default.
   hubble_tls_certificates = {
     "hubble-server-certs" = {
       common_name = "*.default.hubble-grpc.cilium.io"
@@ -49,7 +49,7 @@ data "helm_template" "cilium" {
     operator             = { replicas = min(2, var.cilium_config.node_count) }
     hubble               = local.hubble
 
-    # The Gateway API CRDs ship as an inline manifest of the same machine configuration, and the Cilium operator reads the CRDs at start.
+    # The Gateway API CRDs are delivered as an inline manifest of the same machine configuration, and the Cilium operator reads the CRDs at start.
     gatewayAPI = { enabled = local.gateway_api_enabled }
 
     MTU = var.cilium_config.mtu

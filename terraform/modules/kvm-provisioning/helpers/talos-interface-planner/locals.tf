@@ -20,7 +20,7 @@ locals {
         addresses = []
       }],
 
-      # Interface 2: HostOnly (Internal, carries the node static IP)
+      # Interface 2: HostOnly (Internal, has the node static IP)
       [{
         network_name = var.network_infra.hostonly.name
         mac = format("%s:%s:%s:%s:%s:%02x",

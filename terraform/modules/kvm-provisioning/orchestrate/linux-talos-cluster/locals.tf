@@ -18,7 +18,7 @@ locals {
   network_infrastructure     = var.network_infrastructure_map[var.cluster_identity.cluster_name]
   network_hostonly_addresses = module.linux_talos_domain.hostonly_addresses
 
-  # The rule priorities start ahead of the main table rule at 32766, and the table number stays clear of the reserved 253 to 255.
+  # The rule priorities start ahead of the main table rule at 32766, and the table number avoids the reserved 253 to 255.
   network_hostonly_link = {
     alias         = "hostonly"
     route_table   = "100"
@@ -87,7 +87,7 @@ locals {
     ]
   )
 
-  # Talos 1.13 lacks a field for the AuthenticationConfiguration, hence a machine file carries the document into kube-apiserver.
+  # Talos 1.13 lacks a field for the AuthenticationConfiguration, hence a machine file delivers the document to kube-apiserver.
   # A path directly below /var/lib exists before the file is created at boot.
   apiserver_authentication_config_path = "/var/lib/kube-apiserver-authentication-config.yaml"
   apiserver_authentication_patches = var.apiserver_config.authentication_config == null ? [] : [yamlencode({

@@ -1,5 +1,5 @@
 
-# The KVM default OUI prefix 52:54:00 carries the first 6 hexadecimal characters of the MD5 digest of each seed.
+# The KVM default OUI prefix 52:54:00 precedes the first 6 hexadecimal characters of the MD5 digest of each seed.
 output "macs" {
   description = "Locally administered MAC addresses keyed as the seeds."
   value = {
