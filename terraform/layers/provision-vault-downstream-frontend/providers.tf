@@ -25,7 +25,7 @@ terraform {
   }
 }
 
-# The Bastion Vault holds the kubeconfig of the cluster and signs the listener certificate of the Downstream Vault.
+# The Bastion Vault stores the kubeconfig of the cluster and signs the listener certificate of the Downstream Vault.
 # The .envrc of the layer routes VAULT_ADDR to the platform-foundation Vault Proxy, which overwrites the token of every request.
 provider "vault" {
   alias            = "bastion"

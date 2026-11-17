@@ -32,13 +32,13 @@ Renaming a module call label or a resource label MUST be migrated with a one tim
 
 ### Item A. Access Control Lists and Token Policies
 
-Vault ACL policies enforce scoped path authorization. Downstream Vault operator tokens carry identities granting read and write access to `secret/data/platform-foundation/*`. Policies additionally authorize PKI leaf issuance, OIDC configuration mounts, project specific Kubernetes auth mounts, identity groups, and ACL policies using scoped wildcard paths.
+Vault ACL policies enforce scoped path authorization. Downstream Vault operator tokens map to identities granting read and write access to `secret/data/platform-foundation/*`. Policies additionally authorize PKI leaf issuance, OIDC configuration mounts, project specific Kubernetes auth mounts, identity groups, and ACL policies using scoped wildcard paths.
 
 Component operators MUST NOT receive unrestricted root privileges. Component operator roles enforce boundaries using `allowed_parameters` to restrict assignable token policies. The Downstream Vault rejects any read, refresh, or destroy request directed at unmapped legacy paths with HTTP 403 Forbidden. Operators MUST evict obsolete state records using `terraform state rm` when legacy paths cannot be read by scoped credentials.
 
 ### Item B. Disposable Infrastructure Rebuild versus In Place Live Migration
 
-Executing in place migrations across interconnected libvirt bridges, virtual machine interfaces, Talos control planes, PKI intermediate authorities, and OIDC client registrations requires complex orchestration scripts and carries substantial risk of persistent state drift.
+Executing in place migrations across interconnected libvirt bridges, virtual machine interfaces, Talos control planes, PKI intermediate authorities, and OIDC client registrations requires complex orchestration scripts and poses substantial risk of persistent state drift.
 
 The platform applies greenfield recreation principles. Compute instances and Kubernetes clusters are treated as disposable entities. A rename of a module call label or a resource label MUST use `terraform state mv` under Section 1 Item C. The operator MUST remove a state address with `terraform state rm` when the Vault path lies outside the scoped token, or when the compute entity was destroyed outside Terraform. Workloads incur planned downtime during layer teardown, and operators MUST clean orphaned hypervisor volumes, bridges, and domain definitions out of band when compute nodes are destroyed outside Terraform lifecycle management.
 

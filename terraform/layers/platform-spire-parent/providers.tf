@@ -21,7 +21,7 @@ provider "libvirt" {
   uri = "qemu:///system?socket=/var/run/libvirt/virtqemud-sock"
 }
 
-# The .envrc of the layer routes VAULT_ADDR to the platform-foundation Vault Proxy, hence the layer holds no Bastion credential.
+# The .envrc of the layer routes VAULT_ADDR to the platform-foundation Vault Proxy, hence the layer lacks a Bastion credential.
 # The Proxy overwrites the token of every request, hence the provider skips the child token.
 provider "vault" {
   skip_child_token = true

@@ -10,7 +10,7 @@ locals {
   }
 }
 
-# The platform layer publishes the runtime, and a runtime object stays null on the other runtime.
+# The platform layer publishes the runtime, and a runtime object remains null on the other runtime.
 locals {
   foundation_project_code  = local.state.foundation_libvirt_resources.foundation_vault_path.project_code
   vault_downstream_runtime = local.state.platform_vault_downstream_frontend.runtime

@@ -53,7 +53,7 @@ module "workload_identity_federation" {
   }
 }
 
-# ./governance of parent-group-governance writes the reviewer CI variables. Terraform forgets the variables without deletion.
+# The removed block drops module.code_reviewer from the state and leaves the reviewer CI variables managed by ./governance of parent-group-governance in place.
 removed {
   from = module.code_reviewer
 

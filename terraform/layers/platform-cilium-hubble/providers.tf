@@ -31,7 +31,7 @@ provider "vault" {
   address      = local.downstream_vault_endpoint
   ca_cert_file = local.vault_pki_cert_path
 
-  # The JWT-SVID arrives through TERRAFORM_VAULT_AUTH_JWT from platform terraform and stays out of the state.
+  # The JWT-SVID arrives through TERRAFORM_VAULT_AUTH_JWT from platform terraform and is excluded from the state.
   auth_login_jwt {
     mount = local.terraform_operator.auth_mount
     role  = local.terraform_operator.role_name

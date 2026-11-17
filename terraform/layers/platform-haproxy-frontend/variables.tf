@@ -1,6 +1,6 @@
 
 variable "gitlab_terraform_state_base" {
-  description = "Specifies the GitLab Terraform state API URL of the project hosting every state of this repository, without a trailing slash."
+  description = "Specifies the GitLab Terraform state API URL of the project hosting every state of the repository, without a trailing slash."
   type        = string
 
   validation {
@@ -46,6 +46,6 @@ variable "observability_config" {
 
   validation {
     condition     = alltrue([for cidr in var.observability_config.scraper_cidrs : can(cidrnetmask(cidr))])
-    error_message = "observability_config.scraper_cidrs MUST hold IPv4 CIDR blocks."
+    error_message = "observability_config.scraper_cidrs MUST contain IPv4 CIDR blocks."
   }
 }

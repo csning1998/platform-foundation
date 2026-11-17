@@ -277,7 +277,7 @@ func TestPurgeAllInfrastructure_RequiresTheStateTokenBeforeConfirmation(t *testi
 	}
 }
 
-// testBackendBlock is an HTTP backend block which omits the address, as every layer declares the block.
+// testBackendBlock omits the backend address, matching the shared HTTP backend block of every layer.
 const testBackendBlock = "terraform {\n  backend \"http\" {\n    lock_method = \"POST\"\n  }\n}\n"
 
 func TestPurgeAllInfrastructure_RequiresTheStateBaseBeforeConfirmation(t *testing.T) {

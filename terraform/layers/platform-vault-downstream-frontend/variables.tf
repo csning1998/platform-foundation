@@ -1,6 +1,6 @@
 
 variable "gitlab_terraform_state_base" {
-  description = "Specifies the GitLab Terraform state API URL of the project hosting every state of this repository, without a trailing slash."
+  description = "Specifies the GitLab Terraform state API URL of the project hosting every state of the repository, without a trailing slash."
   type        = string
 
   validation {
@@ -38,7 +38,7 @@ variable "service_config" {
 }
 
 variable "pki_identity" {
-  description = "Identity of the intermediate CA which the Downstream Vault holds: the common name of the CA and the mount path of the PKI engine."
+  description = "Identity of the intermediate CA which the Downstream Vault hosts: the common name of the CA and the mount path of the PKI engine."
   type = object({
     intermediate_ca_common_name = string
     intermediate_mount_path     = string

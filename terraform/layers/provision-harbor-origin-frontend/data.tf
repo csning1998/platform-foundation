@@ -1,5 +1,5 @@
 
-# The registry part of Harbor Origin precedes every Talos cluster. The OIDC part, which depends on Keycloak, lives in provision-harbor-origin-oidc.
+# The registry part of Harbor Origin precedes every Talos cluster. The OIDC part, which depends on Keycloak, resides in provision-harbor-origin-oidc.
 
 data "terraform_remote_state" "security_vault_downstream_tenants" {
   backend = "http"

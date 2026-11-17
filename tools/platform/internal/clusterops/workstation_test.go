@@ -98,7 +98,7 @@ func (f *workstationFixture) assertRuntimeEmpty(t *testing.T) {
 	t.Helper()
 	entries, err := os.ReadDir(f.runtime)
 	if err != nil || len(entries) != 0 {
-		t.Errorf("runtime directory holds %v, %v, want no session directory", entries, err)
+		t.Errorf("runtime directory contains %v, %v, want no session directory", entries, err)
 	}
 }
 
@@ -112,10 +112,10 @@ func TestOpenSession_AuthenticatesOnDownstreamVault(t *testing.T) {
 	if filepath.Dir(session.Dir) != f.runtime || session.NodesErr != nil || !slices.Equal(session.Nodes, []string{"172.16.130.200"}) {
 		t.Errorf("session = %+v, want a directory below %s with node 172.16.130.200", session, f.runtime)
 	}
-	assertFileHolds(t, session.KubeconfigPath(), "kind: Config")
-	assertFileHolds(t, filepath.Join(session.Dir, "talosconfig"), "endpoints: [172.16.130.200]")
+	assertFileContains(t, session.KubeconfigPath(), "kind: Config")
+	assertFileContains(t, filepath.Join(session.Dir, "talosconfig"), "endpoints: [172.16.130.200]")
 
-	// The login carries no token, which keeps the tenant token of the Bastion Vault off the Downstream Vault.
+	// The login request omits a token. The tenant token of the Bastion Vault therefore never reaches the Downstream Vault.
 	for _, want := range []string{
 		"PUT /v1/auth/spire-parent-jwt-svid-provider/login token=",
 		"GET /v1/secret/data/example-platform/keycloak/frontend/cluster-config token=s.downstream",
@@ -205,7 +205,7 @@ func TestCreateSession_FailsWithoutRuntimeDir(t *testing.T) {
 	}
 }
 
-func assertFileHolds(t *testing.T, path, want string) {
+func assertFileContains(t *testing.T, path, want string) {
 	t.Helper()
 	content, err := os.ReadFile(path)
 	if err != nil || !strings.Contains(string(content), want) {

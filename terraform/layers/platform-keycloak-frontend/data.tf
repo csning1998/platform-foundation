@@ -30,7 +30,7 @@ data "terraform_remote_state" "provision_harbor_origin_frontend" {
   config  = { address = "${local._state_base}/provision-harbor-origin-frontend" }
 }
 
-# The Harbor robot pulls the charts from the private OCI project. The ephemeral read keeps the robot secret out of the state.
+# The Harbor robot pulls the charts from the private OCI project. The ephemeral read excludes the robot secret from the state.
 ephemeral "vault_kv_secret_v2" "harbor_origin_robot" {
   provider = vault.downstream
   mount    = "secret"

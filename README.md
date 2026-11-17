@@ -34,7 +34,7 @@ The services defined in `compose.yml` run under rootless Podman on a host with S
 
 ### Item A. Standing Conventions
 
-Four conventions MUST hold for every service declared in `compose.yml`.
+Four conventions MUST apply to every service declared in `compose.yml`.
 
 1. **Bind mounts declare no relabel flag**. Neither `:z` nor `:Z` MUST appear on any volume line. Item F documents the incident that motivated this restriction.
 2. **The `security_opt: label=disable` setting MUST NOT appear** on any long-running service. Disabling label separation removes confinement outright rather than resolving the underlying label mismatch.
@@ -82,7 +82,7 @@ Only `gitlab_runner_podman.te` is tracked in version control. The compiled `.mod
     done
     ```
 
-2. The following command reports the distinct set of labels carried by every file beneath the mount sources, a set that MUST contain the single entry `container_file_t:s0` without a category suffix.
+2. The following command reports the distinct set of labels assigned to every file beneath the mount sources, a set that MUST contain the single entry `container_file_t:s0` without a category suffix.
 
     ```bash
     ls -RZ vault sonarqube runner-config | grep -o 'container_file_t:s0[^ ]*' | sort -u
@@ -106,7 +106,7 @@ Only `gitlab_runner_podman.te` is tracked in version control. The compiled `.mod
 
 2. Denials raised by `pasta_t` against `config_home_t` or `data_home_t` are unrelated to this configuration. Such denials originate from file descriptors that the rootless network backend inherits from the process that launches Podman.
 
-3. A denial whose `tcontext` carries a non-empty MCS category on a path beneath `vault/`, `sonarqube/`, or `runner-config/` indicates category drift. Item B restores the baseline, and Item F identifies which tool caused the drift.
+3. A denial whose `tcontext` contains a non-empty MCS category on a path beneath `vault/`, `sonarqube/`, or `runner-config/` indicates category drift. Item B restores the baseline, and Item F identifies which tool caused the drift.
 
 4. A denial whose `tcontext` names `container_runtime_t` with class `unix_stream_socket` and permission `connectto` indicates that the policy module described in Item C is absent, or that the service omits the `container_engine_t` declaration.
 
@@ -122,7 +122,7 @@ Podman relabel flags `:z` and `:Z` each recursively rewrite the MCS category of 
 
 This failure was traced to `.githooks/pre-commit` and `.githooks/commit-msg`, each of which ran `podman run -v "${REPO_ROOT}":/repo:Z` on every commit. The recursive relabel left the three service directories with a category that matched neither the hooks' own short-lived container nor any of the four running services, producing denials unrelated to container startup or restart. A resulting denial can cause Vault's raft storage to fail a write, panicking the process and losing the unseal state.
 
-Both hooks read the repository without writing to it and therefore require no relabeling at all. The fix replaces `:Z` with `--security-opt label=disable`, scoped to these two short-lived, non-secret-holding containers, which presents a different risk profile from disabling confinement on a long-running service such as `vault-server`.
+Both hooks read the repository without writing to it and therefore require no relabeling at all. The fix replaces `:Z` with `--security-opt label=disable`, scoped to these two short-lived, secret-free containers, which presents a different risk profile from disabling confinement on a long-running service such as `vault-server`.
 
 Any future local tool that mounts the repository root, or any ancestor of `vault/`, `sonarqube/`, or `runner-config/`, MUST avoid `:z` and `:Z` for the same reason.
 
@@ -260,8 +260,8 @@ The health check MUST print `Agent is healthy.`.
 4. The last version with resources MUST be pushed back as a newer serial.
 5. The lineage of the restored version MUST equal the lineage of the current state.
 6. The domain UUID inside the restored version MUST equal the output of `virsh -c qemu:///system domuuid <domain>`.
-7. The downloaded state holds secrets.
-8. The downloaded files MUST stay in a directory created with `umask 077`.
+7. The downloaded state contains secrets.
+8. The downloaded files MUST reside in a directory created with `umask 077`.
 9. The downloaded files MUST be deleted after the push.
 
 ```bash

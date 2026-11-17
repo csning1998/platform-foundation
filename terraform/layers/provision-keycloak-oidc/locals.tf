@@ -56,7 +56,7 @@ locals {
     if v.oidc_client != null
   }
 
-  # Keeps vault_frontend static because the client carries the audience mapper and multiple redirect URIs, unlike single-callback services.
+  # Keeps vault_frontend static because the client has the audience mapper and multiple redirect URIs, unlike single-callback services.
   oidc_clients_all = merge({
     vault_frontend = {
       client_id           = "vault-infra"

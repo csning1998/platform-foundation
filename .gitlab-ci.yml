@@ -12,13 +12,13 @@ include:
         - "gemini-3.8-flash"
         - "azure-gpt-5.4-mini"
       enable_sonarqube: true
-      # The group runner carries the tag and reaches SonarQube on the host network sonarqube-ci-net.
+      # The group runner is registered with the tag and reaches SonarQube on the host network sonarqube-ci-net.
       sonar_scanner_tags: ["sonarqube-network"]
       sonar_go_coverage_path: "tools/platform/coverage.out"
   - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/iac-terraform@1.8.4
     inputs:
       # CKV_GLB_1, CKV_GLB_3, CKV_GLB_4: require GitLab Premium/Ultimate merge request approval and push rules.
-      # CKV_TF_1: enforces commit-pinned Git URLs; modules use immutable semantic versions from GitLab Terraform Registry.
+      # CKV_TF_1: enforces commit-pinned Git URLs. Modules use immutable semantic versions from GitLab Terraform Registry.
       checkov_skip: "CKV_GLB_1,CKV_GLB_3,CKV_GLB_4,CKV_TF_1"
   - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/iac-ansible@1.8.4
     inputs:
@@ -36,8 +36,8 @@ include:
   - component: $CI_SERVER_FQDN/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/auto-tag@1.8.4
     inputs:
       reviewer_image: $CI_REGISTRY/$CI_PROJECT_ROOT_NAMESPACE/gitlab-ci-with-code-reviewer/reviewer:1.8.4
-      # Module publishing paused until terraform/modules/ gains an external consumer repository;
-      # currently, layers reference modules by relative path.
+      # Module publishing is paused until terraform/modules/ gains an external consumer repository.
+      # Layers reference modules by relative path.
       # - local: ".gitlab/ci/modules-terraform.yml"
   - local: ".gitlab/ci/collection-ansible.yml"
 
@@ -46,9 +46,9 @@ lint:ansible:
   variables:
     ANSIBLE_CONFIG: "${CI_PROJECT_DIR}/ansible/ansible.cfg"
 
-# internal/libvirtops uses cgo bindings against libvirt.org/go/libvirt. The lang-go component's
-# golang:*-alpine image ships CGO_ENABLED=0 and no libvirt headers by default; these overrides
-# are local to platform-foundation until ported into gitlab-ci-with-code-reviewer's lang-go.yml.
+# internal/libvirtops uses cgo bindings against libvirt.org/go/libvirt. The golang:*-alpine image of the lang-go
+# component sets CGO_ENABLED=0 and lacks the libvirt headers. The overrides below are specific to
+# platform-foundation until the lang-go.yml of gitlab-ci-with-code-reviewer installs the libvirt toolchain.
 build:go:
   variables:
     CGO_ENABLED: "1"

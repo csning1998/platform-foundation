@@ -137,7 +137,7 @@ func mapGetenv(env map[string]string) func(string) string {
 	return func(key string) string { return env[key] }
 }
 
-// installFakeAnsiblePlaybook puts a recorder of the arguments and the configuration variables first on PATH.
+// installFakeAnsiblePlaybook places a recorder of the arguments and the configuration variables first on PATH.
 func installFakeAnsiblePlaybook(t *testing.T) string {
 	t.Helper()
 	bin := t.TempDir()
@@ -152,7 +152,7 @@ func installFakeAnsiblePlaybook(t *testing.T) string {
 	return record
 }
 
-// installFakeTerraform puts first on PATH a terraform which prints stdout and exits with code.
+// installFakeTerraform places first on PATH a terraform which prints stdout and exits with code.
 func installFakeTerraform(t *testing.T, stdout string, code int) {
 	t.Helper()
 	bin := t.TempDir()

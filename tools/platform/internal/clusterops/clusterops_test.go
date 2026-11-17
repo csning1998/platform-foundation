@@ -116,7 +116,7 @@ func TestDecodeCoordinates_ExtractsOperators(t *testing.T) {
 func replaceJSON(t *testing.T, old, new string) []byte {
 	t.Helper()
 	if !strings.Contains(tenantsOutput, old) {
-		t.Fatalf("tenantsOutput holds no %q", old)
+		t.Fatalf("tenantsOutput lacks %q", old)
 	}
 	return []byte(strings.Replace(tenantsOutput, old, new, 1))
 }
@@ -701,7 +701,7 @@ func TestBuildShellEnv_ConfiguresSessionVariables(t *testing.T) {
 	}
 }
 
-// newSessionWithFile returns a session directory which holds one kubeconfig.
+// newSessionWithFile returns a session directory which contains one kubeconfig.
 func newSessionWithFile(t *testing.T) string {
 	t.Helper()
 	dir, err := CreateSessionDir(t.TempDir())

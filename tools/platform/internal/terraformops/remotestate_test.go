@@ -25,7 +25,7 @@ func writeLayer(t *testing.T, dir, layer, content string) {
 
 const testStateBase = "https://gitlab.example/api/v4/projects/7/terraform/state"
 
-// backendBlock is an HTTP backend block which omits the address, as every layer declares the block.
+// backendBlock omits the backend address, matching the shared HTTP backend block of every layer.
 const backendBlock = "terraform {\n  backend \"http\" {\n    lock_method = \"POST\"\n  }\n}\n"
 
 func TestListPurgeableStates_DerivesTheAddressAndRetainsAdministrationLayers(t *testing.T) {

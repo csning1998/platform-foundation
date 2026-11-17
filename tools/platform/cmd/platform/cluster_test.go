@@ -80,7 +80,7 @@ func writeClientCertificate(t *testing.T, dir string) (certFile, keyFile string)
 
 const testStateBase = "https://gitlab.example/api/v4/projects/7/terraform/state"
 
-// newClusterEnvironment starts a Bastion Vault double which holds the leaf of vault-downstream/frontend alone, and
+// newClusterEnvironment starts a Bastion Vault double which stores the leaf of vault-downstream/frontend alone, and
 // points terraform, kubectl, the Vault Proxy environment, and XDG_RUNTIME_DIR of the process at test doubles.
 func newClusterEnvironment(t *testing.T) string {
 	t.Helper()
@@ -142,7 +142,7 @@ func assertNoSessionDir(t *testing.T, runtime string) {
 	t.Helper()
 	entries, err := os.ReadDir(runtime)
 	if err != nil || len(entries) != 0 {
-		t.Errorf("runtime directory holds %v, %v, want no session directory", entries, err)
+		t.Errorf("runtime directory contains %v, %v, want no session directory", entries, err)
 	}
 }
 

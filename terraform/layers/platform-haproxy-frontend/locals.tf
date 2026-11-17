@@ -16,7 +16,7 @@ locals {
 }
 
 # HAProxy precedes the Downstream Vault, which a VM runtime of the Downstream Vault exposes through the VIP of HAProxy.
-# The layer therefore depends on the Bastion Vault alone, and each registry field holds one category in JSON.
+# The layer therefore depends on the Bastion Vault alone, and each registry field stores one category in JSON.
 locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)
@@ -43,7 +43,7 @@ locals {
   ))
 }
 
-# Kubernetes-native runtimes stay on the Cilium Service/L2Announcement path. Any other
+# Kubernetes-native runtimes remain on the Cilium Service/L2Announcement path. Any other
 # runtime in the catalog is an external service, owned end to end by this tier per the
 # decisions.md entry retiring Cilium Service exposure for non-Kubernetes backends.
 locals {
@@ -85,7 +85,7 @@ locals {
 }
 
 # Backend list for the platform_haproxy_frontend Ansible role, read from the same infrastructure_map
-# feeding the Cilium manifests. Both stay derived from one Terraform source.
+# feeding the Cilium manifests. Both remain derived from one Terraform source.
 locals {
   lb_service_segments = [
     for seg_key, seg in local.fronted_segments : {

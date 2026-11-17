@@ -9,7 +9,7 @@ locals {
   }
 }
 
-# Each registry field holds one category in JSON. The facts are not secret, while the provider marks every KV value as sensitive.
+# Each registry field stores one category in JSON. The facts are not secret, while the provider marks every KV value as sensitive.
 locals {
   registry_bastion = {
     for field, value in nonsensitive(data.vault_generic_secret.registry_bastion.data) : field => jsondecode(value)

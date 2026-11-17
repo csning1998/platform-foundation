@@ -31,7 +31,7 @@ provider "vault" {
   address      = local.downstream_vault_endpoint
   ca_cert_file = local.vault_pki_cert_path
 
-  # The JWT-SVID arrives through TERRAFORM_VAULT_AUTH_JWT from platform terraform and stays out of the state.
+  # The JWT-SVID arrives through TERRAFORM_VAULT_AUTH_JWT from platform terraform and is excluded from the state.
   auth_login_jwt {
     mount = local.terraform_operator.auth_mount
     role  = local.terraform_operator.role_name
@@ -41,7 +41,7 @@ provider "vault" {
 
 # The Bastion Vault receives the kubeconfig of the Talos runtime. The operator of this component logs in through the JWT-SVID of the SPIRE Parent.
 
-# The OCI registry client of the provider lacks a CA option. The operator host trust store MUST hold the Downstream PKI trust bundle.
+# The OCI registry client of the provider lacks a CA option. The operator host trust store MUST contain the Downstream PKI trust bundle.
 provider "helm" {
   registries = [
     {

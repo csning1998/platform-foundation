@@ -22,7 +22,7 @@ locals {
 locals {
   # Operators of the components deployed before the SPIRE Child, keyed as in output terraform_operator.
   # security-vault-downstream-tenants declares the operators of the components deployed after the SPIRE Child.
-  # The vault-downstream operator administers the Downstream Vault, and the platform-foundation Vault Proxy carries every Bastion change.
+  # The vault-downstream operator administers the Downstream Vault, and the platform-foundation Vault Proxy routes every Bastion change.
   _spire_parent_operator_targets = {
     "spire-child"      = { owner = local.foundation_project_code, service = "spire", component = "child" }
     "vault-downstream" = { owner = local.foundation_project_code, service = "vault-downstream", component = "frontend" }
