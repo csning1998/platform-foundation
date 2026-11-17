@@ -19,7 +19,7 @@ import (
 	"platform/internal/ui"
 )
 
-// clusterPrefix requires a cluster suffix, which prevents a match on the shared guest key id_<algorithm>_<ProjectCode>.
+// clusterPrefix requires a cluster suffix, hence the prefix never matches the shared guest key id_<algorithm>_<ProjectCode>.
 const clusterPrefix = config.ProjectCode + "-"
 
 // clusterFileRe matches the identity key pair, the Host block file, and the known_hosts file of one cluster.

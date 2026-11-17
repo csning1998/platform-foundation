@@ -6,7 +6,7 @@ resource "harbor_registry" "proxy_registries" {
   provider_name = each.value.provider_name
 }
 
-# The proxy caches serve public upstream images. Anonymous pulls exclude registry credentials from the Talos machine configuration.
+# The proxy caches serve public upstream images. With anonymous pulls, the Talos machine configuration omits registry credentials.
 resource "harbor_project" "proxy_projects" {
   for_each      = local.proxy_caches
   name          = each.value.project_name

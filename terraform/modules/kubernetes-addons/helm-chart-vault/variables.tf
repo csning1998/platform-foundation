@@ -9,7 +9,7 @@ variable "helm_config" {
   })
 }
 
-# The raft settings are separate from vault_config because the listener certificate reads listener_names before the TLS Secret exists.
+# The raft settings are separated from vault_config because the listener certificate reads listener_names before the TLS Secret exists.
 variable "raft_config" {
   description = "Raft cluster settings: the number of servers, which form one raft cluster, and the cluster domain under which the peers join."
   type = object({

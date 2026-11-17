@@ -194,7 +194,7 @@ func removeJWTEnv(base []string) []string {
 }
 
 // PrepareTerraform returns the terraform invocation of the layer at layerDir, with the JWT-SVID of its operator
-// when the layer logs in with one. Resolution of terraform precedes the wrapper run, which prevents a JWT-SVID from reaching an unstartable run.
+// when the layer logs in with one. Resolution of terraform precedes the wrapper run, hence a JWT-SVID never reaches an unstartable run.
 func PrepareTerraform(ctx context.Context, cfg Config, layerDir string, args, environ []string) (Invocation, error) {
 	terraform, err := exec.LookPath("terraform")
 	if err != nil {

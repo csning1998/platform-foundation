@@ -30,7 +30,7 @@ This specification states the coordination contract between the SPIRE trust doma
 5. `pki-leaf-platform` has a zero path length, issues leaf certificates alone, and permits the platform domain, `cluster.local`, and the platform network. The listeners of SPIRE Parent OIDC and Downstream Vault take their certificates from `pki-leaf-platform`.
 6. Module `vault-pki-setup`, invoked by layer `security-vault-downstream-pki`, realizes the Tier 3 role for Downstream Vault. Downstream Vault generates the P-256 CSR and keeps the private key, `pki-intermediate-vault-downstream` signs the CSR through `root/sign-intermediate`, and the signed certificate returns to Downstream Vault. The signing request contains a DNS name inside the permitted subtree, since a signer with permitted DNS constraints rejects a CA certificate without one.
 7. SPIRE Parent's own Intermediate CA additionally signs SPIRE Child's Intermediate CA on the SPIRE branch, and SPIRE Child signs a workload's leaf SVID.
-8. Resource `pki_root` sets `prevent_destroy = true` in `parent-group-governance`.
+8. Resource `pki_root` declares `prevent_destroy = true` in `parent-group-governance`.
 
 ### Item D. Listener Certificates Outside the Terraform State
 
