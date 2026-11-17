@@ -23,7 +23,7 @@
 
     # A certificate from a rebuilt pki-leaf-platform fails the chain check,
     # and a certificate inside the renewal window fails checkend.
-    - name: "B1c. Verify the held stats certificate against the CA bundle"
+    - name: "B1c. Verify the existing stats certificate against the CA bundle"
       ansible.builtin.command:
         argv:
           - openssl
@@ -35,7 +35,7 @@
       changed_when: false
       failed_when: false
 
-    - name: "B1d. Check that the held stats certificate outlives the renewal window"
+    - name: "B1d. Check that the existing stats certificate outlives the renewal window"
       ansible.builtin.command:
         argv:
           - openssl

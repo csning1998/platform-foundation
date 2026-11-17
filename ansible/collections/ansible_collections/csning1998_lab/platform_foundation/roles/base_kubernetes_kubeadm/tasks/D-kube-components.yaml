@@ -31,7 +31,7 @@
         name: "{{ _base_kubernetes_kubeadm_k8s_versioned_packages }}"
         state: present
 
-    - name: "Step 5. Hold Kubernetes package versions"
+    - name: "Step 5. Pin Kubernetes package versions"
       ansible.builtin.dpkg_selections:
         name: "{{ item }}"
         selection: hold

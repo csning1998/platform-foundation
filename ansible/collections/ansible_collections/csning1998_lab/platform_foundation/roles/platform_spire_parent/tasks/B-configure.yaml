@@ -52,7 +52,7 @@
         msg: "{{ ansible_failed_result.msg | default('see task output above') }}"
 
 # The workstation issues the secret ID through the Vault Proxy, and the secret ID never enters a Terraform state.
-# A held secret ID stays while the operator Vault still knows the secret ID under the current role.
+# An existing secret ID remains valid while the operator Vault still knows the secret ID under the current role.
 - name: "Block B2: Upstream Authority Secret ID"
   become: true
   block:
@@ -62,14 +62,14 @@
       vars:
         utils_vault_operator_login_use_ambient: true
 
-    - name: "B2b. Read the secret ID which the host holds"
+    - name: "B2b. Read the secret ID stored on the host"
       ansible.builtin.slurp:
         src: "{{ platform_spire_parent_upstream_env_path }}"
       register: _platform_spire_parent_upstream_env
       failed_when: false
       no_log: true
 
-    - name: "B2c. Look up the held secret ID on the operator Vault"
+    - name: "B2c. Look up the stored secret ID on the operator Vault"
       when: _platform_spire_parent_upstream_env.content is defined
       ansible.builtin.uri:
         url: >-

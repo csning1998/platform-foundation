@@ -41,7 +41,7 @@
     - Disable libvirtd service
     - Restart libvirtd socket
 
-# The monolithic libvirtd socket stays disabled on a modular-daemon host.
+# The monolithic libvirtd socket remains disabled on a modular-daemon host.
 # virtqemud, virtnetworkd, and virtstoraged own the live client-facing sockets.
 - name: "Step 5. Ensure modular libvirt daemon socket drop-in directories exist"
   ansible.builtin.file:

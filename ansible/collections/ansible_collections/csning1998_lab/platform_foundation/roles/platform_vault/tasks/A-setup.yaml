@@ -57,7 +57,7 @@
         mode: "0644"
       notify: Restart Vault Service
 
-    - name: "A2b. Verify the held listener certificate against the CA chain"
+    - name: "A2b. Verify the existing listener certificate against the CA chain"
       ansible.builtin.command:
         argv:
           - openssl
@@ -69,7 +69,7 @@
       changed_when: false
       failed_when: false
 
-    - name: "A2c. Check that the held listener certificate outlives the renewal window"
+    - name: "A2c. Check that the existing listener certificate outlives the renewal window"
       ansible.builtin.command:
         argv:
           - openssl
@@ -92,7 +92,7 @@
           vars:
             utils_vault_operator_login_use_ambient: true
 
-        # The raft peers join through the node addresses, hence each node carries its own address and the VIP.
+        # The raft peers join through the node addresses, hence each node certificate contains its own address and the VIP.
         - name: "A2d-ii. Issue the certificate and the private key"
           ansible.builtin.uri:
             url: >-

@@ -20,7 +20,7 @@
 
     # A certificate from a rebuilt pki-leaf-platform fails the chain check.
     # A certificate inside the renewal window fails checkend.
-    - name: "D1c. Verify the held listener certificate against the CA chain"
+    - name: "D1c. Verify the existing listener certificate against the CA chain"
       ansible.builtin.command:
         argv:
           - openssl
@@ -32,7 +32,7 @@
       changed_when: false
       failed_when: false
 
-    - name: "D1d. Check that the held listener certificate outlives the renewal window"
+    - name: "D1d. Check that the existing listener certificate outlives the renewal window"
       ansible.builtin.command:
         argv:
           - openssl

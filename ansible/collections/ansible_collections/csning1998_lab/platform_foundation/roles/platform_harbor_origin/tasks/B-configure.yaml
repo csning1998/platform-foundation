@@ -15,7 +15,7 @@
           if platform_harbor_origin_harbor_dir_stat.stat.exists
           else platform_harbor_origin_harbor_gid) | int }}
 
-# The OS trust store MUST hold the root of the chain.
+# The OS trust store MUST contain the root of the chain.
 # Python does not accept an intermediate CA as the only trust anchor.
 - name: "B5. Install the Vault PKI trust bundle into the OS trust store"
   when: vault_ca_cert_b64 is defined

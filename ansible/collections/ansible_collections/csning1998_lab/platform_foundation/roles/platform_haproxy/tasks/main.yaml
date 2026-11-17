@@ -8,7 +8,7 @@
 
 # extra-vars precedence outranks set_fact: a decoded value cannot reuse the lb_service_segments
 # name itself. Terraform sends that variable JSON-encoded (ansible-runner extra_vars requires
-# string values). platform_haproxy_lb_service_segments holds the decoded native list.
+# string values). platform_haproxy_lb_service_segments contains the decoded native list.
 - name: "Task 0b. Decode lb_service_segments into a native list"
   ansible.builtin.set_fact:
     platform_haproxy_lb_service_segments: >-

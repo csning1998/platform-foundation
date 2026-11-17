@@ -196,7 +196,7 @@
           ansible.builtin.include_role:
             name: csning1998_lab.platform_foundation.utils_spire_server_command
           vars:
-            # The anchor holds the coordinates shared by every call, and each call adds its own arguments.
+            # The anchor contains the coordinates shared by every call, and each call adds its own arguments.
             <<: &server_command_vars
               utils_spire_server_command_kind: "{{ utils_spire_agent_server_kind }}"
               utils_spire_server_command_parent_ssh_host: "{{ spire_parent_ssh_host | default('') }}"
@@ -335,11 +335,11 @@
         utils_spire_server_command_arguments: "bundle show"
         utils_spire_server_command_tolerate_failure: false
 
-    - name: "Step F1a. Assert that the bundle holds a certificate"
+    - name: "Step F1a. Assert that the bundle contains a certificate"
       ansible.builtin.assert:
         that:
           - "'BEGIN CERTIFICATE' in utils_spire_server_command_result.stdout"
-        fail_msg: "The trust bundle of the {{ utils_spire_agent_server_kind }} SPIRE server holds no certificate."
+        fail_msg: "The trust bundle of the {{ utils_spire_agent_server_kind }} SPIRE server lacks a certificate."
 
     - name: "Step F2. Deploy the trust bundle locally"
       ansible.builtin.copy:
