@@ -2,7 +2,7 @@
 
 ## Section 1. Executive Summary and Final Verdict
 
-1. **Decision Status**: The attestor selection for the two SPIRE Agents of the operator workstation is open. This record holds the discussion of 2026-10-24. The final verdict MUST wait until every condition in Section 4 is satisfied.
+1. **Decision Status**: The attestor selection for the two SPIRE Agents of the operator workstation is open. This record contains the discussion of 2026-10-24. The final verdict MUST wait until every condition in Section 4 is satisfied.
 2. **Current Constraint**: Both workstation agents attest with the `join_token` node attestor. A workstation agent with an expired agent SVID cannot attest again without a new join token. A workstation shutdown longer than the agent SVID lifetime, one hour for the Parent agent and four hours for the Child agent, therefore requires one forced playbook run per expired agent.
 3. **Proposed Direction**: The Child agent of the workstation SHOULD move to the `x509pop` node attestor, which the SPIRE Child already enables. The Parent agent of the workstation retains `join_token` until the Bastion Vault provides a node attestation PKI.
 4. **Cost of the Proposed Direction**: The `x509pop` attestor requires a node private key on the workstation disk for the lifetime of the node certificate. The window in which stolen agent data remains usable grows from four hours to the node certificate lifetime.
@@ -11,7 +11,7 @@
 
 ### Item A. Incident of 2026-10-24
 
-The workstation agent of the SPIRE Parent rotated the agent SVID for the last time at 2026-10-22 18:00:46 +0800. The rotated agent SVID expired at 2026-10-22 19:00:46 +0800. The workstation agent of the SPIRE Child held an agent SVID with an expiry of 2026-10-22 20:26:34 +0800. The workstation was shut down at 2026-10-22 18:07:58 +0800. The workstation booted again at 2026-10-23 04:55:50 +0800.
+The workstation agent of the SPIRE Parent rotated the agent SVID for the last time at 2026-10-22 18:00:46 +0800. The rotated agent SVID expired at 2026-10-22 19:00:46 +0800. The workstation agent of the SPIRE Child had an agent SVID with an expiry of 2026-10-22 20:26:34 +0800. The workstation was shut down at 2026-10-22 18:07:58 +0800. The workstation booted again at 2026-10-23 04:55:50 +0800.
 
 After the boot, each agent started node attestation, because the stored agent SVID had expired. The configured join token had already been consumed by the first attestation. Each SPIRE server rejected every attempt with `join token was not provided`. The agent creates the Workload API socket only after a successful attestation. Consequently, the `spire-fetch-*` wrappers failed. The `terraform plan` of `provision-spire-child` failed at the operator login.
 
@@ -73,7 +73,7 @@ The SPIRE Parent enables only `join_token` and `k8s_psat` in `server.conf.j2`. T
 2. The node certificate lifetime MUST NOT exceed the theft window which the owner accepts.
 3. A renewal schedule MUST renew the node certificate during the online periods of the workstation.
 4. The node private key MUST be readable by root alone with mode `0600`.
-5. The node private key MUST carry the SELinux label of the agent data directory.
+5. The node private key MUST have the SELinux label of the agent data directory.
 6. A node alias MUST select the subject CN of the workstation node certificate.
 7. Every workload entry of the workstation operators MUST reference the node alias as the parent ID.
 8. The revocation path in Section 3 Item B MUST be verified before the migration.

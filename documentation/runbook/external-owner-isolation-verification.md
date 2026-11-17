@@ -202,7 +202,7 @@ podman rm -f owner-isolation-vault
 
 ### Step A. Verify the Node Alias across Certificate Rotation (`spire-x509pop.sh`)
 
-This script starts an isolated SPIRE server with the `x509pop` node attestor in `external_pki` mode and without `agent_path_template`, matching the server rendered by `spire-nested`. The server registers a node alias selecting the subject CN of an owner node and a workload entry below the alias. Two agents present certificates from the same node CA: one carries the owner CN, and the other carries a platform CN. The script then rotates the owner certificate and restarts the owner agent with an empty data directory.
+This script starts an isolated SPIRE server with the `x509pop` node attestor in `external_pki` mode and without `agent_path_template`, matching the server rendered by `spire-nested`. The server registers a node alias selecting the subject CN of an owner node and a workload entry below the alias. Two agents present certificates from the same node CA: one has the owner CN, and the other has a platform CN. The script then rotates the owner certificate and restarts the owner agent with an empty data directory.
 
 ```bash
 #!/usr/bin/env bash
@@ -321,9 +321,9 @@ echo "--- owner node after rotation: $(fetch agent)"
 
 Expected output:
 
-1. Both agents attest as `spiffe://example.test/spire/agent/x509pop/<certificate fingerprint>`. `spire-nested` renders no `agent_path_template` in `externalPKI` mode, and the agent ID therefore carries the fingerprint instead of the CN.
+1. Both agents attest as `spiffe://example.test/spire/agent/x509pop/<certificate fingerprint>`. `spire-nested` renders no `agent_path_template` in `externalPKI` mode, and the agent ID therefore contains the fingerprint instead of the CN.
 2. The owner node receives `spiffe://example.test/example-owner/app`. The platform node, whose certificate comes from the same CA, reports `no identity issued`.
-3. After rotation, the agent list shows a third agent ID with a new fingerprint, and the owner node still receives `spiffe://example.test/example-owner/app` through the node alias. The agent of the old certificate stays listed until its SVID expires.
+3. After rotation, the agent list shows a third agent ID with a new fingerprint, and the owner node still receives `spiffe://example.test/example-owner/app` through the node alias. The agent of the old certificate remains listed until its SVID expires.
 
 ### Step B. Remove the SPIRE Containers
 
@@ -338,7 +338,7 @@ podman network rm owner-isolation
 
 ### Step A. Save the Registration Script (`spire-child-registration.sh`)
 
-This script logs in as the `spire-child` operator to read the Child admin kubeconfig and the owner coordinates. The admin creates one fixture entry of the platform, and then impersonates an operator of the owner `opgitlab` with the group `spire-owner-operator:opgitlab`, which kube-apiserver assigns to the JWT-SVID of such an operator. Every registration case runs as a server-side dry run. The `keycloak` operator fetches a JWT-SVID with the Kubernetes audience to confirm that the platform group holds no registration grant, and logs in to the Child mount with its Vault audience JWT-SVID.
+This script logs in as the `spire-child` operator to read the Child admin kubeconfig and the owner coordinates. The admin creates one fixture entry of the platform, and then impersonates an operator of the owner `opgitlab` with the group `spire-owner-operator:opgitlab`, which kube-apiserver assigns to the JWT-SVID of such an operator. Every registration case runs as a server-side dry run. The `keycloak` operator fetches a JWT-SVID with the Kubernetes audience to confirm that the platform group lacks a registration grant, and logs in to the Child mount with its Vault audience JWT-SVID.
 
 ```bash
 #!/usr/bin/env bash
@@ -477,7 +477,7 @@ Expected output:
 
 1. The server lists the node attestors `join_token k8s_psat x509pop`, the policy and its binding exist, and the workstation parameter matches an attested agent.
 2. The platform operator reports the username of the `keycloak` operator and the group `spire-owner-operator:platform-foundation`, and the owner caller reports the group `spire-owner-operator:opgitlab`.
-3. Every registration case outputs `OK`. The three cases inside the owner prefix are admitted, and the remaining thirteen cases are denied by the violated rule. The platform operator holds no grant on `clusterstaticentries`.
+3. Every registration case outputs `OK`. The three cases inside the owner prefix are admitted, and the remaining thirteen cases are denied by the violated rule. The platform operator lacks a grant on `clusterstaticentries`.
 4. Both owner roles reject the platform JWT-SVID, and the quota reports the role `opgitlab-terraform-operator` on the Child mount.
 
 ### Step C. Remove the Work Directory
