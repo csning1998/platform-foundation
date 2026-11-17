@@ -1,8 +1,6 @@
 
-# GitLab HTTP backend base URL. Authentication credentials must be supplied via
-# `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD` environment variables.
 locals {
-  _state_base_platform_foundation = "https://gitlab.com/api/v4/projects/84608830/terraform/state"
+  _state_base = var.gitlab_terraform_state_base
 }
 
 locals {
@@ -44,7 +42,7 @@ locals {
 
   # Excludes entries missing an SSoT VIP (an open ADR defect) or a backend server, both
   # of which fail downstream against Cilium or the Kubernetes API.
-  # A cluster tagged self-managed-lb holds its own VIP. An announcement of the VIP from this layer duplicates the holder.
+  # A cluster tagged self-managed-lb announces its own VIP. An announcement of the VIP from this layer duplicates the announcement of the cluster.
   fronted_segments = {
     for key, seg in local.foundation_infrastructure_map : key => seg
     if key != local.cilium_cluster_name

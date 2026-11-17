@@ -15,6 +15,7 @@ import (
 
 	"platform/internal/ansibleops"
 	"platform/internal/config"
+	"platform/internal/terraformops"
 	"platform/internal/ui"
 )
 
@@ -50,8 +51,13 @@ func (p Paths) resolveDownstreamLayerDir() string {
 
 // ReadDownstreamInventory runs terraform output -json generic_cluster in layerDir and decodes the result.
 func ReadDownstreamInventory(ctx context.Context, layerDir string) (DownstreamInventory, error) {
+	backendEnv, err := terraformops.BuildLayerBackendEnv(os.Getenv(terraformops.StateBaseEnvKey), layerDir)
+	if err != nil {
+		return DownstreamInventory{}, err
+	}
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "terraform", "-chdir="+layerDir, "output", "-json", "generic_cluster")
+	cmd.Env = append(os.Environ(), backendEnv...)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
 		return DownstreamInventory{}, fmt.Errorf("%w: terraform output of %s: %w: %s",

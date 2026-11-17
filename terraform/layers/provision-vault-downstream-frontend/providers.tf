@@ -19,16 +19,13 @@ terraform {
     }
   }
   backend "http" {
-    address        = "https://gitlab.com/api/v4/projects/84608830/terraform/state/provision-vault-downstream-frontend"
-    lock_address   = "https://gitlab.com/api/v4/projects/84608830/terraform/state/provision-vault-downstream-frontend/lock"
-    unlock_address = "https://gitlab.com/api/v4/projects/84608830/terraform/state/provision-vault-downstream-frontend/lock"
     lock_method    = "POST"
     unlock_method  = "DELETE"
     retry_wait_min = 5
   }
 }
 
-# The Bastion Vault holds the kubeconfig of the cluster and signs the listener certificate of the Downstream Vault.
+# The Bastion Vault stores the kubeconfig of the cluster and signs the listener certificate of the Downstream Vault.
 # The .envrc of the layer routes VAULT_ADDR to the platform-foundation Vault Proxy, which overwrites the token of every request.
 provider "vault" {
   alias            = "bastion"

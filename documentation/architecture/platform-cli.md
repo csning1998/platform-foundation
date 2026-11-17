@@ -15,7 +15,7 @@
 ### Item B. Build and Execution Constraints
 
 1. The binary MUST be built with `build-platform.sh`, which runs the tests, builds `tools/platform` into `platform-foundation/platform`, and runs the SonarQube scan.
-2. `build-platform.sh` MUST read the SonarQube analysis token through the Vault Proxy identity `credential-distributor-platform-foundation` inside a subshell, and MUST hold the repository values as `readonly` constants.
+2. `build-platform.sh` MUST read the SonarQube analysis token through the Vault Proxy identity `credential-distributor-platform-foundation` inside a subshell, and MUST declare the repository values as `readonly` constants.
 3. The executable MUST be invoked with the working directory inside the `platform-foundation` repository. `platform terraform` MUST be invoked with the working directory set to a layer directory under `terraform/layers/`.
 4. Automatic environment initialization MUST determine `PROJECT_ROOT` from the current working directory.
 5. The compiled `platform` binary MUST NOT be tracked in version control and MUST be excluded by `.gitignore`.
@@ -59,16 +59,18 @@
 4. `platform terraform` MUST NOT bootstrap `.env`.
 5. `platform layer clean <layer|all>` MUST report which layer directories exist under `terraform/layers/`.
 6. `platform layer clean` MUST NOT delete a state, because Terraform remote state is stored in the GitLab HTTP backend.
-7. Menu option 9 MUST delete the GitLab HTTP backend state of every layer whose backend address a `.tf` file declares, except a layer whose name begins with `administration-`. An administration layer manages the GitLab project which hosts every state.
-8. Menu option 9 MUST list the states before deletion and MUST require a second confirmation. Menu option 9 MUST read the GitLab token from `TF_HTTP_PASSWORD` and MUST stop before any deletion when the variable is empty.
-9. Menu option 9 MUST resolve the state list before the first confirmation and MUST stop before any purge when the resolution fails, since the libvirt and SSH purges cannot be undone.
+7. Menu option 9 MUST delete the GitLab HTTP backend state of every layer whose `.tf` file declares an HTTP backend block, except a layer whose name begins with `administration-`. An administration layer manages the GitLab project which hosts every state.
+8. The state address of a layer MUST be `GITLAB_TERRAFORM_STATE_BASE` followed by the layer directory name. Menu option 9 MUST stop before the first confirmation when `GITLAB_TERRAFORM_STATE_BASE` is empty.
+9. A command which runs `terraform -chdir=<layer>` outside the layer `.envrc` MUST pass `TF_HTTP_ADDRESS`, `TF_HTTP_LOCK_ADDRESS`, and `TF_HTTP_UNLOCK_ADDRESS` of that layer to `terraform`.
+10. Menu option 9 MUST list the states before deletion and MUST require a second confirmation. Menu option 9 MUST read the GitLab token from `TF_HTTP_PASSWORD` and MUST stop before any deletion when the variable is empty.
+11. Menu option 9 MUST resolve the state list before the first confirmation and MUST stop before any purge when the resolution fails, since the libvirt and SSH purges cannot be undone.
 
 ### Item F. Libvirt and KVM Operations (`libvirt`)
 
 1. `platform libvirt ensure-services` MUST verify that modular libvirt sockets (`virtqemud.socket`, `virtnetworkd.socket`, `virtstoraged.socket`) are active, starting inactive units via `sudo systemctl start`.
 2. `platform libvirt purge` MUST destroy and undefine all domains, storage pools, storage volumes, and virtual networks whose names begin with the `platform-` prefix.
 3. `platform libvirt purge` MUST require explicit user confirmation by typing `Y` or `y` prior to resource destruction.
-4. Menu option 9 MUST remove, after the libvirt purge, the identity key pair, the Host block file, and the `known_hosts` file of every cluster under `~/.ssh`, together with each `Include` directive of `~/.ssh/config` which names such a Host block file. A cluster file name carries the `<ProjectCode>-` prefix after `id_<algorithm>_`, `ssh_`, or `known_hosts_`. The shared guest key `id_<algorithm>_<ProjectCode>` MUST remain. `foundation-libvirt-resources` cannot recreate an identity key over an existing file.
+4. Menu option 9 MUST remove, after the libvirt purge, the identity key pair, the Host block file, and the `known_hosts` file of every cluster under `~/.ssh`, together with each `Include` directive of `~/.ssh/config` which names such a Host block file. A cluster file name uses the `<ProjectCode>-` prefix after `id_<algorithm>_`, `ssh_`, or `known_hosts_`. The shared guest key `id_<algorithm>_<ProjectCode>` MUST remain. `foundation-libvirt-resources` cannot recreate an identity key over an existing file.
 
 ### Item G. Strategy Configuration (`strategy`)
 
@@ -78,7 +80,7 @@
 
 ### Item H. Workstation Host Resolution (`hosts`)
 
-1. `platform hosts sync` MUST read the DNS host records of every active network on `qemu:///system` and MUST keep the records which carry a host name with prefix `platform-foundation-`.
+1. `platform hosts sync` MUST read the DNS host records of every active network on `qemu:///system` and MUST keep the records which contain a host name with prefix `platform-foundation-`.
 2. `platform hosts sync` MUST merge the records into one line per address, ordered by address.
 3. `platform hosts sync` MUST print the unified diff between `/etc/hosts` and the rewritten block between `# BEGIN platform-foundation` and `# END platform-foundation`, and MUST NOT write without `--apply`.
 4. `platform hosts sync --apply` MUST back up `/etc/hosts` to `/etc/hosts.bak` and MUST write the file in place, which keeps its SELinux label.
@@ -93,7 +95,7 @@
 3. The commands MUST read the Vault coordinates from one `terraform output -json` of `security-vault-downstream-tenants`, whose output `downstream_vault_operators` names the Vault instance, the KV mount, and the KV path of each `cluster-config` leaf.
 4. For a leaf on the Downstream Vault, the commands MUST log in with the JWT-SVID of the operator of the target and MUST verify the listener against `downstream_vault_ca_cert_path`.
 5. For a leaf on the Bastion Vault, the commands MUST use `VAULT_ADDR`, `VAULT_CACERT`, `VAULT_CLIENT_CERT`, and `VAULT_CLIENT_KEY` of the Proxy environment.
-6. The Downstream Vault token MUST stay inside the process and MUST NOT enter the environment of the session shell.
+6. The Downstream Vault token MUST remain inside the process and MUST NOT enter the environment of the session shell.
 7. The session files MUST reside in a new directory of mode `0700` below `XDG_RUNTIME_DIR`, or below the temporary directory without `XDG_RUNTIME_DIR`, with mode `0600` for each file.
 8. The talosconfig MUST take its endpoints from the InternalIP of the nodes which the API server reports, and MUST omit the endpoints when the API server does not answer.
 9. `platform cluster shell` MUST remove the session directory after the shell exits, whatever the exit status.
@@ -147,7 +149,7 @@ The interactive menu MUST present options in the following sequence:
 | `internal/libvirtops.EnsureServices` | `systemctl` CLI binary           | Systemd socket activation management. Avoids heavyweight D-Bus library bindings.                                                     |
 | `internal/clusterops`                | `github.com/hashicorp/vault/api` | JWT login and KV reads with CA verification. Delegates `terraform output` and `kubectl get nodes` to the CLI binaries.               |
 | `internal/hostsops`                  | `diff`, `sudo cp`, `sudo tee`    | Unprivileged diff and an elevated backup and in-place write. Incurs one `sudo` prompt per applied rewrite.                           |
-| `internal/operatorops`               | `terraform` CLI binary, `execve` | Process replacement keeps the JWT-SVID out of every child but `terraform`. Incurs one wrapper run per invocation of a JWT layer.     |
+| `internal/operatorops`               | `terraform` CLI binary, `execve` | Process replacement withholds the JWT-SVID from every child but `terraform`. Incurs one wrapper run per invocation of a JWT layer.   |
 
 ### Item C. Libvirt Resource Cleanup Invariant
 

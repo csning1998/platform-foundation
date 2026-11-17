@@ -6,7 +6,7 @@ This specification establishes the realization requirements from the `service_ca
 
 ### Item A. Six-Stage Realization Path
 
-1. Stage 1 (Declaration): The calling layer `terraform.tfvars` MUST declare one `service_catalog` entry per service. The `foundation-libvirt-resources` layer SHALL hold the aggregated catalog for the entire repository.
+1. Stage 1 (Declaration): The calling layer `terraform.tfvars` MUST declare one `service_catalog` entry per service. The `foundation-libvirt-resources` layer SHALL contain the aggregated catalog for the entire repository.
 2. Stage 2 (Pure Computation): The `service-catalog` module MUST derive identity, network, and storage topology from the catalog through Terraform `locals` blocks only. The `service-catalog` module SHALL NOT declare any managed resources.
 3. Stage 3 (Foundation Realization): The `foundation-resources` module MUST invoke the `service-catalog` module and SHALL materialize the derived topology into `libvirt_network`, `libvirt_pool`, and `libvirt_volume` resources for every service defined in the catalog.
 4. Stage 4 (Per-Layer Projection): Each consuming layer MUST read the foundation outputs through a `terraform_remote_state` data source and MUST pass them to the `terraform-layer-context` module. The `terraform-layer-context` module SHALL resolve local `target_clusters`, `primary_role`, and `service_config` inputs into a layer-scoped context object.
@@ -90,8 +90,8 @@ flowchart TD
 ### Item D. Module Versus Layer Boundary
 
 1. Every component defined from Stage 2 through Stage 6 in Item A MUST function as a repeatable Terraform module. A module SHALL NOT own an independent Terraform state backend.
-2. The `platform-spire-parent` component MUST function as an independent layer. The layer SHALL maintain a dedicated backend state address declared in `providers.tf`.
-3. The `foundation-libvirt-resources` component MUST function as an independent foundation layer. The layer state SHALL hold every shared `libvirt_network`, `libvirt_pool`, and `libvirt_volume` resource. Consuming service layers MUST NOT declare competing resources for these foundation objects.
+2. The `platform-spire-parent` component MUST function as an independent layer. The layer SHALL maintain a dedicated backend state address exported as `TF_HTTP_ADDRESS` by the layer `.envrc` from `GITLAB_TERRAFORM_STATE_BASE` and the layer directory name.
+3. The `foundation-libvirt-resources` component MUST function as an independent foundation layer. The layer state SHALL contain every shared `libvirt_network`, `libvirt_pool`, and `libvirt_volume` resource. Consuming service layers MUST NOT declare competing resources for these foundation objects.
 
 ### Item E. Ownership Boundary of `service_catalog`
 
@@ -175,7 +175,7 @@ Location: `terraform/modules/kvm-provisioning/helpers/service-catalog`. The modu
 
 1. Outputs `topology_network` and `topology_identity` MUST maintain nesting structured by service name and component name.
 2. Outputs `volume_map`, `pki_map`, and `dns_records` MUST expose flat maps keyed by the composite cluster key or volume identifier.
-3. The `credential_paths` output MUST expose Vault KV path strings structured as `${project_code}/${service}/${component}`, and each string names the folder of a component. The folder SHALL NOT hold a secret itself. The output SHALL NOT contain plaintext secret data.
+3. The `credential_paths` output MUST expose Vault KV path strings structured as `${project_code}/${service}/${component}`, and each string names the folder of a component. The folder SHALL NOT contain a secret itself. The output SHALL NOT contain plaintext secret data.
 4. Output `foundation_vault_path` of layer `foundation-libvirt-resources` MUST expose the leaf paths `kv_paths[service][component][leaf]` structured as `${project_code}/${service}/${component}/${leaf}`. The leaf vocabulary is `ssh`, `cluster-config`, `app`, `addon`, `init`, `join-token`, `registrar`, `parent-attestor`, and `robot`, and the entry `addon` is a prefix which a consumer completes as `addon-<name>`.
 5. Output `foundation_vault_path` MUST also expose `ssh_credential_paths`, which resolves to the `ssh` leaf of every SSH-enabled cluster, and `guest_vm_path`, the one project-wide secret which no service owns. Consumers SHALL read these paths and MUST NOT compose them.
 6. Each leaf has exactly one writer layer: `security-vault-bastion-credentials` writes the `ssh` leaf and the keepalived password at `haproxy/frontend/app` to the Bastion Vault. `security-vault-downstream-credentials` writes the Hubble UI login at `cilium/hubble/addon-hubble-ui` to the Downstream Vault. The platform layer of a cluster writes the `cluster-config` leaf. Layer `platform-vault-downstream-frontend` writes the `init` leaf. Layer `provision-spire-child` writes the `registrar` and `parent-attestor` leaves. Role `utils_spire_agent` writes the `join-token` leaves below `spire/parent` and `spire/child`.
@@ -357,7 +357,7 @@ Location: `terraform/modules/kvm-provisioning/configure`.
 1. The module MUST drive Ansible execution via the `ansible/ansible` provider using `action "ansible_playbook_run"` blocks.
 2. The `local_file.inventory` resource MUST trigger playbook execution on `after_create` and `after_update` events. The inventory file SHALL append `jsonencode(var.status_trigger)` in comments to detect upstream virtual machine recreation.
 3. The action trigger MUST declare `on_failure = taint`, which requires Terraform `1.16.0` or later. A failed playbook marks the inventory tainted, and the next apply replaces the inventory and reruns the playbook.
-4. The inventory MUST carry the connection variables `ansible_pipelining`, `ansible_ssh_private_key_file`, and `ansible_ssh_common_args` in `all.vars`, and a caller value of the same name MUST take precedence. The module MUST NOT write an `ansible.cfg`, since several instances of the module in one layer share the working directory.
+4. The inventory MUST define the connection variables `ansible_pipelining`, `ansible_ssh_private_key_file`, and `ansible_ssh_common_args` in `all.vars`, and a caller value of the same name MUST take precedence. The module MUST NOT write an `ansible.cfg`, since several instances of the module in one layer share the working directory.
 5. Playbook runs MUST resolve the collection of this repository through `ansible/ansible.cfg`, which `ANSIBLE_CONFIG` of the repository `.envrc` names.
 6. The `extra_vars` variable MUST declare `sensitive = true` to protect credentials from terminal logging.
 
@@ -437,7 +437,7 @@ Location: `ansible/collections/ansible_collections/csning1998_lab/platform_found
 
 ### Item B. Attestation and Token Workflow
 
-1. Block D MUST evaluate the live `spire-agent healthcheck` and set `utils_spire_agent_already_attested` to `true` when the check succeeds. Block D SHALL remove `/opt/spire/agent/data/agent-data.json` when no attested agent runs, because that file holds the identity data of a previous SPIRE Server which the current server cannot verify.
+1. Block D MUST evaluate the live `spire-agent healthcheck` and set `utils_spire_agent_already_attested` to `true` when the check succeeds. Block D SHALL remove `/opt/spire/agent/data/agent-data.json` when no attested agent runs, because that file contains the identity data of a previous SPIRE Server which the current server cannot verify.
 2. Block E MUST execute when `utils_spire_agent_already_attested` is `false`. The block SHALL delegate token generation to `spire_parent_node_ip` via `spire-server token generate`, record the token in Bastion Vault for audit while verifying the listener certificate against the CA file named by `bastion_vault_ca_cert_path`, and execute initial agent attestation.
 3. The join token storage path MUST namespace under `spire_cluster_name` and the target hostname.
 4. The generated Agent SPIFFE ID MUST embed the join token string. Download workload entries SHALL reference this parent ID.
@@ -449,7 +449,7 @@ Location: `ansible/collections/ansible_collections/csning1998_lab/platform_found
 
 ### Item D. Consuming Layer Requirements
 
-1. A consuming layer `data.tf` MUST declare a remote state data source targeting the state address `platform-spire-parent-frontend`, which layer `platform-spire-parent` keeps after its directory rename. The layer SHALL inject `spire_parent_node_ip`, `spire_trust_domain`, and `spire_server_port` into `ansible_extra_vars`.
+1. A consuming layer `data.tf` MUST declare a remote state data source targeting the state address `platform-spire-parent`. The layer SHALL inject `spire_parent_node_ip`, `spire_trust_domain`, and `spire_server_port` into `ansible_extra_vars`.
 2. The consuming layer `terraform apply` MUST execute after the completion of `platform-spire-parent` apply.
 3. Consuming Ansible plays MUST gate `utils_spire_agent` execution on the presence of required SPIRE connection variables under the `registered` tag.
 

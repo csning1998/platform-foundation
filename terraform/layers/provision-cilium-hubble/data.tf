@@ -1,17 +1,17 @@
 
 data "terraform_remote_state" "platform_cilium_hubble" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/platform-cilium-hubble" }
+  config  = { address = "${local._state_base}/platform-cilium-hubble" }
 }
 
 data "terraform_remote_state" "foundation_libvirt_resources" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/foundation-libvirt-resources" }
+  config  = { address = "${local._state_base}/foundation-libvirt-resources" }
 }
 
 data "terraform_remote_state" "security_vault_downstream_tenants" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-vault-downstream-tenants" }
+  config  = { address = "${local._state_base}/security-vault-downstream-tenants" }
 }
 
 ephemeral "vault_kv_secret_v2" "cilium_hubble" {
@@ -21,7 +21,7 @@ ephemeral "vault_kv_secret_v2" "cilium_hubble" {
 }
 
 # Cluster readiness checks MUST re-validate quorum convergence during apply operations
-# because concurrent disk I/O from sibling layers destabilizes etcd consensus.
+# because concurrent disk writes from sibling layers destabilize etcd consensus.
 ephemeral "talos_cluster_health" "this" {
   client_configuration = {
     ca_certificate     = ephemeral.vault_kv_secret_v2.cilium_hubble.data["talos_ca_certificate_b64"]

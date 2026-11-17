@@ -277,6 +277,29 @@ func TestPurgeAllInfrastructure_RequiresTheStateTokenBeforeConfirmation(t *testi
 	}
 }
 
+// testBackendBlock omits the backend address, matching the shared HTTP backend block of every layer.
+const testBackendBlock = "terraform {\n  backend \"http\" {\n    lock_method = \"POST\"\n  }\n}\n"
+
+func TestPurgeAllInfrastructure_RequiresTheStateBaseBeforeConfirmation(t *testing.T) {
+	t.Setenv("TF_HTTP_PASSWORD", "test-token")
+	t.Setenv("GITLAB_TERRAFORM_STATE_BASE", "")
+	a, out := newOperationsApp(t, "y\n")
+	dir := filepath.Join(a.terraform, "layers", "platform-a")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir platform-a: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "providers.tf"), []byte(testBackendBlock), 0o644); err != nil {
+		t.Fatalf("write platform-a: %v", err)
+	}
+
+	if err := a.purgeAllInfrastructure(context.Background()); !errors.Is(err, terraformops.ErrStateBaseMissing) {
+		t.Fatalf("purgeAllInfrastructure error = %v, want ErrStateBaseMissing", err)
+	}
+	if strings.Contains(out.String(), confirmExecutionPrompt) || strings.Contains(strings.ToLower(out.String()), "libvirt") {
+		t.Errorf("purgeAllInfrastructure reached the confirmation or libvirt without the state base: %q", out.String())
+	}
+}
+
 func TestPurgeAllInfrastructure_StopsBeforeConfirmationWhenTheLayersAreUnreadable(t *testing.T) {
 	t.Setenv("TF_HTTP_PASSWORD", "test-token")
 	a, out := newOperationsApp(t, "y\n")
@@ -296,13 +319,12 @@ func TestPurgeRemoteStates_ListsTheStatesAndDeletesNothingWhenNotConfirmed(t *te
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatalf("mkdir %s: %v", layer, err)
 		}
-		backend := "terraform {\n  backend \"http\" {\n    address = \"https://gitlab.invalid/api/v4/projects/7/terraform/state/" + layer + "\"\n  }\n}\n"
-		if err := os.WriteFile(filepath.Join(dir, "providers.tf"), []byte(backend), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "providers.tf"), []byte(testBackendBlock), 0o644); err != nil {
 			t.Fatalf("write %s: %v", layer, err)
 		}
 	}
 
-	states, err := terraformops.ListPurgeableStates(a.terraform)
+	states, err := terraformops.ListPurgeableStates(a.terraform, "https://gitlab.invalid/api/v4/projects/7/terraform/state")
 	if err != nil {
 		t.Fatalf("ListPurgeableStates: %v", err)
 	}

@@ -22,6 +22,7 @@ import (
 
 	"platform/internal/config"
 	"platform/internal/operatorops"
+	"platform/internal/terraformops"
 )
 
 var (
@@ -30,7 +31,7 @@ var (
 	// ErrUnknownTarget reports a target without a Terraform operator on the Downstream Vault.
 	ErrUnknownTarget = errors.New("clusterops: the target has no Terraform operator")
 	// ErrClusterConfigMissing reports a cluster without a cluster-config leaf, for example a cluster of the VM runtime.
-	ErrClusterConfigMissing = errors.New("clusterops: the Vault holds no cluster-config of the target")
+	ErrClusterConfigMissing = errors.New("clusterops: the Vault lacks the cluster-config of the target")
 	// ErrProxyEnvironmentMissing reports a shell without the environment of the platform-foundation Vault Proxy.
 	ErrProxyEnvironmentMissing = errors.New("clusterops: VAULT_ADDR, VAULT_TOKEN, VAULT_CLIENT_CERT, or VAULT_CLIENT_KEY is empty, allow the .envrc with direnv allow or run eval \"$(vault-proxy-env " + config.VaultProxyIdentity + ")\"")
 )
@@ -45,21 +46,21 @@ type ClusterConfig struct {
 	KVPath  string
 }
 
-// Operator holds the JWT login coordinates of the Terraform operator of one component and its cluster-config leaf.
+// Operator contains the JWT login coordinates of the Terraform operator of one component and its cluster-config leaf.
 type Operator struct {
 	AuthMount     string
 	RoleName      string
 	ClusterConfig ClusterConfig
 }
 
-// Coordinates holds the Downstream Vault address, its CA chain, and the operators keyed by service and component.
+// Coordinates contains the Downstream Vault address, its CA chain, and the operators keyed by service and component.
 type Coordinates struct {
 	Address    string
 	CACertPath string
 	Operators  map[string]map[string]Operator
 }
 
-// Credential holds the decoded kubeconfig and the base64 Talos client credentials of a cluster.
+// Credential contains the decoded kubeconfig and the base64 Talos client credentials of a cluster.
 type Credential struct {
 	Kubeconfig []byte
 	TalosCA    string
@@ -169,10 +170,15 @@ func convertOperator(target string, op operatorOutput) (Operator, error) {
 
 // ReadCoordinates runs terraform output -json in tenantsLayerDir and returns the coordinates of the output.
 func ReadCoordinates(ctx context.Context, tenantsLayerDir string) (Coordinates, error) {
+	backendEnv, err := terraformops.BuildLayerBackendEnv(os.Getenv(terraformops.StateBaseEnvKey), tenantsLayerDir)
+	if err != nil {
+		return Coordinates{}, err
+	}
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "terraform", "-chdir="+tenantsLayerDir, "output", "-json")
+	cmd.Env = append(os.Environ(), backendEnv...)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return Coordinates{}, fmt.Errorf("clusterops: terraform output of %s: %w: %s",
 			filepath.Base(tenantsLayerDir), err, strings.TrimSpace(stderr.String()))
@@ -326,7 +332,7 @@ func RenderTalosconfig(target operatorops.OperatorSubject, nodes []string, cred 
 }
 
 // ListNodeAddresses returns the InternalIP of every node which the API server behind kubeconfigPath reports.
-// The cluster itself supplies the addresses, which keeps the Talos endpoints out of any second source.
+// The cluster itself supplies the addresses, hence no second source supplies the Talos endpoints.
 func ListNodeAddresses(ctx context.Context, kubeconfigPath string) ([]string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigPath, "--request-timeout=10s",

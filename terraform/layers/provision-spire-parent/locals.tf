@@ -1,8 +1,6 @@
 
-# GitLab HTTP backend base URL. Authentication credentials must be supplied via
-# `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD` environment variables.
 locals {
-  _state_base_platform_foundation = "https://gitlab.com/api/v4/projects/84608830/terraform/state"
+  _state_base = var.gitlab_terraform_state_base
 }
 
 locals {
@@ -24,7 +22,7 @@ locals {
 locals {
   # Operators of the components deployed before the SPIRE Child, keyed as in output terraform_operator.
   # security-vault-downstream-tenants declares the operators of the components deployed after the SPIRE Child.
-  # The vault-downstream operator administers the Downstream Vault, and the platform-foundation Vault Proxy carries every Bastion change.
+  # The vault-downstream operator administers the Downstream Vault, and the platform-foundation Vault Proxy routes every Bastion change.
   _spire_parent_operator_targets = {
     "spire-child"      = { owner = local.foundation_project_code, service = "spire", component = "child" }
     "vault-downstream" = { owner = local.foundation_project_code, service = "vault-downstream", component = "frontend" }

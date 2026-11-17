@@ -1,6 +1,16 @@
 
+variable "gitlab_terraform_state_base" {
+  description = "Specifies the GitLab Terraform state API URL of the project hosting every state of the repository, without a trailing slash."
+  type        = string
+
+  validation {
+    condition     = can(regex("^https://[^/]+/.+/projects/[0-9]+/terraform/state$", var.gitlab_terraform_state_base))
+    error_message = "gitlab_terraform_state_base must match https://<host>/<api path>/projects/<project ID>/terraform/state."
+  }
+}
+
 variable "tenants" {
-  description = "Platform tenant workloads keyed by the name below the project code, each mapping a SPIFFE ID to a JWT auth role and KV and PKI ACL policies. workload names a catalog service and component, and kubernetes names a namespace and a service account, and exactly one of the two MUST be set. kv_paths, kv_read_paths, and pki_roles are relative to the project code. issuer child binds a workload attested by the SPIRE Child, and provision-spire-child creates its role. issuer parent binds a workload attested by the SPIRE Parent, and this layer creates its role. External owners register their own workloads, see _external_owners."
+  description = "Platform tenant workloads keyed by the name below the project code, each mapping a SPIFFE ID to a JWT auth role and KV and PKI ACL policies. workload names a catalog service and component, and kubernetes names a namespace and a service account, and exactly one of the two MUST be set. kv_paths, kv_read_paths, and pki_roles are relative to the project code. issuer child binds a workload attested by the SPIRE Child, and provision-spire-child creates its role. issuer parent binds a workload attested by the SPIRE Parent, and this layer creates its role. External owners register their own workloads. Refer to _external_owners."
   type = map(object({
     issuer = optional(string, "child")
     workload = optional(object({

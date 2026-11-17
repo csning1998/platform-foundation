@@ -2,6 +2,7 @@ package terraformops
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -22,25 +23,25 @@ func writeLayer(t *testing.T, dir, layer, content string) {
 	}
 }
 
-func backendBlock(state string) string {
-	return "terraform {\n  backend \"http\" {\n    address        = \"https://gitlab.example/api/v4/projects/7/terraform/state/" + state +
-		"\"\n    lock_address   = \"https://gitlab.example/api/v4/projects/7/terraform/state/" + state + "/lock\"\n  }\n}\n"
-}
+const testStateBase = "https://gitlab.example/api/v4/projects/7/terraform/state"
 
-func TestListPurgeableStates_ReadsTheBackendAndRetainsAdministrationLayers(t *testing.T) {
+// backendBlock omits the backend address, matching the shared HTTP backend block of every layer.
+const backendBlock = "terraform {\n  backend \"http\" {\n    lock_method = \"POST\"\n  }\n}\n"
+
+func TestListPurgeableStates_DerivesTheAddressAndRetainsAdministrationLayers(t *testing.T) {
 	dir := t.TempDir()
-	writeLayer(t, dir, "platform-b", backendBlock("platform-b-frontend")+"provider \"vault\" {\n  address = local.vault_endpoint\n}\n")
-	writeLayer(t, dir, "foundation-a", backendBlock("foundation-a"))
-	writeLayer(t, dir, "administration-gitlab-project", backendBlock("administration-gitlab-project"))
+	writeLayer(t, dir, "platform-b", backendBlock+"provider \"vault\" {\n  address = local.vault_endpoint\n}\n")
+	writeLayer(t, dir, "foundation-a", backendBlock)
+	writeLayer(t, dir, "administration-gitlab-project", backendBlock)
 	writeLayer(t, dir, "helper-without-backend", "locals {}\n")
 
-	got, err := ListPurgeableStates(dir)
+	got, err := ListPurgeableStates(dir, testStateBase)
 	if err != nil {
 		t.Fatalf("ListPurgeableStates: %v", err)
 	}
 	want := []RemoteState{
-		{Layer: "foundation-a", Address: "https://gitlab.example/api/v4/projects/7/terraform/state/foundation-a"},
-		{Layer: "platform-b", Address: "https://gitlab.example/api/v4/projects/7/terraform/state/platform-b-frontend"},
+		{Layer: "foundation-a", Address: testStateBase + "/foundation-a"},
+		{Layer: "platform-b", Address: testStateBase + "/platform-b"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("ListPurgeableStates = %+v, want %+v", got, want)
@@ -88,8 +89,37 @@ func TestDeleteRemoteState_ReportsTheStatusWithoutTheToken(t *testing.T) {
 	}
 }
 
+func TestListPurgeableStates_RequiresTheStateBase(t *testing.T) {
+	dir := t.TempDir()
+	writeLayer(t, dir, "foundation-a", backendBlock)
+	if _, err := ListPurgeableStates(dir, ""); !errors.Is(err, ErrStateBaseMissing) {
+		t.Errorf("ListPurgeableStates error = %v, want ErrStateBaseMissing", err)
+	}
+}
+
+func TestBuildLayerBackendEnv_DerivesTheAddressesFromTheLayerDirectory(t *testing.T) {
+	got, err := BuildLayerBackendEnv(testStateBase, "/repo/terraform/layers/platform-b")
+	if err != nil {
+		t.Fatalf("BuildLayerBackendEnv: %v", err)
+	}
+	want := []string{
+		"TF_HTTP_ADDRESS=" + testStateBase + "/platform-b",
+		"TF_HTTP_LOCK_ADDRESS=" + testStateBase + "/platform-b/lock",
+		"TF_HTTP_UNLOCK_ADDRESS=" + testStateBase + "/platform-b/lock",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("BuildLayerBackendEnv = %q, want %q", got, want)
+	}
+}
+
+func TestBuildLayerBackendEnv_RequiresTheStateBase(t *testing.T) {
+	if _, err := BuildLayerBackendEnv("", "/repo/terraform/layers/platform-b"); !errors.Is(err, ErrStateBaseMissing) {
+		t.Errorf("BuildLayerBackendEnv error = %v, want ErrStateBaseMissing", err)
+	}
+}
+
 func TestListPurgeableStates_FailsWithoutTheLayersDirectory(t *testing.T) {
-	if _, err := ListPurgeableStates(t.TempDir()); err == nil {
+	if _, err := ListPurgeableStates(t.TempDir(), testStateBase); err == nil {
 		t.Error("ListPurgeableStates() error = nil, want the failure to read a missing layers directory")
 	}
 }
@@ -99,7 +129,7 @@ func TestListPurgeableStates_FailsOnAnUnreadableTerraformFile(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "layers", "platform-a", "broken.tf"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if _, err := ListPurgeableStates(dir); err == nil {
+	if _, err := ListPurgeableStates(dir, testStateBase); err == nil {
 		t.Error("ListPurgeableStates() error = nil, want the failure to read a .tf path which is a directory")
 	}
 }
@@ -109,7 +139,7 @@ func TestListPurgeableStates_FailsOnALayerNameWhichBreaksTheGlob(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "layers", "platform-["), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if _, err := ListPurgeableStates(dir); err == nil {
+	if _, err := ListPurgeableStates(dir, testStateBase); err == nil {
 		t.Error("ListPurgeableStates() error = nil, want the glob failure of a layer name with an unclosed bracket")
 	}
 }

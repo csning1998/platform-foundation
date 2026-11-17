@@ -1,22 +1,22 @@
 
 data "terraform_remote_state" "platform_vault_downstream_frontend" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/platform-vault-frontend" }
+  config  = { address = "${local._state_base}/platform-vault-downstream-frontend" }
 }
 
 data "terraform_remote_state" "security_vault_downstream_tenants" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-vault-downstream-tenants" }
+  config  = { address = "${local._state_base}/security-vault-downstream-tenants" }
 }
 
 data "terraform_remote_state" "security_vault_downstream_pki" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-pki" }
+  config  = { address = "${local._state_base}/security-vault-downstream-pki" }
 }
 
 data "terraform_remote_state" "provision_keycloak_oidc" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/provision-keycloak-oidc" }
+  config  = { address = "${local._state_base}/provision-keycloak-oidc" }
 }
 
 # Read OIDC Client credentials from Vault (Created in provision-*)

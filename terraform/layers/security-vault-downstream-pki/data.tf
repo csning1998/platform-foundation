@@ -1,17 +1,17 @@
 
 data "terraform_remote_state" "platform_vault_downstream_frontend" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/platform-vault-frontend" }
+  config  = { address = "${local._state_base}/platform-vault-downstream-frontend" }
 }
 
 data "terraform_remote_state" "security_vault_downstream_tenants" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-vault-downstream-tenants" }
+  config  = { address = "${local._state_base}/security-vault-downstream-tenants" }
 }
 
 data "terraform_remote_state" "foundation_libvirt_resources" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/foundation-libvirt-resources" }
+  config  = { address = "${local._state_base}/foundation-libvirt-resources" }
 }
 
 # parent-group-governance publishes the Bastion facts of the tenant in the registry, in place of its Terraform state.

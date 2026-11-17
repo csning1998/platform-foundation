@@ -1,4 +1,14 @@
 
+variable "gitlab_terraform_state_base" {
+  description = "Specifies the GitLab Terraform state API URL of the project hosting every state of the repository, without a trailing slash."
+  type        = string
+
+  validation {
+    condition     = can(regex("^https://[^/]+/.+/projects/[0-9]+/terraform/state$", var.gitlab_terraform_state_base))
+    error_message = "gitlab_terraform_state_base must match https://<host>/<api path>/projects/<project ID>/terraform/state."
+  }
+}
+
 variable "oidc_users" {
   description = "Map of users to create in Keycloak with their associated groups"
   type = map(object({
@@ -13,7 +23,7 @@ variable "oidc_users" {
 }
 
 variable "talos_workload_config" {
-  description = "Keycloak workload of the Talos runtime. The images match the VM runtime by tag and carry the digest of the tag, and the nodes pull them through the Harbor Origin mirrors. The local-path chart comes from its upstream OCI repository, as on the Downstream Vault."
+  description = "Keycloak workload of the Talos runtime. The images match the VM runtime by tag and include the digest of the tag, and the nodes pull them through the Harbor Origin mirrors. The local-path chart comes from its upstream OCI repository, as on the Downstream Vault."
   type = object({
     keycloak_image = string
     keycloak_resources = object({
@@ -43,7 +53,7 @@ variable "talos_workload_config" {
       for image in [var.talos_workload_config.keycloak_image, var.talos_workload_config.postgres_image] :
       can(regex("@sha256:[0-9a-f]{64}$", image))
     ])
-    error_message = "keycloak_image and postgres_image MUST carry a sha256 digest."
+    error_message = "keycloak_image and postgres_image MUST include a sha256 digest."
   }
 }
 

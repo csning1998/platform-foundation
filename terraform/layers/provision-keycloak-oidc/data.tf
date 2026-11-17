@@ -1,17 +1,17 @@
 
 data "terraform_remote_state" "security_vault_downstream_tenants" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-vault-downstream-tenants" }
+  config  = { address = "${local._state_base}/security-vault-downstream-tenants" }
 }
 
 data "terraform_remote_state" "security_vault_downstream_pki" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/security-pki" }
+  config  = { address = "${local._state_base}/security-vault-downstream-pki" }
 }
 
 data "terraform_remote_state" "platform_keycloak_frontend" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/platform-keycloak-frontend" }
+  config  = { address = "${local._state_base}/platform-keycloak-frontend" }
 }
 
 ephemeral "vault_kv_secret_v2" "keycloak_admin" {
@@ -22,7 +22,7 @@ ephemeral "vault_kv_secret_v2" "keycloak_admin" {
 
 data "terraform_remote_state" "foundation_libvirt_resources" {
   backend = "http"
-  config  = { address = "${local._state_base_platform_foundation}/foundation-libvirt-resources" }
+  config  = { address = "${local._state_base}/foundation-libvirt-resources" }
 }
 
 ephemeral "vault_kv_secret_v2" "keycloak_cluster" {

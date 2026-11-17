@@ -1,8 +1,6 @@
 
-# GitLab HTTP backend base URL. Authentication credentials must be supplied via
-# `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD` environment variables.
 locals {
-  _state_base_platform_foundation = "https://gitlab.com/api/v4/projects/84608830/terraform/state"
+  _state_base = var.gitlab_terraform_state_base
 }
 
 locals {
@@ -12,7 +10,7 @@ locals {
   }
 }
 
-# The platform layer publishes the runtime, and a runtime object stays null on the other runtime.
+# The platform layer publishes the runtime, and a runtime object remains null on the other runtime.
 locals {
   foundation_project_code  = local.state.foundation_libvirt_resources.foundation_vault_path.project_code
   vault_downstream_runtime = local.state.platform_vault_downstream_frontend.runtime

@@ -109,7 +109,7 @@ func (a *app) verifyEnvironment() error {
 const hypervisorInventoryYAML = "---\nall:\n  hosts:\n    localhost:\n      ansible_connection: local\n"
 
 // runHypervisorPlaybook writes a throwaway inventory into a.ansibleDir. The implicit
-// localhost inventory carries no directory against which Ansible resolves group_vars.
+// localhost inventory lacks a directory against which Ansible resolves group_vars.
 func (a *app) runHypervisorPlaybook(ctx context.Context) error {
 	inventory, err := os.CreateTemp(a.ansibleDir, "inventory-hypervisor-baseline-*.yaml")
 	if err != nil {
@@ -244,7 +244,7 @@ func (a *app) purgeAllInfrastructure(ctx context.Context) error {
 	if token == "" {
 		return terraformops.ErrStateTokenMissing
 	}
-	states, err := terraformops.ListPurgeableStates(a.terraform)
+	states, err := terraformops.ListPurgeableStates(a.terraform, os.Getenv(terraformops.StateBaseEnvKey))
 	if err != nil {
 		return err
 	}

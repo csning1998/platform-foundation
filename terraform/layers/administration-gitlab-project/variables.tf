@@ -10,6 +10,16 @@ variable "github_owner" {
   }
 }
 
+variable "gitlab_url" {
+  description = "Specifies the GitLab instance HTTPS URL exported by vault-proxy-env from the repository origin remote."
+  type        = string
+
+  validation {
+    condition     = can(regex("^https://[^/]+$", var.gitlab_url))
+    error_message = "gitlab_url must be https://<host> without a trailing path."
+  }
+}
+
 variable "gitlab_token_owner_code" {
   description = "Specifies the owner code whose state backend token authenticates the gitlab provider. The first creation of the project sets parent-group-governance under the credential-distributor identity, since a token limited to the project cannot exist before the project."
   type        = string
